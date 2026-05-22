@@ -39,13 +39,19 @@ export function NewDmDialog() {
       convId = shared?.[0]?.conversation_id ?? null;
     }
     if (!convId) {
-      const { data: conv } = await supabase
-        .from("conversations").insert({ is_group: false }).select("id").single();
-      convId = conv!.id;
-      await supabase.from("conversation_members").insert([
-        { conversation_id: convId, user_id: user!.id },
-        { conversation_id: convId, user_id: other.id },
+      // Generate the id client-side. We can't read a new conversation back via
+      // .select() yet: RLS only lets *members* read a conversation, and we don't
+      // become a member until the next insert. So we avoid select-after-insert.
+      const newId = crypto.randomUUID();
+      const { error: convErr } = await supabase
+        .from("conversations").insert({ id: newId, is_group: false });
+      if (convErr) return;
+      const { error: memErr } = await supabase.from("conversation_members").insert([
+        { conversation_id: newId, user_id: user!.id },
+        { conversation_id: newId, user_id: other.id },
       ]);
+      if (memErr) return;
+      convId = newId;
     }
     setOpen(false);
     router.push(`/dms/${convId}`);

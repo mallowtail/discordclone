@@ -10,7 +10,7 @@ create table public.profiles (
 -- ============ CHANNELS ============
 create table public.channels (
   id uuid primary key default gen_random_uuid(),
-  name text not null,
+  name text not null unique,
   position int not null default 0,
   created_at timestamptz not null default now()
 );

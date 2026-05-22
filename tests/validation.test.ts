@@ -26,4 +26,16 @@ describe("validateUsername", () => {
   it("rejects spaces and symbols", () => {
     expect(validateUsername("bad name!").ok).toBe(false);
   });
+  it("accepts the minimum length (3)", () => {
+    expect(validateUsername("abc").ok).toBe(true);
+  });
+  it("accepts the maximum length (20)", () => {
+    expect(validateUsername("a".repeat(20)).ok).toBe(true);
+  });
+  it("rejects one over the maximum (21)", () => {
+    expect(validateUsername("a".repeat(21)).ok).toBe(false);
+  });
+  it("trims surrounding whitespace before validating", () => {
+    expect(validateUsername("  abc  ")).toEqual({ ok: true, value: "abc" });
+  });
 });

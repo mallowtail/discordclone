@@ -10,7 +10,7 @@ export function validateMessage(input: string): Validated {
 export function validateUsername(input: string): Validated {
   const value = input.trim();
   if (!/^[A-Za-z0-9_]{3,20}$/.test(value)) {
-    return { ok: false, error: "3–20 letters, numbers, or underscores only" };
+    return { ok: false, error: "3-20 letters, numbers, or underscores only" };
   }
   return { ok: true, value };
 }

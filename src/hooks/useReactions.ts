@@ -1,13 +1,21 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { Reaction } from "@/types/db";
 import { aggregateReactions, type ReactionPill } from "@/lib/reactions";
 
+// Short, stable hash so the realtime channel name stays small even when `key`
+// is hundreds of joined UUIDs (channel names must not balloon to thousands of chars).
+function shortHash(s: string): string {
+  let h = 5381;
+  for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0;
+  return (h >>> 0).toString(36);
+}
+
 // Returns a map: messageId -> aggregated reaction pills, kept live.
 export function useReactions(messageIds: string[], currentUserId: string): Record<string, ReactionPill[]> {
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
   const [rows, setRows] = useState<Reaction[]>([]);
   const key = messageIds.join(",");
 
@@ -25,7 +33,7 @@ export function useReactions(messageIds: string[], currentUserId: string): Recor
     load();
 
     const channel = supabase
-      .channel(`reactions:${key}`)
+      .channel(`reactions:${shortHash(key)}`)
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "reactions" },

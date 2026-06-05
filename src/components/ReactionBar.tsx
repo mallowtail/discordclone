@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/components/providers/AuthProvider";
 import type { Message } from "@/types/db";
@@ -8,7 +9,7 @@ import type { ReactionPill } from "@/lib/reactions";
 const EMOJI = ["👍", "❤️", "😂", "🎉", "😮", "😢"];
 
 export function ReactionBar({ message, pills }: { message: Message; pills: ReactionPill[] }) {
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
   const { user } = useAuth();
 
   async function toggle(emoji: string, mine: boolean) {

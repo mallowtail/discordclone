@@ -40,9 +40,23 @@ export function useMessages(target: Target) {
               : [...prev, payload.new as Message]
           )
       )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "messages", filter: `${column}=eq.${value}` },
+        (payload) =>
+          setMessages((prev) =>
+            prev.map((m) => (m.id === (payload.new as Message).id ? (payload.new as Message) : m))
+          )
+      )
+      .on(
+        // DELETE payloads carry only the primary key (id); they can't be column-filtered,
+        // so filter client-side by whether the id is in the current list.
+        "postgres_changes",
+        { event: "DELETE", schema: "public", table: "messages" },
+        (payload) =>
+          setMessages((prev) => prev.filter((m) => m.id !== (payload.old as { id: string }).id))
+      )
       .subscribe((status) => {
-        // on (re)subscribe — including automatic reconnect after a drop —
-        // reload recent history so no messages are missed during the gap
         if (status === "SUBSCRIBED") load();
       });
 

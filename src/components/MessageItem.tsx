@@ -1,5 +1,6 @@
 import type { Message } from "@/types/db";
 import { formatTime } from "@/lib/format";
+import { MessageContent } from "@/components/MessageContent";
 
 export function MessageItem({
   msg,
@@ -18,7 +19,7 @@ export function MessageItem({
           <span className="text-xs text-[#949ba4] ml-2">{formatTime(msg.created_at)}</span>
         </div>
       )}
-      <div className="text-[#dbdee1] whitespace-pre-wrap break-words">{msg.content}</div>
+      <MessageContent msg={msg} />
     </div>
   );
 }

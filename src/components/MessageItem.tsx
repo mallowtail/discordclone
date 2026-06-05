@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type { Message } from "@/types/db";
 import { formatTime } from "@/lib/format";
 import { useAuth } from "@/components/providers/AuthProvider";
@@ -19,7 +19,7 @@ export function MessageItem({
   showHeader: boolean;
 }) {
   const { user } = useAuth();
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
   const isMine = user?.id === msg.author_id;
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(msg.content);
@@ -40,7 +40,8 @@ export function MessageItem({
 
   async function remove() {
     if (!confirm("Delete this message?")) return;
-    await supabase.from("messages").delete().eq("id", msg.id);
+    const { error: err } = await supabase.from("messages").delete().eq("id", msg.id);
+    if (err) setError("Couldn't delete — try again");
   }
 
   return (

@@ -5,11 +5,15 @@ import { createClient } from "@/lib/supabase/client";
 import type { Message, Profile } from "@/types/db";
 import { MessageItem } from "@/components/MessageItem";
 import { startsNewGroup } from "@/lib/grouping";
+import { useAuth } from "@/components/providers/AuthProvider";
+import { useReactions } from "@/hooks/useReactions";
 
 export function MessageList({ messages }: { messages: Message[] }) {
   const supabase = createClient();
   const [names, setNames] = useState<Record<string, string>>({});
   const bottom = useRef<HTMLDivElement>(null);
+  const { user } = useAuth();
+  const reactionsByMessage = useReactions(messages.map((m) => m.id), user?.id ?? "");
 
   useEffect(() => {
     const missing = [...new Set(messages.map((m) => m.author_id))].filter((id) => !names[id]);
@@ -37,6 +41,7 @@ export function MessageList({ messages }: { messages: Message[] }) {
             msg={m}
             authorName={names[m.author_id] ?? "…"}
             showHeader={showHeader}
+            pills={reactionsByMessage[m.id] ?? []}
           />
         );
       })}

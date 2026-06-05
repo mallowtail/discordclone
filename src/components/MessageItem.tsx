@@ -8,15 +8,19 @@ import { createClient } from "@/lib/supabase/client";
 import { validateMessage } from "@/lib/validation";
 import { MessageContent } from "@/components/MessageContent";
 import { MessageActions } from "@/components/MessageActions";
+import { ReactionBar } from "@/components/ReactionBar";
+import type { ReactionPill } from "@/lib/reactions";
 
 export function MessageItem({
   msg,
   authorName,
   showHeader,
+  pills,
 }: {
   msg: Message;
   authorName: string;
   showHeader: boolean;
+  pills: ReactionPill[];
 }) {
   const { user } = useAuth();
   const supabase = useMemo(() => createClient(), []);
@@ -77,6 +81,7 @@ export function MessageItem({
       ) : (
         <MessageContent msg={msg} />
       )}
+      {!editing && <ReactionBar message={msg} pills={pills} />}
       {isMine && !editing && (
         <MessageActions
           onEdit={() => {

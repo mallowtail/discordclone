@@ -24,7 +24,7 @@ export async function uploadImage(file: File): Promise<{ url: string } | { error
   const { error } = await supabase.storage
     .from("attachments")
     .upload(path, file, { contentType: file.type });
-  if (error) return { error: "Upload failed — try again" };
+  if (error) return { error: `Upload failed: ${error.message}` };
   const { data } = supabase.storage.from("attachments").getPublicUrl(path);
   return { url: data.publicUrl };
 }

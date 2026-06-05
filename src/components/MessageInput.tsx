@@ -16,8 +16,7 @@ export function MessageInput({ target, placeholder }: { target: Target; placehol
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  async function send(e: React.FormEvent) {
-    e.preventDefault();
+  async function submit() {
     if (uploading) return;
     const v = validateMessage(text);
     if (!v.ok) return setError(v.error);
@@ -31,6 +30,11 @@ export function MessageInput({ target, placeholder }: { target: Target; placehol
       setText(draft);
       setError("Failed to send — try again");
     }
+  }
+
+  function send(e: React.FormEvent) {
+    e.preventDefault();
+    submit();
   }
 
   async function onPickFile(e: React.ChangeEvent<HTMLInputElement>) {
@@ -66,11 +70,19 @@ export function MessageInput({ target, placeholder }: { target: Target; placehol
           📎
         </button>
         <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onPickFile} />
-        <input
+        <textarea
           value={text}
           onChange={(e) => setText(e.target.value)}
+          onKeyDown={(e) => {
+            // Enter sends; Shift+Enter inserts a newline.
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              submit();
+            }
+          }}
+          rows={1}
           placeholder={uploading ? "Uploading…" : placeholder}
-          className="flex-1 p-2 rounded bg-[#383a40] text-[#dbdee1] outline-none"
+          className="flex-1 p-2 rounded bg-[#383a40] text-[#dbdee1] outline-none resize-none"
         />
       </div>
     </form>

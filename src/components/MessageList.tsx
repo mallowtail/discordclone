@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { Message, Profile } from "@/types/db";
 import { MessageItem } from "@/components/MessageItem";
+import { startsNewGroup } from "@/lib/grouping";
 
 export function MessageList({ messages }: { messages: Message[] }) {
   const supabase = createClient();
@@ -26,9 +27,19 @@ export function MessageList({ messages }: { messages: Message[] }) {
 
   return (
     <div className="flex-1 overflow-y-auto py-3">
-      {messages.map((m) => (
-        <MessageItem key={m.id} msg={m} authorName={names[m.author_id] ?? "…"} />
-      ))}
+      {messages.map((m, i) => {
+        // Show the name + time only at the start of a group: a new author, or
+        // the same author after a >7-minute gap. Otherwise messages stack.
+        const showHeader = startsNewGroup(messages[i - 1], m);
+        return (
+          <MessageItem
+            key={m.id}
+            msg={m}
+            authorName={names[m.author_id] ?? "…"}
+            showHeader={showHeader}
+          />
+        );
+      })}
       <div ref={bottom} />
     </div>
   );

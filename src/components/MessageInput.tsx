@@ -6,8 +6,16 @@ import { useAuth } from "@/components/providers/AuthProvider";
 import { validateMessage } from "@/lib/validation";
 import { uploadImage } from "@/lib/upload";
 import type { Message } from "@/types/db";
+import { MentionAutocomplete } from "@/components/MentionAutocomplete";
 
 type Target = { channel_id: string } | { conversation_id: string };
+
+// The active @mention query is the @-word immediately before the caret, if any.
+function mentionQueryAt(text: string, caret: number): string | null {
+  const before = text.slice(0, caret);
+  const m = before.match(/(?:^|\s)@([a-zA-Z0-9_]*)$/);
+  return m ? m[1] : null;
+}
 
 export function MessageInput({
   target,
@@ -28,9 +36,11 @@ export function MessageInput({
   const [error, setError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [pingAuthor, setPingAuthor] = useState(true);
+  const [caret, setCaret] = useState(0);
   const fileRef = useRef<HTMLInputElement>(null);
+  const taRef = useRef<HTMLTextAreaElement>(null);
+  const mentionQuery = mentionQueryAt(text, caret);
 
-  // Default the ping back ON each time a new reply target is chosen.
   useEffect(() => {
     setPingAuthor(true);
   }, [replyTo?.id]);
@@ -86,8 +96,21 @@ export function MessageInput({
     onClearReply?.();
   }
 
+  function pickMention(username: string) {
+    const before = text.slice(0, caret).replace(/@([a-zA-Z0-9_]*)$/, `@${username} `);
+    const after = text.slice(caret);
+    const next = before + after;
+    setText(next);
+    setCaret(before.length);
+    requestAnimationFrame(() => {
+      taRef.current?.focus();
+      taRef.current?.setSelectionRange(before.length, before.length);
+    });
+  }
+
   return (
-    <form onSubmit={send} className="p-3">
+    <form onSubmit={send} className="p-3 relative">
+      <MentionAutocomplete query={mentionQuery} onPick={pickMention} />
       {error && <p className="text-red-400 text-sm mb-1">{error}</p>}
       {replyTo && (
         <div className="flex items-center justify-between bg-[#2b2d31] rounded-t-md px-2 py-1 text-[11px] text-[#949ba4]">
@@ -121,8 +144,14 @@ export function MessageInput({
         </button>
         <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onPickFile} />
         <textarea
+          ref={taRef}
           value={text}
-          onChange={(e) => setText(e.target.value)}
+          onChange={(e) => {
+            setText(e.target.value);
+            setCaret(e.target.selectionStart ?? e.target.value.length);
+          }}
+          onKeyUp={(e) => setCaret((e.target as HTMLTextAreaElement).selectionStart ?? 0)}
+          onClick={(e) => setCaret((e.target as HTMLTextAreaElement).selectionStart ?? 0)}
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey) {
               e.preventDefault();

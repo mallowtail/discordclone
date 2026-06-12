@@ -7,6 +7,7 @@ import type { Profile, Message } from "@/types/db";
 import { useMessages } from "@/hooks/useMessages";
 import { MessageList } from "@/components/MessageList";
 import { MessageInput } from "@/components/MessageInput";
+import { PinnedPanel } from "@/components/PinnedPanel";
 
 export default function DmPage({ params }: { params: Promise<{ conversationId: string }> }) {
   const { conversationId } = use(params);
@@ -15,7 +16,9 @@ export default function DmPage({ params }: { params: Promise<{ conversationId: s
   const [other, setOther] = useState<Profile | null>(null);
   const [replyTo, setReplyTo] = useState<Message | null>(null);
   const [replyToName, setReplyToName] = useState("");
+  const [showPins, setShowPins] = useState(false);
   const messages = useMessages({ conversationId });
+  const pinned = messages.filter((m) => m.pinned);
 
   useEffect(() => {
     if (!user) return;
@@ -31,8 +34,15 @@ export default function DmPage({ params }: { params: Promise<{ conversationId: s
 
   return (
     <>
-      <header className="p-3 border-b border-black/30 font-semibold text-white">
-        @ {other?.display_name ?? "Direct Message"}
+      <header className="p-3 border-b border-black/30 font-semibold text-white flex items-center justify-between relative">
+        <span>@ {other?.display_name ?? "Direct Message"}</span>
+        <button
+          onClick={() => setShowPins((s) => !s)}
+          className="text-xs font-normal text-[#949ba4] hover:text-white"
+        >
+          📌 Pinned ({pinned.length})
+        </button>
+        {showPins && <PinnedPanel pinned={pinned} onClose={() => setShowPins(false)} />}
       </header>
       <MessageList
         messages={messages}

@@ -6,6 +6,7 @@ import type { Channel, Message } from "@/types/db";
 import { useMessages } from "@/hooks/useMessages";
 import { MessageList } from "@/components/MessageList";
 import { MessageInput } from "@/components/MessageInput";
+import { PinnedPanel } from "@/components/PinnedPanel";
 
 export default function ChannelPage({ params }: { params: Promise<{ channelId: string }> }) {
   const { channelId: name } = use(params);
@@ -25,9 +26,20 @@ function ChannelView({ channel }: { channel: Channel }) {
   const messages = useMessages({ channelId: channel.id });
   const [replyTo, setReplyTo] = useState<Message | null>(null);
   const [replyToName, setReplyToName] = useState("");
+  const [showPins, setShowPins] = useState(false);
+  const pinned = messages.filter((m) => m.pinned);
   return (
     <>
-      <header className="p-3 border-b border-black/30 font-semibold text-white"># {channel.name}</header>
+      <header className="p-3 border-b border-black/30 font-semibold text-white flex items-center justify-between relative">
+        <span># {channel.name}</span>
+        <button
+          onClick={() => setShowPins((s) => !s)}
+          className="text-xs font-normal text-[#949ba4] hover:text-white"
+        >
+          📌 Pinned ({pinned.length})
+        </button>
+        {showPins && <PinnedPanel pinned={pinned} onClose={() => setShowPins(false)} />}
+      </header>
       <MessageList
         messages={messages}
         onReply={(m, name) => {

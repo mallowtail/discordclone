@@ -42,16 +42,17 @@ export function MessageItem({
   const [draft, setDraft] = useState(msg.content);
   const [error, setError] = useState<string | null>(null);
 
-  const highlighted =
-    !isMine &&
-    mentionsMe({
-      content: msg.content,
-      myUsername: profile?.username ?? null,
-      myId: user?.id ?? null,
-      replyToId: msg.reply_to_id,
-      mentionAuthor: msg.mention_author,
-      repliedToAuthorId: repliedTo?.author_id ?? null,
-    });
+  // Self-pings are allowed: highlight whenever the message mentions me, even on
+  // my own messages (typing @myself, or replying to my own message with @ ON).
+  // Replying to someone else stays unhighlighted — mentionsMe handles that.
+  const highlighted = mentionsMe({
+    content: msg.content,
+    myUsername: profile?.username ?? null,
+    myId: user?.id ?? null,
+    replyToId: msg.reply_to_id,
+    mentionAuthor: msg.mention_author,
+    repliedToAuthorId: repliedTo?.author_id ?? null,
+  });
 
   async function saveEdit() {
     const v = validateMessage(draft);

@@ -2,7 +2,7 @@
 
 import { use, useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import type { Channel } from "@/types/db";
+import type { Channel, Message } from "@/types/db";
 import { useMessages } from "@/hooks/useMessages";
 import { MessageList } from "@/components/MessageList";
 import { MessageInput } from "@/components/MessageInput";
@@ -23,11 +23,25 @@ export default function ChannelPage({ params }: { params: Promise<{ channelId: s
 
 function ChannelView({ channel }: { channel: Channel }) {
   const messages = useMessages({ channelId: channel.id });
+  const [replyTo, setReplyTo] = useState<Message | null>(null);
+  const [replyToName, setReplyToName] = useState("");
   return (
     <>
       <header className="p-3 border-b border-black/30 font-semibold text-white"># {channel.name}</header>
-      <MessageList messages={messages} />
-      <MessageInput target={{ channel_id: channel.id }} placeholder={`Message #${channel.name}`} />
+      <MessageList
+        messages={messages}
+        onReply={(m, name) => {
+          setReplyTo(m);
+          setReplyToName(name);
+        }}
+      />
+      <MessageInput
+        target={{ channel_id: channel.id }}
+        placeholder={`Message #${channel.name}`}
+        replyTo={replyTo}
+        replyToName={replyToName}
+        onClearReply={() => setReplyTo(null)}
+      />
     </>
   );
 }

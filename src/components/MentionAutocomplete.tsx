@@ -9,9 +9,11 @@ import type { Profile } from "@/types/db";
 export function MentionAutocomplete({
   query,
   onPick,
+  onResults,
 }: {
   query: string | null;
   onPick: (username: string) => void;
+  onResults?: (usernames: string[]) => void;
 }) {
   const supabase = createClient();
   const [results, setResults] = useState<Profile[]>([]);
@@ -19,6 +21,7 @@ export function MentionAutocomplete({
   useEffect(() => {
     if (query === null) {
       setResults([]);
+      onResults?.([]);
       return;
     }
     let active = true;
@@ -28,11 +31,16 @@ export function MentionAutocomplete({
       .ilike("username", `${query}%`)
       .limit(6)
       .then(({ data }) => {
-        if (active) setResults((data as Profile[]) ?? []);
+        if (!active) return;
+        const rows = (data as Profile[]) ?? [];
+        setResults(rows);
+        onResults?.(rows.map((r) => r.username));
       });
     return () => {
       active = false;
     };
+    // onResults is a stable setter from the parent; intentionally omitted from deps.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [supabase, query]);
 
   if (query === null || results.length === 0) return null;

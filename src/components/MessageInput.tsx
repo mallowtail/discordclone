@@ -37,9 +37,11 @@ export function MessageInput({
   const [uploading, setUploading] = useState(false);
   const [pingAuthor, setPingAuthor] = useState(true);
   const [caret, setCaret] = useState(0);
+  const [mentionMatches, setMentionMatches] = useState<string[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
   const mentionQuery = mentionQueryAt(text, caret);
+  const acOpen = mentionQuery !== null && mentionMatches.length > 0;
 
   useEffect(() => {
     setPingAuthor(true);
@@ -110,7 +112,7 @@ export function MessageInput({
 
   return (
     <form onSubmit={send} className="p-3 relative">
-      <MentionAutocomplete query={mentionQuery} onPick={pickMention} />
+      <MentionAutocomplete query={mentionQuery} onPick={pickMention} onResults={setMentionMatches} />
       {error && <p className="text-red-400 text-sm mb-1">{error}</p>}
       {replyTo && (
         <div className="flex items-center justify-between bg-[#2b2d31] rounded-t-md px-2 py-1 text-[11px] text-[#949ba4]">
@@ -153,6 +155,13 @@ export function MessageInput({
           onKeyUp={(e) => setCaret((e.target as HTMLTextAreaElement).selectionStart ?? 0)}
           onClick={(e) => setCaret((e.target as HTMLTextAreaElement).selectionStart ?? 0)}
           onKeyDown={(e) => {
+            // While the @-autocomplete is open, Enter/Tab accepts the top match
+            // instead of sending the message.
+            if (acOpen && (e.key === "Enter" || e.key === "Tab")) {
+              e.preventDefault();
+              pickMention(mentionMatches[0]);
+              return;
+            }
             if (e.key === "Enter" && !e.shiftKey) {
               e.preventDefault();
               submit();

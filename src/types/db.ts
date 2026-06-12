@@ -22,6 +22,10 @@ export type Message = {
   image_url: string | null;
   created_at: string;
   updated_at: string | null;
+  reply_to_id: string | null;
+  mention_author: boolean;
+  pinned: boolean;
+  pinned_at: string | null;
 };
 
 export type Reaction = {

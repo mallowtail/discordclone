@@ -75,6 +75,7 @@ export function MessageItem({
   async function togglePin() {
     const { error: err } = await supabase.rpc("toggle_pin", { msg: msg.id });
     if (err) setError("Couldn't pin — try again");
+    else setError(null);
   }
 
   function jumpToOriginal() {
@@ -115,6 +116,10 @@ export function MessageItem({
           <span className="text-xs text-[#949ba4] ml-2">{formatTime(msg.created_at)}</span>
           {msg.pinned && <span className="text-xs text-[#949ba4] ml-2" title="Pinned">📌</span>}
         </div>
+      )}
+      {/* keep the pin indicator visible even on grouped (header-less) messages */}
+      {!showHeader && msg.pinned && (
+        <span className="absolute left-1 top-0.5 text-[10px] text-[#949ba4]" title="Pinned">📌</span>
       )}
 
       {editing ? (

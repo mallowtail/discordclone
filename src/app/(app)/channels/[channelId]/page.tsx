@@ -18,7 +18,7 @@ export default function ChannelPage({ params }: { params: Promise<{ channelId: s
       .then(({ data }) => setChannel(data));
   }, [supabase, name]);
 
-  if (!channel) return <div className="p-4 text-[#949ba4]">Loading channel…</div>;
+  if (!channel) return <div className="p-4 text-muted">Loading channel…</div>;
   return <ChannelView channel={channel} />;
 }
 
@@ -30,11 +30,11 @@ function ChannelView({ channel }: { channel: Channel }) {
   const pinned = messages.filter((m) => m.pinned);
   return (
     <>
-      <header className="p-3 border-b border-black/30 font-semibold text-white flex items-center justify-between relative">
+      <header className="p-3 border-b border-line font-semibold text-ink flex items-center justify-between relative">
         <span># {channel.name}</span>
         <button
           onClick={() => setShowPins((s) => !s)}
-          className="text-xs font-normal text-[#949ba4] hover:text-white"
+          className="text-xs font-normal text-muted hover:text-ink"
         >
           📌 Pinned ({pinned.length})
         </button>

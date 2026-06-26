@@ -34,20 +34,20 @@ export function PinnedPanel({ pinned, onClose }: { pinned: Message[]; onClose: (
   }
 
   return (
-    <div className="absolute right-3 top-12 w-72 bg-[#111214] border border-white/10 rounded-lg p-2 shadow-xl z-50">
-      <div className="text-white font-bold text-[11px] uppercase mb-2">📌 Pinned Messages</div>
-      {pinned.length === 0 && <div className="text-[#949ba4] text-sm px-1 py-2">No pinned messages yet.</div>}
+    <div className="absolute right-3 top-12 w-72 bg-sidebar border border-line rounded-xl p-2 shadow-xl z-50">
+      <div className="text-ink font-bold text-[11px] uppercase mb-2">📌 Pinned Messages</div>
+      {pinned.length === 0 && <div className="text-muted text-sm px-1 py-2">No pinned messages yet.</div>}
       {[...pinned]
         .sort((a, b) => (b.pinned_at ?? "").localeCompare(a.pinned_at ?? ""))
         .map((m) => (
-          <div key={m.id} className="bg-[#2b2d31] rounded-md p-2 text-xs mb-1.5">
-            <button onClick={() => unpin(m.id)} title="Unpin" className="float-right text-[#949ba4] hover:text-white">
+          <div key={m.id} className="bg-surface rounded-lg p-2 text-xs mb-1.5">
+            <button onClick={() => unpin(m.id)} title="Unpin" className="float-right text-muted hover:text-ink">
               ✕
             </button>
-            <div className="text-white font-semibold cursor-pointer" onClick={() => jump(m.id)}>
+            <div className="text-ink font-semibold cursor-pointer" onClick={() => jump(m.id)}>
               {names[m.author_id] ?? "…"}
             </div>
-            <div className="text-[#dbdee1] cursor-pointer" onClick={() => jump(m.id)}>
+            <div className="text-ink cursor-pointer" onClick={() => jump(m.id)}>
               {snippet(m)}
             </div>
           </div>

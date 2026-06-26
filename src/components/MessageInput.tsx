@@ -113,23 +113,23 @@ export function MessageInput({
   return (
     <form onSubmit={send} className="p-3 relative">
       <MentionAutocomplete query={mentionQuery} onPick={pickMention} onResults={setMentionMatches} />
-      {error && <p className="text-red-400 text-sm mb-1">{error}</p>}
+      {error && <p className="text-danger text-sm mb-1">{error}</p>}
       {replyTo && (
-        <div className="flex items-center justify-between bg-[#2b2d31] rounded-t-md px-2 py-1 text-[11px] text-[#949ba4]">
+        <div className="flex items-center justify-between bg-surface rounded-t-xl px-2 py-1 text-[11px] text-muted">
           <span>
-            Replying to <b className="text-[#c9ccd1]">{replyToName ?? "user"}</b>
+            Replying to <b className="text-ink">{replyToName ?? "user"}</b>
           </span>
           <span className="flex items-center gap-2">
             <button
               type="button"
               onClick={() => setPingAuthor((p) => !p)}
               className={`rounded-full px-2 font-semibold border ${
-                pingAuthor ? "border-[#5865f2] bg-[#3c4270] text-[#c9cdfb]" : "border-[#4e5058] text-[#949ba4]"
+                pingAuthor ? "border-accent bg-mention text-mention-ink" : "border-line text-muted"
               }`}
             >
               {pingAuthor ? "@ ON" : "@ OFF"}
             </button>
-            <button type="button" onClick={onClearReply} title="Cancel reply" className="hover:text-white">
+            <button type="button" onClick={onClearReply} title="Cancel reply" className="hover:text-ink">
               ✕
             </button>
           </span>
@@ -139,7 +139,7 @@ export function MessageInput({
         <button
           type="button"
           onClick={() => fileRef.current?.click()}
-          className="text-[#949ba4] hover:text-white"
+          className="text-muted hover:text-ink"
           title="Attach image"
         >
           📎
@@ -169,7 +169,7 @@ export function MessageInput({
           }}
           rows={1}
           placeholder={uploading ? "Uploading…" : placeholder}
-          className="flex-1 p-2 rounded bg-[#383a40] text-[#dbdee1] outline-none resize-none"
+          className="flex-1 p-2 rounded-xl border border-line bg-surface text-ink outline-none resize-none"
         />
       </div>
     </form>

@@ -46,15 +46,15 @@ export function MentionAutocomplete({
   if (query === null || results.length === 0) return null;
 
   return (
-    <div className="absolute bottom-14 left-3 w-56 bg-[#111214] border border-white/10 rounded-md p-1 shadow-xl z-50">
+    <div className="absolute bottom-14 left-3 w-56 bg-sidebar border border-line rounded-xl p-1 shadow-xl z-50">
       {results.map((p) => (
         <button
           key={p.id}
           type="button"
           onClick={() => onPick(p.username)}
-          className="w-full text-left px-2 py-1 rounded hover:bg-[#404249] text-[#dbdee1] text-sm"
+          className="w-full text-left px-2 py-1 rounded hover:bg-surface text-ink text-sm"
         >
-          {p.display_name} <span className="text-[#949ba4]">@{p.username}</span>
+          {p.display_name} <span className="text-muted">@{p.username}</span>
         </button>
       ))}
     </div>

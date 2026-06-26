@@ -15,7 +15,7 @@
   --color-amber: #f0b86b;
   --color-danger: #f87171;
   --color-online: #3ba55d;
-  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 
 body {

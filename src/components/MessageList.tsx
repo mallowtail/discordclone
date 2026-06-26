@@ -16,21 +16,21 @@ export function MessageList({
   onReply?: (m: Message, authorName: string) => void;
 }) {
   const supabase = createClient();
-  const [names, setNames] = useState<Record<string, string>>({});
+  const [profiles, setProfiles] = useState<Record<string, Profile>>({});
   const bottom = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
   const reactionsByMessage = useReactions(messages.map((m) => m.id), user?.id ?? "");
   const byId = new Map(messages.map((m) => [m.id, m]));
 
   useEffect(() => {
-    const missing = [...new Set(messages.map((m) => m.author_id))].filter((id) => !names[id]);
+    const missing = [...new Set(messages.map((m) => m.author_id))].filter((id) => !profiles[id]);
     if (missing.length === 0) return;
     supabase.from("profiles").select("*").in("id", missing).then(({ data }) => {
-      const next: Record<string, string> = {};
-      (data as Profile[] | null)?.forEach((p) => (next[p.id] = p.display_name));
-      setNames((prev) => ({ ...prev, ...next }));
+      const next: Record<string, Profile> = {};
+      (data as Profile[] | null)?.forEach((p) => (next[p.id] = p));
+      setProfiles((prev) => ({ ...prev, ...next }));
     });
-  }, [messages, names, supabase]);
+  }, [messages, profiles, supabase]);
 
   useEffect(() => {
     bottom.current?.scrollIntoView({ behavior: "smooth" });
@@ -45,11 +45,12 @@ export function MessageList({
           <MessageItem
             key={m.id}
             msg={m}
-            authorName={names[m.author_id] ?? "…"}
+            authorName={profiles[m.author_id]?.display_name ?? "…"}
+            authorAvatar={profiles[m.author_id]?.avatar_url ?? null}
             showHeader={showHeader}
             pills={reactionsByMessage[m.id] ?? []}
             repliedTo={repliedTo}
-            repliedToName={repliedTo ? names[repliedTo.author_id] : undefined}
+            repliedToName={repliedTo ? profiles[repliedTo.author_id]?.display_name : undefined}
             onReply={onReply}
           />
         );

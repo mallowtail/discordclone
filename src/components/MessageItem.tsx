@@ -10,6 +10,7 @@ import { mentionsMe } from "@/lib/mentions";
 import { MessageContent } from "@/components/MessageContent";
 import { MessageActions } from "@/components/MessageActions";
 import { ReactionBar } from "@/components/ReactionBar";
+import { Avatar } from "@/components/Avatar";
 import type { ReactionPill } from "@/lib/reactions";
 
 function snippet(m: Message): string {
@@ -21,6 +22,7 @@ function snippet(m: Message): string {
 export function MessageItem({
   msg,
   authorName,
+  authorAvatar,
   showHeader,
   pills,
   repliedTo,
@@ -29,6 +31,7 @@ export function MessageItem({
 }: {
   msg: Message;
   authorName: string;
+  authorAvatar: string | null;
   showHeader: boolean;
   pills: ReactionPill[];
   repliedTo: Message | null;
@@ -42,9 +45,6 @@ export function MessageItem({
   const [draft, setDraft] = useState(msg.content);
   const [error, setError] = useState<string | null>(null);
 
-  // Self-pings are allowed: highlight whenever the message mentions me, even on
-  // my own messages (typing @myself, or replying to my own message with @ ON).
-  // Replying to someone else stays unhighlighted — mentionsMe handles that.
   const highlighted = mentionsMe({
     content: msg.content,
     myUsername: profile?.username ?? null,
@@ -90,67 +90,73 @@ export function MessageItem({
         highlighted ? "bg-amber/10 border-l-2 border-amber" : ""
       }`}
     >
-      {msg.reply_to_id && (
-        <div
-          onClick={jumpToOriginal}
-          className="flex items-center gap-1 text-[11px] text-muted mb-0.5 cursor-pointer"
-        >
-          <span className="text-muted">↰</span>
-          {repliedTo ? (
-            <>
-              {msg.mention_author ? (
-                <span className="bg-mention text-mention-ink rounded px-1 font-medium">@{repliedToName ?? "user"}</span>
-              ) : (
-                <span className="text-ink font-semibold">{repliedToName ?? "user"}</span>
-              )}
-              <span className="truncate">{snippet(repliedTo)}</span>
-            </>
-          ) : (
-            <span className="italic">Original message</span>
-          )}
-        </div>
-      )}
-
-      {showHeader && (
-        <div>
-          <span className="font-semibold text-ink">{authorName}</span>
-          <span className="text-xs text-muted ml-2">{formatTime(msg.created_at)}</span>
-          {msg.pinned && <span className="text-xs text-muted ml-2" title="Pinned">📌</span>}
-        </div>
-      )}
-      {/* keep the pin indicator visible even on grouped (header-less) messages */}
       {!showHeader && msg.pinned && (
         <span className="absolute left-1 top-0.5 text-[10px] text-muted" title="Pinned">📌</span>
       )}
-
-      {editing ? (
-        <div>
-          <textarea
-            autoFocus
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                saveEdit();
-              }
-              if (e.key === "Escape") {
-                setEditing(false);
-                setDraft(msg.content);
-                setError(null);
-              }
-            }}
-            className="w-full p-2 rounded-lg bg-surface text-ink outline-none"
-          />
-          {error && <p className="text-danger text-sm">{error}</p>}
-          <p className="text-xs text-muted">Enter to save · Esc to cancel</p>
+      <div className="flex gap-3">
+        <div className="w-10 flex-none">
+          {showHeader && <Avatar url={authorAvatar} name={authorName} size="md" />}
         </div>
-      ) : (
-        <MessageContent msg={msg} />
-      )}
-      {error && !editing && <p className="text-danger text-sm">{error}</p>}
+        <div className="flex-1 min-w-0">
+          {msg.reply_to_id && (
+            <div
+              onClick={jumpToOriginal}
+              className="flex items-center gap-1 text-[11px] text-muted mb-0.5 cursor-pointer"
+            >
+              <span className="text-muted">↰</span>
+              {repliedTo ? (
+                <>
+                  {msg.mention_author ? (
+                    <span className="bg-mention text-mention-ink rounded px-1 font-medium">@{repliedToName ?? "user"}</span>
+                  ) : (
+                    <span className="text-ink font-semibold">{repliedToName ?? "user"}</span>
+                  )}
+                  <span className="truncate">{snippet(repliedTo)}</span>
+                </>
+              ) : (
+                <span className="italic">Original message</span>
+              )}
+            </div>
+          )}
 
-      {!editing && <ReactionBar message={msg} pills={pills} />}
+          {showHeader && (
+            <div>
+              <span className="font-semibold text-ink">{authorName}</span>
+              <span className="text-xs text-muted ml-2">{formatTime(msg.created_at)}</span>
+              {msg.pinned && <span className="text-xs text-muted ml-2" title="Pinned">📌</span>}
+            </div>
+          )}
+
+          {editing ? (
+            <div>
+              <textarea
+                autoFocus
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    saveEdit();
+                  }
+                  if (e.key === "Escape") {
+                    setEditing(false);
+                    setDraft(msg.content);
+                    setError(null);
+                  }
+                }}
+                className="w-full p-2 rounded-lg bg-surface text-ink outline-none"
+              />
+              {error && <p className="text-danger text-sm">{error}</p>}
+              <p className="text-xs text-muted">Enter to save · Esc to cancel</p>
+            </div>
+          ) : (
+            <MessageContent msg={msg} />
+          )}
+          {error && !editing && <p className="text-danger text-sm">{error}</p>}
+
+          {!editing && <ReactionBar message={msg} pills={pills} />}
+        </div>
+      </div>
       {!editing && (
         <MessageActions
           onReply={() => onReply?.(msg, authorName)}

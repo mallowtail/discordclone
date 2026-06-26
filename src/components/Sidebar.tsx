@@ -47,13 +47,13 @@ export function Sidebar() {
   }
 
   return (
-    <aside className="w-60 bg-[#2b2d31] flex flex-col">
-      <div className="p-3 font-bold text-white border-b border-black/30">🏫 Our Server</div>
-      <nav className="flex-1 overflow-y-auto p-2 text-[#949ba4]">
+    <aside className="w-60 bg-sidebar flex flex-col">
+      <div className="p-3 font-bold text-ink border-b border-line">🏫 Our Server</div>
+      <nav className="flex-1 overflow-y-auto p-2 text-muted">
         <div className="text-xs uppercase mt-2 mb-1">Text Channels</div>
         {channels.map((c) => (
           <Link key={c.id} href={`/channels/${c.name}`}
-            className="block px-2 py-1 rounded hover:bg-[#404249] hover:text-white">
+            className="block px-2 py-1 rounded hover:bg-surface hover:text-ink">
             # {c.name}
           </Link>
         ))}
@@ -62,14 +62,14 @@ export function Sidebar() {
         </div>
         {dms.map((d) => (
           <Link key={d.id} href={`/dms/${d.id}`}
-            className="block px-2 py-1 rounded hover:bg-[#404249] hover:text-white">
+            className="block px-2 py-1 rounded hover:bg-surface hover:text-ink">
             ● {d.other?.display_name ?? "Unknown"}
           </Link>
         ))}
       </nav>
-      <div className="p-2 bg-[#232428] flex items-center justify-between text-sm">
-        <span className="text-white truncate">🟢 {user?.email}</span>
-        <button onClick={onSignOut} className="text-[#949ba4] hover:text-white">Log out</button>
+      <div className="p-2 bg-surface-2 rounded-xl flex items-center justify-between text-sm">
+        <span className="text-ink truncate">🟢 {user?.email}</span>
+        <button onClick={onSignOut} className="text-muted hover:text-ink">Log out</button>
       </div>
     </aside>
   );

@@ -28,3 +28,17 @@ export async function uploadImage(file: File): Promise<{ url: string } | { error
   const { data } = supabase.storage.from("attachments").getPublicUrl(path);
   return { url: data.publicUrl };
 }
+
+export async function uploadAvatar(file: File): Promise<{ url: string } | { error: string }> {
+  const check = validateImage(file);
+  if (!check.ok) return { error: check.error };
+  const supabase = createClient();
+  const ext = file.name.split(".").pop()?.toLowerCase() || "png";
+  const path = `${crypto.randomUUID()}.${ext}`;
+  const { error } = await supabase.storage
+    .from("avatars")
+    .upload(path, file, { contentType: file.type });
+  if (error) return { error: `Upload failed: ${error.message}` };
+  const { data } = supabase.storage.from("avatars").getPublicUrl(path);
+  return { url: data.publicUrl };
+}

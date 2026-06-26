@@ -41,20 +41,20 @@ export default function RegisterPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
-      <form onSubmit={onSubmit} className="w-full max-w-sm bg-[#2b2d31] p-6 rounded-lg space-y-3">
+      <form onSubmit={onSubmit} className="w-full max-w-sm bg-surface border border-line p-6 rounded-xl space-y-3">
         <h1 className="text-xl font-bold text-white">Create account</h1>
-        {error && <p className="text-red-400 text-sm">{error}</p>}
-        <input className="w-full p-2 rounded bg-[#1e1f22]" placeholder="Username"
+        {error && <p className="text-danger text-sm">{error}</p>}
+        <input className="w-full p-2 rounded-lg bg-surface-2" placeholder="Username"
           value={username} onChange={(e) => setUsername(e.target.value)} />
-        <input className="w-full p-2 rounded bg-[#1e1f22]" type="email" placeholder="Email"
+        <input className="w-full p-2 rounded-lg bg-surface-2" type="email" placeholder="Email"
           value={email} onChange={(e) => setEmail(e.target.value)} />
-        <input className="w-full p-2 rounded bg-[#1e1f22]" type="password" placeholder="Password"
+        <input className="w-full p-2 rounded-lg bg-surface-2" type="password" placeholder="Password"
           value={password} onChange={(e) => setPassword(e.target.value)} />
-        <button disabled={busy} className="w-full p-2 rounded bg-[#5865f2] text-white font-medium disabled:opacity-50">
+        <button disabled={busy} className="w-full p-2 rounded-lg bg-accent hover:bg-accent-strong text-white font-medium disabled:opacity-50">
           {busy ? "Creating…" : "Register"}
         </button>
-        <p className="text-sm text-[#949ba4]">
-          Have an account? <Link href="/login" className="text-[#5865f2]">Log in</Link>
+        <p className="text-sm text-muted">
+          Have an account? <Link href="/login" className="text-accent">Log in</Link>
         </p>
       </form>
     </div>

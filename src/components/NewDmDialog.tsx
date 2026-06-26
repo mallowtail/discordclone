@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/components/providers/AuthProvider";
 import type { Profile } from "@/types/db";
+import { Avatar } from "@/components/Avatar";
 
 export function NewDmDialog() {
   const supabase = createClient();
@@ -72,8 +73,9 @@ export function NewDmDialog() {
               {results.map((p) => (
                 <li key={p.id}>
                   <button onClick={() => startDm(p)}
-                    className="w-full text-left px-2 py-1 rounded hover:bg-surface text-ink">
-                    {p.display_name} <span className="text-muted">@{p.username}</span>
+                    className="w-full text-left px-2 py-1 rounded hover:bg-surface text-ink flex items-center gap-2">
+                    <Avatar url={p.avatar_url ?? null} name={p.display_name} size="sm" />
+                    <span className="truncate">{p.display_name} <span className="text-muted">@{p.username}</span></span>
                   </button>
                 </li>
               ))}

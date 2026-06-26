@@ -7,13 +7,16 @@ import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/components/providers/AuthProvider";
 import type { Channel, Profile } from "@/types/db";
 import { NewDmDialog } from "@/components/NewDmDialog";
+import { Avatar } from "@/components/Avatar";
+import { ProfileDialog } from "@/components/ProfileDialog";
 
 export function Sidebar() {
   const supabase = createClient();
   const router = useRouter();
-  const { user, signOut } = useAuth();
+  const { user, profile, signOut } = useAuth();
   const [channels, setChannels] = useState<Channel[]>([]);
   const [dms, setDms] = useState<{ id: string; other: Profile }[]>([]);
+  const [showProfile, setShowProfile] = useState(false);
 
   useEffect(() => {
     supabase.from("channels").select("*").order("position")
@@ -62,15 +65,24 @@ export function Sidebar() {
         </div>
         {dms.map((d) => (
           <Link key={d.id} href={`/dms/${d.id}`}
-            className="block px-2 py-1 rounded hover:bg-surface hover:text-ink">
-            ● {d.other?.display_name ?? "Unknown"}
+            className="flex items-center gap-2 px-2 py-1 rounded hover:bg-surface hover:text-ink">
+            <Avatar url={d.other?.avatar_url ?? null} name={d.other?.display_name} size="sm" />
+            {d.other?.display_name ?? "Unknown"}
           </Link>
         ))}
       </nav>
-      <div className="p-2 bg-surface-2 rounded-xl flex items-center justify-between text-sm">
-        <span className="text-ink truncate">🟢 {user?.email}</span>
-        <button onClick={onSignOut} className="text-muted hover:text-ink">Log out</button>
+      <div className="p-2 bg-surface-2 rounded-xl flex items-center justify-between text-sm gap-2">
+        <button
+          onClick={() => setShowProfile(true)}
+          className="flex items-center gap-2 min-w-0 hover:opacity-80"
+          title="Edit profile"
+        >
+          <Avatar url={profile?.avatar_url ?? null} name={profile?.display_name} size="sm" />
+          <span className="text-ink truncate">{profile?.display_name ?? user?.email}</span>
+        </button>
+        <button onClick={onSignOut} className="text-muted hover:text-ink flex-none">Log out</button>
       </div>
+      {showProfile && <ProfileDialog onClose={() => setShowProfile(false)} />}
     </aside>
   );
 }

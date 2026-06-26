@@ -35,7 +35,7 @@ export function ReactionBar({ message, pills }: { message: Message; pills: React
           key={p.emoji}
           onClick={() => toggle(p.emoji, p.mine)}
           className={`text-xs rounded px-1.5 py-0.5 border ${
-            p.mine ? "border-[#5865f2] bg-[#5865f2]/20" : "border-transparent bg-black/20"
+            p.mine ? "border-accent bg-accent/15" : "border-line bg-surface"
           }`}
         >
           {p.emoji} {p.count}

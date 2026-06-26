@@ -87,21 +87,21 @@ export function MessageItem({
     <div
       id={`msg-${msg.id}`}
       className={`group relative px-4 hover:bg-black/10 ${showHeader ? "mt-3 pt-0.5" : ""} ${
-        highlighted ? "bg-[#faa61a]/10 border-l-2 border-[#faa61a]" : ""
+        highlighted ? "bg-amber/10 border-l-2 border-amber" : ""
       }`}
     >
       {msg.reply_to_id && (
         <div
           onClick={jumpToOriginal}
-          className="flex items-center gap-1 text-[11px] text-[#949ba4] mb-0.5 cursor-pointer"
+          className="flex items-center gap-1 text-[11px] text-muted mb-0.5 cursor-pointer"
         >
-          <span className="text-[#6d6f78]">↰</span>
+          <span className="text-muted">↰</span>
           {repliedTo ? (
             <>
               {msg.mention_author ? (
-                <span className="bg-[#3c4270] text-[#c9cdfb] rounded px-1 font-medium">@{repliedToName ?? "user"}</span>
+                <span className="bg-mention text-mention-ink rounded px-1 font-medium">@{repliedToName ?? "user"}</span>
               ) : (
-                <span className="text-[#c9ccd1] font-semibold">{repliedToName ?? "user"}</span>
+                <span className="text-ink font-semibold">{repliedToName ?? "user"}</span>
               )}
               <span className="truncate">{snippet(repliedTo)}</span>
             </>
@@ -113,14 +113,14 @@ export function MessageItem({
 
       {showHeader && (
         <div>
-          <span className="font-semibold text-white">{authorName}</span>
-          <span className="text-xs text-[#949ba4] ml-2">{formatTime(msg.created_at)}</span>
-          {msg.pinned && <span className="text-xs text-[#949ba4] ml-2" title="Pinned">📌</span>}
+          <span className="font-semibold text-ink">{authorName}</span>
+          <span className="text-xs text-muted ml-2">{formatTime(msg.created_at)}</span>
+          {msg.pinned && <span className="text-xs text-muted ml-2" title="Pinned">📌</span>}
         </div>
       )}
       {/* keep the pin indicator visible even on grouped (header-less) messages */}
       {!showHeader && msg.pinned && (
-        <span className="absolute left-1 top-0.5 text-[10px] text-[#949ba4]" title="Pinned">📌</span>
+        <span className="absolute left-1 top-0.5 text-[10px] text-muted" title="Pinned">📌</span>
       )}
 
       {editing ? (
@@ -140,15 +140,15 @@ export function MessageItem({
                 setError(null);
               }
             }}
-            className="w-full p-2 rounded bg-[#383a40] text-[#dbdee1] outline-none"
+            className="w-full p-2 rounded-lg bg-surface text-ink outline-none"
           />
-          {error && <p className="text-red-400 text-sm">{error}</p>}
-          <p className="text-xs text-[#949ba4]">Enter to save · Esc to cancel</p>
+          {error && <p className="text-danger text-sm">{error}</p>}
+          <p className="text-xs text-muted">Enter to save · Esc to cancel</p>
         </div>
       ) : (
         <MessageContent msg={msg} />
       )}
-      {error && !editing && <p className="text-red-400 text-sm">{error}</p>}
+      {error && !editing && <p className="text-danger text-sm">{error}</p>}
 
       {!editing && <ReactionBar message={msg} pills={pills} />}
       {!editing && (

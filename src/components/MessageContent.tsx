@@ -20,7 +20,7 @@ function isHttpUrl(u: string): boolean {
 export function MessageContent({ msg }: { msg: Message }) {
   const safeImage = msg.image_url && isHttpUrl(msg.image_url) ? msg.image_url : null;
   return (
-    <div className="text-[#dbdee1] break-words">
+    <div className="text-ink break-words">
       {msg.content && (
         <ReactMarkdown
           remarkPlugins={[remarkGfm, remarkBreaks, remarkMentions]}
@@ -31,11 +31,11 @@ export function MessageContent({ msg }: { msg: Message }) {
             a: ({ href, children }) => {
               if (href?.startsWith("mention:")) {
                 return (
-                  <span className="bg-[#3c4270] text-[#c9cdfb] rounded px-1 font-medium">{children}</span>
+                  <span className="bg-mention text-mention-ink rounded px-1 font-medium">{children}</span>
                 );
               }
               return (
-                <a href={href} target="_blank" rel="noopener noreferrer" className="text-[#5865f2] underline">
+                <a href={href} target="_blank" rel="noopener noreferrer" className="text-accent underline">
                   {children}
                 </a>
               );
@@ -54,7 +54,7 @@ export function MessageContent({ msg }: { msg: Message }) {
           <img src={safeImage} alt="attachment" className="mt-1 max-h-80 max-w-sm rounded" />
         </a>
       )}
-      {msg.updated_at && <span className="text-xs text-[#949ba4] ml-1">(edited)</span>}
+      {msg.updated_at && <span className="text-xs text-muted ml-1">(edited)</span>}
     </div>
   );
 }

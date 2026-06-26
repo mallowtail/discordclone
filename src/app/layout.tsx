@@ -7,7 +7,7 @@ export const metadata: Metadata = { title: "Chat", description: "Group chat" };
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className="bg-[#313338] text-[#dbdee1] antialiased">
+      <body className="bg-app text-ink antialiased">
         <AuthProvider>{children}</AuthProvider>
       </body>
     </html>

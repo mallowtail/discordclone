@@ -6,11 +6,35 @@ export type Profile = {
   created_at: string;
 };
 
+export type Server = {
+  id: string;
+  name: string;
+  icon_url: string | null;
+  owner_id: string | null;
+  created_at: string;
+};
+
+export type ServerMember = {
+  server_id: string;
+  user_id: string;
+  joined_at: string;
+};
+
+export type Category = {
+  id: string;
+  server_id: string;
+  name: string;
+  position: number;
+  created_at: string;
+};
+
 export type Channel = {
   id: string;
   name: string;
   position: number;
   created_at: string;
+  server_id: string;
+  category_id: string | null;
 };
 
 export type Message = {

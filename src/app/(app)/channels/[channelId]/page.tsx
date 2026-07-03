@@ -7,6 +7,7 @@ import { useMessages } from "@/hooks/useMessages";
 import { MessageList } from "@/components/MessageList";
 import { MessageInput } from "@/components/MessageInput";
 import { PinnedPanel } from "@/components/PinnedPanel";
+import { MembersPanel } from "@/components/MembersPanel";
 
 export default function ChannelPage({ params }: { params: Promise<{ channelId: string }> }) {
   const { channelId: id } = use(params);
@@ -32,26 +33,40 @@ function ChannelView({ channel }: { channel: Channel }) {
   const [replyTo, setReplyTo] = useState<Message | null>(null);
   const [replyToName, setReplyToName] = useState("");
   const [showPins, setShowPins] = useState(false);
+  const [showMembers, setShowMembers] = useState(false);
   const pinned = messages.filter((m) => m.pinned);
   return (
     <>
       <header className="p-3 border-b border-line font-semibold text-ink flex items-center justify-between relative">
         <span># {channel.name}</span>
-        <button onClick={() => setShowPins((s) => !s)} className="text-xs font-normal text-muted hover:text-ink">
-          📌 Pinned ({pinned.length})
-        </button>
+        <span className="flex items-center">
+          <button onClick={() => setShowPins((s) => !s)} className="text-xs font-normal text-muted hover:text-ink">
+            📌 Pinned ({pinned.length})
+          </button>
+          <button
+            onClick={() => setShowMembers((s) => !s)}
+            className="text-xs font-normal text-muted hover:text-ink ml-3"
+          >
+            👥 Members
+          </button>
+        </span>
         {showPins && <PinnedPanel pinned={pinned} onClose={() => setShowPins(false)} />}
       </header>
-      <MessageList messages={messages} onReply={(m, name) => { setReplyTo(m); setReplyToName(name); }} />
-      <MessageInput
-        target={{ channel_id: channel.id }}
-        placeholder={`Message #${channel.name}`}
-        replyTo={replyTo}
-        replyToName={replyToName}
-        onClearReply={() => setReplyTo(null)}
-        addPending={addPending}
-        removePending={removePending}
-      />
+      <div className="flex flex-1 min-h-0">
+        <div className="flex-1 flex flex-col min-w-0">
+          <MessageList messages={messages} onReply={(m, name) => { setReplyTo(m); setReplyToName(name); }} />
+          <MessageInput
+            target={{ channel_id: channel.id }}
+            placeholder={`Message #${channel.name}`}
+            replyTo={replyTo}
+            replyToName={replyToName}
+            onClearReply={() => setReplyTo(null)}
+            addPending={addPending}
+            removePending={removePending}
+          />
+        </div>
+        {showMembers && <MembersPanel serverId={channel.server_id} onClose={() => setShowMembers(false)} />}
+      </div>
     </>
   );
 }

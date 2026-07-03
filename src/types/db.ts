@@ -18,6 +18,7 @@ export type ServerMember = {
   server_id: string;
   user_id: string;
   joined_at: string;
+  role: "admin" | "member";
 };
 
 export type Category = {
@@ -50,6 +51,7 @@ export type Message = {
   mention_author: boolean;
   pinned: boolean;
   pinned_at: string | null;
+  pending?: boolean;
 };
 
 export type Reaction = {

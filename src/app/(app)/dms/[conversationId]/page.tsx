@@ -17,7 +17,7 @@ export default function DmPage({ params }: { params: Promise<{ conversationId: s
   const [replyTo, setReplyTo] = useState<Message | null>(null);
   const [replyToName, setReplyToName] = useState("");
   const [showPins, setShowPins] = useState(false);
-  const messages = useMessages({ conversationId });
+  const { messages, addPending, removePending } = useMessages({ conversationId });
   const pinned = messages.filter((m) => m.pinned);
 
   useEffect(() => {
@@ -57,6 +57,8 @@ export default function DmPage({ params }: { params: Promise<{ conversationId: s
         replyTo={replyTo}
         replyToName={replyToName}
         onClearReply={() => setReplyTo(null)}
+        addPending={addPending}
+        removePending={removePending}
       />
     </>
   );

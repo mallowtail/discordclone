@@ -23,12 +23,16 @@ export function MessageInput({
   replyTo,
   replyToName,
   onClearReply,
+  addPending,
+  removePending,
 }: {
   target: Target;
   placeholder: string;
   replyTo?: Message | null;
   replyToName?: string;
   onClearReply?: () => void;
+  addPending: (m: Message) => void;
+  removePending: (id: string) => void;
 }) {
   const supabase = createClient();
   const { user } = useAuth();
@@ -58,10 +62,28 @@ export function MessageInput({
     setError(null);
     const draft = v.value;
     setText("");
+    const id = crypto.randomUUID();
+    const optimistic: Message = {
+      id,
+      author_id: user!.id,
+      channel_id: "channel_id" in target ? target.channel_id : null,
+      conversation_id: "conversation_id" in target ? target.conversation_id : null,
+      content: draft,
+      image_url: null,
+      created_at: new Date().toISOString(),
+      updated_at: null,
+      reply_to_id: replyTo?.id ?? null,
+      mention_author: replyTo ? pingAuthor : false,
+      pinned: false,
+      pinned_at: null,
+      pending: true,
+    };
+    addPending(optimistic);
     const { error: err } = await supabase
       .from("messages")
-      .insert({ author_id: user!.id, content: draft, ...replyFields(), ...target });
+      .insert({ id, author_id: user!.id, content: draft, ...replyFields(), ...target });
     if (err) {
+      removePending(id);
       setText(draft);
       setError("Failed to send — try again");
       return;
@@ -88,10 +110,28 @@ export function MessageInput({
     }
     const content = text.trim();
     setText("");
+    const id = crypto.randomUUID();
+    const optimistic: Message = {
+      id,
+      author_id: user!.id,
+      channel_id: "channel_id" in target ? target.channel_id : null,
+      conversation_id: "conversation_id" in target ? target.conversation_id : null,
+      content,
+      image_url: result.url,
+      created_at: new Date().toISOString(),
+      updated_at: null,
+      reply_to_id: replyTo?.id ?? null,
+      mention_author: replyTo ? pingAuthor : false,
+      pinned: false,
+      pinned_at: null,
+      pending: true,
+    };
+    addPending(optimistic);
     const { error: err } = await supabase
       .from("messages")
-      .insert({ author_id: user!.id, content, image_url: result.url, ...replyFields(), ...target });
+      .insert({ id, author_id: user!.id, content, image_url: result.url, ...replyFields(), ...target });
     if (err) {
+      removePending(id);
       setError("Failed to send image — try again");
       return;
     }

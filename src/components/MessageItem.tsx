@@ -88,7 +88,7 @@ export function MessageItem({
       id={`msg-${msg.id}`}
       className={`group relative px-4 hover:bg-black/10 ${showHeader ? "mt-3 pt-0.5" : ""} ${
         highlighted ? "bg-amber/10 border-l-2 border-amber" : ""
-      }`}
+      } ${msg.pending ? "opacity-50" : ""}`}
     >
       {!showHeader && msg.pinned && (
         <span className="absolute left-1 top-0.5 text-[10px] text-muted" title="Pinned">📌</span>

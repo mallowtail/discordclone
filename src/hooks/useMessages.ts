@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { Message } from "@/types/db";
 
@@ -12,6 +12,13 @@ export function useMessages(target: Target) {
   const column = "channelId" in target ? "channel_id" : "conversation_id";
   const value = "channelId" in target ? target.channelId : target.conversationId;
 
+  const addPending = useCallback((m: Message) => {
+    setMessages((prev) => (prev.some((x) => x.id === m.id) ? prev : [...prev, m]));
+  }, []);
+  const removePending = useCallback((id: string) => {
+    setMessages((prev) => prev.filter((m) => m.id !== id));
+  }, []);
+
   useEffect(() => {
     let active = true;
 
@@ -22,8 +29,6 @@ export function useMessages(target: Target) {
         .eq(column, value)
         .order("created_at", { ascending: true })
         .limit(200);
-      // replace state from source of truth — covers both first load and reconnect,
-      // and naturally de-dupes anything the INSERT handler already appended
       if (active) setMessages(data ?? []);
     }
     load();
@@ -34,11 +39,13 @@ export function useMessages(target: Target) {
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "messages", filter: `${column}=eq.${value}` },
         (payload) =>
-          setMessages((prev) =>
-            prev.some((m) => m.id === (payload.new as Message).id)
-              ? prev
-              : [...prev, payload.new as Message]
-          )
+          setMessages((prev) => {
+            const row = payload.new as Message;
+            // replace an existing id (clears an optimistic `pending` row) or append
+            return prev.some((m) => m.id === row.id)
+              ? prev.map((m) => (m.id === row.id ? row : m))
+              : [...prev, row];
+          })
       )
       .on(
         "postgres_changes",
@@ -49,8 +56,6 @@ export function useMessages(target: Target) {
           )
       )
       .on(
-        // DELETE payloads carry only the primary key (id); they can't be column-filtered,
-        // so filter client-side by whether the id is in the current list.
         "postgres_changes",
         { event: "DELETE", schema: "public", table: "messages" },
         (payload) =>
@@ -66,5 +71,5 @@ export function useMessages(target: Target) {
     };
   }, [supabase, column, value]);
 
-  return messages;
+  return { messages, addPending, removePending };
 }

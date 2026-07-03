@@ -28,7 +28,7 @@ export default function ChannelPage({ params }: { params: Promise<{ channelId: s
 }
 
 function ChannelView({ channel }: { channel: Channel }) {
-  const messages = useMessages({ channelId: channel.id });
+  const { messages, addPending, removePending } = useMessages({ channelId: channel.id });
   const [replyTo, setReplyTo] = useState<Message | null>(null);
   const [replyToName, setReplyToName] = useState("");
   const [showPins, setShowPins] = useState(false);
@@ -49,6 +49,8 @@ function ChannelView({ channel }: { channel: Channel }) {
         replyTo={replyTo}
         replyToName={replyToName}
         onClearReply={() => setReplyTo(null)}
+        addPending={addPending}
+        removePending={removePending}
       />
     </>
   );

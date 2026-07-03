@@ -9,7 +9,7 @@ export default function Home() {
   const router = useRouter();
   useEffect(() => {
     if (loading) return;
-    router.replace(user ? "/channels/general" : "/login");
+    router.replace(user ? "/channels/first" : "/login");
   }, [user, loading, router]);
   return null;
 }

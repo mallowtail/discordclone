@@ -20,7 +20,7 @@ export default function LoginPage() {
     const { error: err } = await supabase.auth.signInWithPassword({ email, password });
     setBusy(false);
     if (err) return setError("Wrong email or password");
-    router.push("/channels/general");
+    router.push("/channels/first");
   }
 
   return (

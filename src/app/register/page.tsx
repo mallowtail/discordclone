@@ -36,7 +36,7 @@ export default function RegisterPage() {
       setBusy(false);
       return setError(profErr.message.includes("duplicate") ? "Username taken" : profErr.message);
     }
-    router.push("/channels/general");
+    router.push("/channels/first");
   }
 
   return (

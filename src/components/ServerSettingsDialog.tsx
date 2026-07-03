@@ -10,10 +10,12 @@ import type { Server } from "@/types/db";
 
 export function ServerSettingsDialog({
   server,
+  isManager,
   onSaved,
   onClose,
 }: {
   server: Server;
+  isManager: boolean;
   onSaved: () => void;
   onClose: () => void;
 }) {
@@ -66,21 +68,25 @@ export function ServerSettingsDialog({
       <div className="bg-surface p-5 rounded-xl w-80 border border-line" onClick={(e) => e.stopPropagation()}>
         <h2 className="text-ink font-semibold mb-3">Server settings</h2>
         {error && <p className="text-danger text-sm mb-2">{error}</p>}
-        <div className="flex items-center gap-3 mb-3">
-          <ServerIcon iconUrl={server.icon_url} name={server.name} size="lg" />
-          <button onClick={() => fileRef.current?.click()} disabled={busy}
-            className="text-sm bg-accent hover:bg-accent-strong text-white rounded-lg px-3 py-1.5 disabled:opacity-50">
-            Upload icon
-          </button>
-          <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onPickIcon} />
-        </div>
-        <label className="text-muted text-xs">Name</label>
-        <input value={name} onChange={(e) => setName(e.target.value)}
-          className="w-full p-2 rounded-lg bg-surface-2 text-ink mt-1 mb-3" />
-        <button onClick={saveName} disabled={busy}
-          className="w-full bg-accent hover:bg-accent-strong text-white font-medium rounded-lg p-2 disabled:opacity-50">
-          {busy ? "Saving…" : "Save"}
-        </button>
+        {isManager && (
+          <>
+            <div className="flex items-center gap-3 mb-3">
+              <ServerIcon iconUrl={server.icon_url} name={server.name} size="lg" />
+              <button onClick={() => fileRef.current?.click()} disabled={busy}
+                className="text-sm bg-accent hover:bg-accent-strong text-white rounded-lg px-3 py-1.5 disabled:opacity-50">
+                Upload icon
+              </button>
+              <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onPickIcon} />
+            </div>
+            <label className="text-muted text-xs">Name</label>
+            <input value={name} onChange={(e) => setName(e.target.value)}
+              className="w-full p-2 rounded-lg bg-surface-2 text-ink mt-1 mb-3" />
+            <button onClick={saveName} disabled={busy}
+              className="w-full bg-accent hover:bg-accent-strong text-white font-medium rounded-lg p-2 disabled:opacity-50">
+              {busy ? "Saving…" : "Save"}
+            </button>
+          </>
+        )}
         <button onClick={leave} disabled={busy}
           className="w-full text-danger text-sm mt-3 hover:underline disabled:opacity-50">
           Leave server

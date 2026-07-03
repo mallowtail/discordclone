@@ -36,11 +36,6 @@ export default function RegisterPage() {
       setBusy(false);
       return setError(profErr.message.includes("duplicate") ? "Username taken" : profErr.message);
     }
-    // Auto-join the shared default (oldest) server so new users land in a channel,
-    // not a dead end. New accounts aren't members of anything otherwise.
-    const { data: def } = await supabase
-      .from("servers").select("id").order("created_at").limit(1).maybeSingle();
-    if (def) await supabase.from("server_members").insert({ server_id: def.id, user_id: data.user.id });
     router.push("/channels/first");
   }
 

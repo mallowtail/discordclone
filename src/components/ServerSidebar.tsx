@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import type { Server, Category, Channel } from "@/types/db";
 import { CreateChannelDialog } from "@/components/CreateChannelDialog";
 import { ServerSettingsDialog } from "@/components/ServerSettingsDialog";
+import { useServerRole } from "@/hooks/useServerRole";
 
 export function ServerSidebar({ serverId }: { serverId: string }) {
   const supabase = createClient();
@@ -15,6 +16,7 @@ export function ServerSidebar({ serverId }: { serverId: string }) {
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [creating, setCreating] = useState(false);
   const [settings, setSettings] = useState(false);
+  const { isManager } = useServerRole(serverId);
 
   const load = useCallback(async () => {
     const [{ data: s }, { data: cats }, { data: chs }] = await Promise.all([
@@ -80,14 +82,16 @@ export function ServerSidebar({ serverId }: { serverId: string }) {
               ))}
           </div>
         ))}
-        <div className="flex gap-2 mt-3 text-xs">
-          <button onClick={() => setCreating(true)} className="hover:text-ink">+ Channel</button>
-          <button onClick={addCategory} className="hover:text-ink">+ Category</button>
-        </div>
+        {isManager && (
+          <div className="flex gap-2 mt-3 text-xs">
+            <button onClick={() => setCreating(true)} className="hover:text-ink">+ Channel</button>
+            <button onClick={addCategory} className="hover:text-ink">+ Category</button>
+          </div>
+        )}
       </nav>
       {creating && <CreateChannelDialog serverId={serverId} categories={categories} onClose={() => setCreating(false)} />}
       {settings && server && (
-        <ServerSettingsDialog server={server} onSaved={load} onClose={() => setSettings(false)} />
+        <ServerSettingsDialog server={server} isManager={isManager} onSaved={load} onClose={() => setSettings(false)} />
       )}
     </aside>
   );

@@ -42,3 +42,17 @@ export async function uploadAvatar(file: File): Promise<{ url: string } | { erro
   const { data } = supabase.storage.from("avatars").getPublicUrl(path);
   return { url: data.publicUrl };
 }
+
+export async function uploadServerIcon(file: File): Promise<{ url: string } | { error: string }> {
+  const check = validateImage(file);
+  if (!check.ok) return { error: check.error };
+  const supabase = createClient();
+  const ext = file.name.split(".").pop()?.toLowerCase() || "png";
+  const path = `${crypto.randomUUID()}.${ext}`;
+  const { error } = await supabase.storage
+    .from("server-icons")
+    .upload(path, file, { contentType: file.type });
+  if (error) return { error: `Upload failed: ${error.message}` };
+  const { data } = supabase.storage.from("server-icons").getPublicUrl(path);
+  return { url: data.publicUrl };
+}

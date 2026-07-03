@@ -67,6 +67,20 @@ create policy "servers readable by authenticated" on public.servers for select t
 create policy "create own server" on public.servers for insert to authenticated with check (owner_id = auth.uid());
 create policy "members update server" on public.servers for update to authenticated using (public.is_server_member(id));
 
+-- members may edit a server's name/icon, but NOT reassign ownership (prevents takeover)
+create or replace function public.protect_server_owner()
+returns trigger language plpgsql as $$
+begin
+  if new.owner_id is distinct from old.owner_id then
+    raise exception 'owner_id cannot be changed';
+  end if;
+  return new;
+end $$;
+drop trigger if exists servers_protect_owner on public.servers;
+create trigger servers_protect_owner
+  before update on public.servers
+  for each row execute function public.protect_server_owner();
+
 create policy "read server membership" on public.server_members for select to authenticated using (public.is_server_member(server_id));
 create policy "self join server" on public.server_members for insert to authenticated with check (user_id = auth.uid());
 create policy "self leave server" on public.server_members for delete to authenticated using (user_id = auth.uid());

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
+import { createPortal } from "react-dom";
 import { useServers } from "@/hooks/useServers";
 import { ServerIcon } from "@/components/servers/ServerIcon";
 import { AddServerDialog } from "@/components/servers/AddServerDialog";
@@ -16,19 +17,41 @@ function RailItem({
   onClick: () => void;
   children: React.ReactNode;
 }) {
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
+
+  function showFlyout() {
+    const r = btnRef.current?.getBoundingClientRect();
+    if (r) setPos({ top: r.top + r.height / 2, left: r.right + 12 });
+  }
+  function hideFlyout() {
+    setPos(null);
+  }
+
   return (
-    <div className="group relative flex items-center justify-center w-full">
+    <div
+      className="group relative flex items-center justify-center w-full"
+      onMouseEnter={showFlyout}
+      onMouseLeave={hideFlyout}
+    >
       <span
         className={`absolute left-0 w-1 rounded-r-full bg-ink transition-all duration-200 ${
           active ? "h-10" : "h-0 group-hover:h-2.5"
         }`}
       />
-      <button onClick={onClick} className="transition-transform">
+      <button ref={btnRef} onClick={onClick} aria-label={label}>
         {children}
       </button>
-      <span className="pointer-events-none absolute left-full ml-3 z-50 hidden whitespace-nowrap rounded-lg bg-app px-2 py-1 text-sm text-ink shadow-lg group-hover:block">
-        {label}
-      </span>
+      {pos &&
+        createPortal(
+          <span
+            style={{ position: "fixed", top: pos.top, left: pos.left, transform: "translateY(-50%)" }}
+            className="pointer-events-none z-50 whitespace-nowrap rounded-lg bg-app px-2 py-1 text-sm text-ink shadow-lg"
+          >
+            {label}
+          </span>,
+          document.body
+        )}
     </div>
   );
 }

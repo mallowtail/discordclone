@@ -76,7 +76,7 @@ export function ServerSidebar({ serverId }: { serverId: string }) {
       <nav className="flex-1 overflow-y-auto p-2 text-muted">
         {uncategorized.map((c) => (
           <Link key={c.id} href={`/channels/${c.id}`}
-            className="block px-2 py-1 rounded hover:bg-surface hover:text-ink"># {c.name}</Link>
+            className="block px-2 py-1 rounded-lg hover:bg-surface hover:text-ink"># {c.name}</Link>
         ))}
         {categories.map((cat) => (
           <div key={cat.id}>
@@ -89,7 +89,7 @@ export function ServerSidebar({ serverId }: { serverId: string }) {
             {!collapsed[cat.id] &&
               channelsIn(cat.id).map((c) => (
                 <Link key={c.id} href={`/channels/${c.id}`}
-                  className="block px-2 py-1 ml-2 rounded hover:bg-surface hover:text-ink"># {c.name}</Link>
+                  className="block px-2 py-1 ml-2 rounded-lg hover:bg-surface hover:text-ink"># {c.name}</Link>
               ))}
           </div>
         ))}

@@ -11,6 +11,8 @@ export type Server = {
   name: string;
   icon_url: string | null;
   owner_id: string | null;
+  is_public: boolean;
+  invite_code: string | null;
   created_at: string;
 };
 

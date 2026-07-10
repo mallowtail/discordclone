@@ -1,14 +1,16 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { validateUsername } from "@/lib/validation";
 
-export default function RegisterPage() {
+function RegisterPageContent() {
   const supabase = createClient();
   const router = useRouter();
+  const params = useSearchParams();
+  const next = params.get("next") || "/channels/first";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [username, setUsername] = useState("");
@@ -36,7 +38,7 @@ export default function RegisterPage() {
       setBusy(false);
       return setError(profErr.message.includes("duplicate") ? "Username taken" : profErr.message);
     }
-    router.push("/channels/first");
+    router.push(next);
   }
 
   return (
@@ -54,9 +56,17 @@ export default function RegisterPage() {
           {busy ? "Creating…" : "Register"}
         </button>
         <p className="text-sm text-muted">
-          Have an account? <Link href="/login" className="text-accent">Log in</Link>
+          Have an account? <Link href={`/login?next=${encodeURIComponent(next)}`} className="text-accent">Log in</Link>
         </p>
       </form>
     </div>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Loading…</div>}>
+      <RegisterPageContent />
+    </Suspense>
   );
 }

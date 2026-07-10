@@ -4,12 +4,13 @@ import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { safeNext } from "@/lib/invite";
 
 function LoginPageContent() {
   const supabase = createClient();
   const router = useRouter();
   const params = useSearchParams();
-  const next = params.get("next") || "/channels/first";
+  const next = safeNext(params.get("next"));
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);

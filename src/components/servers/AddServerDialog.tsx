@@ -18,7 +18,7 @@ export function AddServerDialog({ onClose }: { onClose: () => void }) {
   const [directory, setDirectory] = useState<Server[]>([]);
 
   useEffect(() => {
-    supabase.from("servers").select("*").then(({ data }) => setDirectory((data as Server[]) ?? []));
+    supabase.from("servers").select("*").eq("is_public", true).then(({ data }) => setDirectory((data as Server[]) ?? []));
   }, [supabase]);
 
   async function create() {

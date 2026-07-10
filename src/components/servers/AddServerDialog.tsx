@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/components/providers/AuthProvider";
+import { parseInviteCode } from "@/lib/invite";
 import type { Server } from "@/types/db";
 import { ServerIcon } from "@/components/servers/ServerIcon";
 
@@ -16,6 +17,7 @@ export function AddServerDialog({ onClose }: { onClose: () => void }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [directory, setDirectory] = useState<Server[]>([]);
+  const [inviteInput, setInviteInput] = useState("");
 
   useEffect(() => {
     supabase.from("servers").select("*").eq("is_public", true).then(({ data }) => setDirectory((data as Server[]) ?? []));
@@ -43,6 +45,18 @@ export function AddServerDialog({ onClose }: { onClose: () => void }) {
     router.push(`/channels/first?server=${serverId}`);
   }
 
+  async function joinByLink() {
+    const code = parseInviteCode(inviteInput);
+    if (!code) return setError("Enter an invite link or code");
+    setError(null);
+    setBusy(true);
+    const { data, error: err } = await supabase.rpc("join_via_invite", { code });
+    setBusy(false);
+    if (err || !data) return setError("Invalid invite link");
+    onClose();
+    router.push(`/channels/first?server=${data}`);
+  }
+
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50" onClick={onClose}>
       <div className="bg-surface p-5 rounded-xl w-96 border border-line" onClick={(e) => e.stopPropagation()}>
@@ -65,6 +79,18 @@ export function AddServerDialog({ onClose }: { onClose: () => void }) {
           </>
         ) : (
           <>
+          <div className="mb-3">
+            <label className="text-muted text-xs">Have an invite link?</label>
+            <div className="flex gap-2 mt-1">
+              <input value={inviteInput} onChange={(e) => setInviteInput(e.target.value)}
+                placeholder="Paste invite link or code"
+                className="flex-1 p-2 rounded-lg bg-surface-2 text-ink text-sm" />
+              <button onClick={joinByLink} disabled={busy}
+                className="text-sm bg-accent hover:bg-accent-strong text-white rounded-lg px-3 disabled:opacity-50">
+                Join
+              </button>
+            </div>
+          </div>
           <p className="text-muted text-xs mb-2">Public servers</p>
           <ul className="max-h-72 overflow-y-auto flex flex-col gap-1">
             {directory.map((s) => (

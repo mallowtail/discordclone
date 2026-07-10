@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import type { Server, Category, Channel } from "@/types/db";
 import { CreateChannelDialog } from "@/components/servers/CreateChannelDialog";
 import { ServerSettingsDialog } from "@/components/servers/ServerSettingsDialog";
+import { InviteDialog } from "@/components/servers/InviteDialog";
 import { useServerRole } from "@/hooks/useServerRole";
 
 export function ServerSidebar({ serverId }: { serverId: string }) {
@@ -16,6 +17,7 @@ export function ServerSidebar({ serverId }: { serverId: string }) {
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [creating, setCreating] = useState(false);
   const [settings, setSettings] = useState(false);
+  const [inviting, setInviting] = useState(false);
   const { isManager } = useServerRole(serverId);
 
   const load = useCallback(async () => {
@@ -55,13 +57,22 @@ export function ServerSidebar({ serverId }: { serverId: string }) {
 
   return (
     <aside className="w-60 bg-sidebar flex flex-col">
-      <button
-        onClick={() => setSettings(true)}
-        className="p-3 font-bold text-ink border-b border-line flex items-center justify-between hover:bg-surface"
-      >
-        <span className="truncate">{server?.name ?? "…"}</span>
-        <span className="text-muted text-sm">⚙</span>
-      </button>
+      <div className="flex items-center border-b border-line">
+        <button
+          onClick={() => setSettings(true)}
+          className="flex-1 p-3 font-bold text-ink flex items-center justify-between hover:bg-surface min-w-0"
+        >
+          <span className="truncate">{server?.name ?? "…"}</span>
+          <span className="text-muted text-sm">⚙</span>
+        </button>
+        <button
+          onClick={() => setInviting(true)}
+          title="Invite people"
+          className="px-3 py-3 text-muted hover:text-ink hover:bg-surface"
+        >
+          ＋
+        </button>
+      </div>
       <nav className="flex-1 overflow-y-auto p-2 text-muted">
         {uncategorized.map((c) => (
           <Link key={c.id} href={`/channels/${c.id}`}
@@ -92,6 +103,9 @@ export function ServerSidebar({ serverId }: { serverId: string }) {
       {creating && <CreateChannelDialog serverId={serverId} categories={categories} onClose={() => setCreating(false)} />}
       {settings && server && (
         <ServerSettingsDialog server={server} isManager={isManager} onSaved={load} onClose={() => setSettings(false)} />
+      )}
+      {inviting && server && (
+        <InviteDialog server={server} isManager={isManager} onClose={() => setInviting(false)} />
       )}
     </aside>
   );

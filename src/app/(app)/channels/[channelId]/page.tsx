@@ -4,10 +4,10 @@ import { use, useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { Channel, Message } from "@/types/db";
 import { useMessages } from "@/hooks/useMessages";
-import { MessageList } from "@/components/MessageList";
-import { MessageInput } from "@/components/MessageInput";
-import { PinnedPanel } from "@/components/PinnedPanel";
-import { MembersPanel } from "@/components/MembersPanel";
+import { MessageList } from "@/components/messages/MessageList";
+import { MessageInput } from "@/components/messages/MessageInput";
+import { PinnedPanel } from "@/components/messages/PinnedPanel";
+import { MembersPanel } from "@/components/servers/MembersPanel";
 
 export default function ChannelPage({ params }: { params: Promise<{ channelId: string }> }) {
   const { channelId: id } = use(params);

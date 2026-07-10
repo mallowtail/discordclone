@@ -6,9 +6,9 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/components/providers/AuthProvider";
 import type { Profile } from "@/types/db";
-import { NewDmDialog } from "@/components/NewDmDialog";
-import { Avatar } from "@/components/Avatar";
-import { ProfileDialog } from "@/components/ProfileDialog";
+import { NewDmDialog } from "@/components/dms/NewDmDialog";
+import { Avatar } from "@/components/user/Avatar";
+import { ProfileDialog } from "@/components/user/ProfileDialog";
 
 export function DmSidebar() {
   const supabase = createClient();

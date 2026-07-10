@@ -6,7 +6,7 @@ import { useAuth } from "@/components/providers/AuthProvider";
 import { validateMessage } from "@/lib/validation";
 import { uploadImage } from "@/lib/upload";
 import type { Message } from "@/types/db";
-import { MentionAutocomplete } from "@/components/MentionAutocomplete";
+import { MentionAutocomplete } from "@/components/messages/MentionAutocomplete";
 
 type Target = { channel_id: string } | { conversation_id: string };
 

@@ -5,9 +5,9 @@ import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/components/providers/AuthProvider";
 import type { Profile, Message } from "@/types/db";
 import { useMessages } from "@/hooks/useMessages";
-import { MessageList } from "@/components/MessageList";
-import { MessageInput } from "@/components/MessageInput";
-import { PinnedPanel } from "@/components/PinnedPanel";
+import { MessageList } from "@/components/messages/MessageList";
+import { MessageInput } from "@/components/messages/MessageInput";
+import { PinnedPanel } from "@/components/messages/PinnedPanel";
 
 export default function DmPage({ params }: { params: Promise<{ conversationId: string }> }) {
   const { conversationId } = use(params);

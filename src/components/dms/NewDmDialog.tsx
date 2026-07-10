@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/components/providers/AuthProvider";
 import type { Profile } from "@/types/db";
-import { Avatar } from "@/components/Avatar";
+import { Avatar } from "@/components/user/Avatar";
 
 export function NewDmDialog() {
   const supabase = createClient();

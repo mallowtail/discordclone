@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/components/providers/AuthProvider";
 import type { Server } from "@/types/db";
-import { ServerIcon } from "@/components/ServerIcon";
+import { ServerIcon } from "@/components/servers/ServerIcon";
 
 export function AddServerDialog({ onClose }: { onClose: () => void }) {
   const supabase = createClient();

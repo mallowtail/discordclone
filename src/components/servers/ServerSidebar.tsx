@@ -4,8 +4,8 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import type { Server, Category, Channel } from "@/types/db";
-import { CreateChannelDialog } from "@/components/CreateChannelDialog";
-import { ServerSettingsDialog } from "@/components/ServerSettingsDialog";
+import { CreateChannelDialog } from "@/components/servers/CreateChannelDialog";
+import { ServerSettingsDialog } from "@/components/servers/ServerSettingsDialog";
 import { useServerRole } from "@/hooks/useServerRole";
 
 export function ServerSidebar({ serverId }: { serverId: string }) {

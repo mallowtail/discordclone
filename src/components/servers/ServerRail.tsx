@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { useServers } from "@/hooks/useServers";
-import { ServerIcon } from "@/components/ServerIcon";
-import { AddServerDialog } from "@/components/AddServerDialog";
+import { ServerIcon } from "@/components/servers/ServerIcon";
+import { AddServerDialog } from "@/components/servers/AddServerDialog";
 
 export function ServerRail({
   activeServerId,

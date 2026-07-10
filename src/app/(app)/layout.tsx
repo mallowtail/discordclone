@@ -4,9 +4,9 @@ import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/components/providers/AuthProvider";
-import { ServerRail } from "@/components/ServerRail";
-import { ServerSidebar } from "@/components/ServerSidebar";
-import { DmSidebar } from "@/components/DmSidebar";
+import { ServerRail } from "@/components/servers/ServerRail";
+import { ServerSidebar } from "@/components/servers/ServerSidebar";
+import { DmSidebar } from "@/components/dms/DmSidebar";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();

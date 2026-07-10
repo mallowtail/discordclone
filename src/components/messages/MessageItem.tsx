@@ -7,10 +7,10 @@ import { useAuth } from "@/components/providers/AuthProvider";
 import { createClient } from "@/lib/supabase/client";
 import { validateMessage } from "@/lib/validation";
 import { mentionsMe } from "@/lib/mentions";
-import { MessageContent } from "@/components/MessageContent";
-import { MessageActions } from "@/components/MessageActions";
-import { ReactionBar } from "@/components/ReactionBar";
-import { Avatar } from "@/components/Avatar";
+import { MessageContent } from "@/components/messages/MessageContent";
+import { MessageActions } from "@/components/messages/MessageActions";
+import { ReactionBar } from "@/components/messages/ReactionBar";
+import { Avatar } from "@/components/user/Avatar";
 import type { ReactionPill } from "@/lib/reactions";
 
 function snippet(m: Message): string {

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { uploadServerIcon } from "@/lib/upload";
-import { ServerIcon } from "@/components/ServerIcon";
+import { ServerIcon } from "@/components/servers/ServerIcon";
 import type { Server } from "@/types/db";
 
 export function ServerSettingsDialog({

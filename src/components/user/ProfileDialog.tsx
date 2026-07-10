@@ -4,7 +4,7 @@ import { useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { uploadAvatar } from "@/lib/upload";
-import { Avatar } from "@/components/Avatar";
+import { Avatar } from "@/components/user/Avatar";
 
 export function ProfileDialog({ onClose }: { onClose: () => void }) {
   const supabase = createClient();

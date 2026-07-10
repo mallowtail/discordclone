@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { Message, Profile } from "@/types/db";
-import { MessageItem } from "@/components/MessageItem";
+import { MessageItem } from "@/components/messages/MessageItem";
 import { startsNewGroup } from "@/lib/grouping";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { useReactions } from "@/hooks/useReactions";

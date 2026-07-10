@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { Profile } from "@/types/db";
-import { Avatar } from "@/components/Avatar";
+import { Avatar } from "@/components/user/Avatar";
 import { useServerRole } from "@/hooks/useServerRole";
 
 type Member = { user_id: string; role: "admin" | "member"; profile: Profile | null };

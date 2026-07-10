@@ -24,6 +24,7 @@ export function ServerSettingsDialog({
   const { user } = useAuth();
   const fileRef = useRef<HTMLInputElement>(null);
   const [name, setName] = useState(server.name);
+  const [isPublic, setIsPublic] = useState(server.is_public);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -44,6 +45,19 @@ export function ServerSettingsDialog({
     if (err) return setError("Couldn't save — try again");
     onSaved();
     onClose();
+  }
+
+  async function toggleVisibility() {
+    const next = !isPublic;
+    setIsPublic(next);
+    setBusy(true);
+    const { error: err } = await supabase.from("servers").update({ is_public: next }).eq("id", server.id);
+    setBusy(false);
+    if (err) {
+      setIsPublic(!next);
+      return setError("Couldn't change visibility — try again");
+    }
+    onSaved();
   }
 
   async function onPickIcon(e: React.ChangeEvent<HTMLInputElement>) {
@@ -85,6 +99,18 @@ export function ServerSettingsDialog({
               className="w-full bg-accent hover:bg-accent-strong text-white font-medium rounded-lg p-2 disabled:opacity-50">
               {busy ? "Saving…" : "Save"}
             </button>
+            <div className="flex items-center justify-between mt-4">
+              <div>
+                <p className="text-ink text-sm">{isPublic ? "Public" : "Private"}</p>
+                <p className="text-muted text-xs">
+                  {isPublic ? "Listed in the directory; anyone can join." : "Hidden; join by invite link only."}
+                </p>
+              </div>
+              <button onClick={toggleVisibility} disabled={busy}
+                className="text-sm bg-surface-2 hover:bg-line text-ink rounded-lg px-3 py-1.5 disabled:opacity-50">
+                Make {isPublic ? "private" : "public"}
+              </button>
+            </div>
           </>
         )}
         <button onClick={leave} disabled={busy}

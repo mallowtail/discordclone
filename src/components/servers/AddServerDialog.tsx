@@ -64,6 +64,8 @@ export function AddServerDialog({ onClose }: { onClose: () => void }) {
             </button>
           </>
         ) : (
+          <>
+          <p className="text-muted text-xs mb-2">Public servers</p>
           <ul className="max-h-72 overflow-y-auto flex flex-col gap-1">
             {directory.map((s) => (
               <li key={s.id} className="flex items-center gap-2 p-2 rounded-lg hover:bg-surface-2">
@@ -75,6 +77,7 @@ export function AddServerDialog({ onClose }: { onClose: () => void }) {
             ))}
             {directory.length === 0 && <li className="text-muted text-sm p-2">No servers yet.</li>}
           </ul>
+          </>
         )}
       </div>
     </div>

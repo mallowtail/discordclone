@@ -46,7 +46,7 @@ export function MentionAutocomplete({
   if (query === null || results.length === 0) return null;
 
   return (
-    <div className="absolute bottom-14 left-3 w-56 bg-sidebar border border-line rounded-xl p-1 shadow-xl z-50">
+    <div className="absolute bottom-14 left-3 w-56 bg-sidebar border border-line rounded-2xl p-1 shadow-xl z-50">
       {results.map((p) => (
         <button
           key={p.id}

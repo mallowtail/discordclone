@@ -79,7 +79,7 @@ export function ServerSettingsDialog({
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50" onClick={onClose}>
-      <div className="bg-surface p-5 rounded-xl w-80 border border-line" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-surface p-5 rounded-2xl w-80 border border-line" onClick={(e) => e.stopPropagation()}>
         <h2 className="text-ink font-semibold mb-3">Server settings</h2>
         {error && <p className="text-danger text-sm mb-2">{error}</p>}
         {isManager && (
@@ -87,16 +87,16 @@ export function ServerSettingsDialog({
             <div className="flex items-center gap-3 mb-3">
               <ServerIcon iconUrl={server.icon_url} name={server.name} size="lg" />
               <button onClick={() => fileRef.current?.click()} disabled={busy}
-                className="text-sm bg-accent hover:bg-accent-strong text-white rounded-lg px-3 py-1.5 disabled:opacity-50">
+                className="text-sm bg-accent hover:bg-accent-strong text-white rounded-xl px-3 py-1.5 disabled:opacity-50">
                 Upload icon
               </button>
               <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onPickIcon} />
             </div>
             <label className="text-muted text-xs">Name</label>
             <input value={name} onChange={(e) => setName(e.target.value)}
-              className="w-full p-2 rounded-lg bg-surface-2 text-ink mt-1 mb-3" />
+              className="w-full p-2 rounded-xl bg-surface-2 text-ink mt-1 mb-3" />
             <button onClick={saveName} disabled={busy}
-              className="w-full bg-accent hover:bg-accent-strong text-white font-medium rounded-lg p-2 disabled:opacity-50">
+              className="w-full bg-accent hover:bg-accent-strong text-white font-medium rounded-xl p-2 disabled:opacity-50">
               {busy ? "Saving…" : "Save"}
             </button>
             <div className="flex items-center justify-between mt-4">
@@ -107,7 +107,7 @@ export function ServerSettingsDialog({
                 </p>
               </div>
               <button onClick={toggleVisibility} disabled={busy}
-                className="text-sm bg-surface-2 hover:bg-line text-ink rounded-lg px-3 py-1.5 disabled:opacity-50">
+                className="text-sm bg-surface-2 hover:bg-line text-ink rounded-xl px-3 py-1.5 disabled:opacity-50">
                 Make {isPublic ? "private" : "public"}
               </button>
             </div>

@@ -34,13 +34,13 @@ export function PinnedPanel({ pinned, onClose }: { pinned: Message[]; onClose: (
   }
 
   return (
-    <div className="absolute right-3 top-12 w-72 bg-sidebar border border-line rounded-xl p-2 shadow-xl z-50">
+    <div className="absolute right-3 top-12 w-72 bg-sidebar border border-line rounded-2xl p-2 shadow-xl z-50">
       <div className="text-ink font-bold text-[11px] uppercase mb-2">📌 Pinned Messages</div>
       {pinned.length === 0 && <div className="text-muted text-sm px-1 py-2">No pinned messages yet.</div>}
       {[...pinned]
         .sort((a, b) => (b.pinned_at ?? "").localeCompare(a.pinned_at ?? ""))
         .map((m) => (
-          <div key={m.id} className="bg-surface rounded-lg p-2 text-xs mb-1.5">
+          <div key={m.id} className="bg-surface rounded-xl p-2 text-xs mb-1.5">
             <button onClick={() => unpin(m.id)} title="Unpin" className="float-right text-muted hover:text-ink">
               ✕
             </button>

@@ -40,7 +40,7 @@ export function ProfileDialog({ onClose }: { onClose: () => void }) {
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50" onClick={onClose}>
       <div
-        className="bg-surface p-5 rounded-xl w-72 border border-line text-center"
+        className="bg-surface p-5 rounded-2xl w-72 border border-line text-center"
         onClick={(e) => e.stopPropagation()}
       >
         <h2 className="text-ink font-semibold mb-3">Your profile</h2>
@@ -53,7 +53,7 @@ export function ProfileDialog({ onClose }: { onClose: () => void }) {
         <button
           onClick={() => fileRef.current?.click()}
           disabled={busy}
-          className="mt-4 w-full bg-accent hover:bg-accent-strong text-white font-medium rounded-lg p-2 disabled:opacity-50"
+          className="mt-4 w-full bg-accent hover:bg-accent-strong text-white font-medium rounded-xl p-2 disabled:opacity-50"
         >
           {busy ? "Uploading…" : "Upload image"}
         </button>

@@ -144,7 +144,7 @@ export function MessageItem({
                     setError(null);
                   }
                 }}
-                className="w-full p-2 rounded-lg bg-surface text-ink outline-none"
+                className="w-full p-2 rounded-xl bg-surface text-ink outline-none"
               />
               {error && <p className="text-danger text-sm">{error}</p>}
               <p className="text-xs text-muted">Enter to save · Esc to cancel</p>

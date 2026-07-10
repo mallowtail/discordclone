@@ -58,7 +58,7 @@ export function DmSidebar() {
           </Link>
         ))}
       </nav>
-      <div className="p-2 bg-surface-2 rounded-xl flex items-center justify-between text-sm gap-2">
+      <div className="p-2 bg-surface-2 rounded-2xl flex items-center justify-between text-sm gap-2">
         <button onClick={() => setShowProfile(true)}
           className="flex items-center gap-2 min-w-0 hover:opacity-80" title="Edit profile">
           <Avatar url={profile?.avatar_url ?? null} name={profile?.display_name} size="sm" />

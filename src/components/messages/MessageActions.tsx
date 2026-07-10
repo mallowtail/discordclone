@@ -16,7 +16,7 @@ export function MessageActions({
   onDelete: () => void;
 }) {
   return (
-    <div className="absolute right-2 top-0 hidden group-hover:flex gap-1 bg-surface rounded-lg border border-line px-1 py-0.5 text-sm">
+    <div className="absolute right-2 top-0 hidden group-hover:flex gap-1 bg-surface rounded-xl border border-line px-1 py-0.5 text-sm">
       <button onClick={onReply} title="Reply" className="text-muted hover:text-ink">↩️</button>
       <button onClick={onPin} title={pinned ? "Unpin" : "Pin"} className="text-muted hover:text-ink">📌</button>
       {canEdit && (

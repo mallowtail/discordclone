@@ -209,7 +209,7 @@ export function MessageInput({
           }}
           rows={1}
           placeholder={uploading ? "Uploading…" : placeholder}
-          className="flex-1 p-2 rounded-xl border border-line bg-surface text-ink outline-none resize-none"
+          className="flex-1 p-2 rounded-2xl border border-line bg-surface text-ink outline-none resize-none"
         />
       </div>
     </form>

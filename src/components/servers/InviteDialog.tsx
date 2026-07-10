@@ -45,14 +45,14 @@ export function InviteDialog({
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50" onClick={onClose}>
-      <div className="bg-surface p-5 rounded-xl w-96 border border-line" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-surface p-5 rounded-2xl w-96 border border-line" onClick={(e) => e.stopPropagation()}>
         <h2 className="text-ink font-semibold mb-1">Invite people to {server.name}</h2>
         <p className="text-muted text-xs mb-3">Anyone with this link can join.</p>
         {error && <p className="text-danger text-sm mb-2">{error}</p>}
         <div className="flex gap-2">
-          <input readOnly value={url} aria-label="Invite link" className="flex-1 p-2 rounded-lg bg-surface-2 text-ink text-sm" />
+          <input readOnly value={url} aria-label="Invite link" className="flex-1 p-2 rounded-xl bg-surface-2 text-ink text-sm" />
           <button onClick={copy}
-            className="text-sm bg-accent hover:bg-accent-strong text-white rounded-lg px-3 disabled:opacity-50">
+            className="text-sm bg-accent hover:bg-accent-strong text-white rounded-xl px-3 disabled:opacity-50">
             {copied ? "Copied" : "Copy"}
           </button>
         </div>

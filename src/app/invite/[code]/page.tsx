@@ -63,7 +63,7 @@ export default function InvitePage({ params }: { params: Promise<{ code: string 
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
-      <div className="w-full max-w-sm bg-surface border border-line p-6 rounded-xl text-center">
+      <div className="w-full max-w-sm bg-surface border border-line p-6 rounded-2xl text-center">
         {loading ? (
           <p className="text-muted">Loading invite…</p>
         ) : error ? (
@@ -78,7 +78,7 @@ export default function InvitePage({ params }: { params: Promise<{ code: string 
               {preview.member_count} {preview.member_count === 1 ? "member" : "members"}
             </p>
             <button onClick={join} disabled={busy}
-              className="w-full bg-accent hover:bg-accent-strong text-white font-medium rounded-lg p-2 disabled:opacity-50">
+              className="w-full bg-accent hover:bg-accent-strong text-white font-medium rounded-xl p-2 disabled:opacity-50">
               {busy ? "…" : isMember ? "Open" : "Join Server"}
             </button>
           </>

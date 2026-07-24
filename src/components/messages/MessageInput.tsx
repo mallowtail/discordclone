@@ -7,6 +7,7 @@ import { validateMessage } from "@/lib/validation";
 import { uploadImage, uploadFile, isImageType } from "@/lib/upload";
 import type { Message } from "@/types/db";
 import { MentionAutocomplete } from "@/components/messages/MentionAutocomplete";
+import EmojiPicker, { Theme } from "emoji-picker-react";
 
 type Target = { channel_id: string } | { conversation_id: string };
 
@@ -44,9 +45,11 @@ export function MessageInput({
   const [mentionMatches, setMentionMatches] = useState<string[]>([]);
   const [menuOpen, setMenuOpen] = useState(false);
   const [dragging, setDragging] = useState(false);
+  const [emojiOpen, setEmojiOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const emojiRef = useRef<HTMLDivElement>(null);
   const dragDepth = useRef(0);
   const mentionQuery = mentionQueryAt(text, caret);
   const acOpen = mentionQuery !== null && mentionMatches.length > 0;
@@ -71,6 +74,23 @@ export function MessageInput({
       document.removeEventListener("keydown", onKey);
     };
   }, [menuOpen]);
+
+  // Close the emoji picker on outside-click / Escape.
+  useEffect(() => {
+    if (!emojiOpen) return;
+    function onDown(e: MouseEvent) {
+      if (emojiRef.current && !emojiRef.current.contains(e.target as Node)) setEmojiOpen(false);
+    }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setEmojiOpen(false);
+    }
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [emojiOpen]);
 
   function replyFields() {
     return replyTo ? { reply_to_id: replyTo.id, mention_author: pingAuthor } : {};
@@ -193,6 +213,19 @@ export function MessageInput({
     });
   }
 
+  function insertEmoji(emoji: string) {
+    const before = text.slice(0, caret);
+    const after = text.slice(caret);
+    const next = before + emoji + after;
+    setText(next);
+    const newCaret = before.length + emoji.length;
+    setCaret(newCaret);
+    requestAnimationFrame(() => {
+      taRef.current?.focus();
+      taRef.current?.setSelectionRange(newCaret, newCaret);
+    });
+  }
+
   function autoGrow(el: HTMLTextAreaElement) {
     el.style.height = "auto";
     el.style.height = Math.min(el.scrollHeight, 192) + "px";
@@ -294,6 +327,26 @@ export function MessageInput({
             placeholder={uploading ? "Uploading…" : placeholder}
             className="flex-1 bg-transparent text-ink outline-none resize-none min-h-[44px] max-h-48 py-2"
           />
+          <div className="relative" ref={emojiRef}>
+            <button
+              type="button"
+              onClick={() => setEmojiOpen((o) => !o)}
+              title="Emoji"
+              className="w-8 h-8 flex items-center justify-center rounded-full text-muted hover:text-ink text-lg leading-none"
+            >
+              🙂
+            </button>
+            {emojiOpen && (
+              <div className="absolute bottom-full right-0 mb-2 z-30">
+                <EmojiPicker
+                  theme={Theme.DARK}
+                  onEmojiClick={(d) => insertEmoji(d.emoji)}
+                  lazyLoadEmojis
+                  skinTonesDisabled
+                />
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </form>

@@ -7,6 +7,7 @@ import { useAuth } from "@/components/providers/AuthProvider";
 import { ServerRail } from "@/components/servers/ServerRail";
 import { ServerSidebar } from "@/components/servers/ServerSidebar";
 import { DmSidebar } from "@/components/dms/DmSidebar";
+import { ProfilePopoverProvider } from "@/components/providers/ProfilePopoverProvider";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -40,14 +41,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   if (loading || !user) return <div className="p-6 text-muted">Loading…</div>;
 
   return (
-    <div className="flex h-screen">
-      <ServerRail
-        activeServerId={activeServer}
-        onSelectServer={(id) => router.push(`/channels/first?server=${id}`)}
-        onSelectHome={() => router.push("/dms")}
-      />
-      {activeServer === null ? <DmSidebar /> : <ServerSidebar serverId={activeServer} />}
-      <main className="flex-1 flex flex-col min-w-0">{children}</main>
-    </div>
+    <ProfilePopoverProvider>
+      <div className="flex h-screen">
+        <ServerRail
+          activeServerId={activeServer}
+          onSelectServer={(id) => router.push(`/channels/first?server=${id}`)}
+          onSelectHome={() => router.push("/dms")}
+        />
+        {activeServer === null ? <DmSidebar /> : <ServerSidebar serverId={activeServer} />}
+        <main className="flex-1 flex flex-col min-w-0">{children}</main>
+      </div>
+    </ProfilePopoverProvider>
   );
 }

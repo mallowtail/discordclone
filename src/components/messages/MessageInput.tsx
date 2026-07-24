@@ -47,6 +47,7 @@ export function MessageInput({
   const fileRef = useRef<HTMLInputElement>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const dragDepth = useRef(0);
   const mentionQuery = mentionQueryAt(text, caret);
   const acOpen = mentionQuery !== null && mentionMatches.length > 0;
 
@@ -158,6 +159,7 @@ export function MessageInput({
   }
 
   async function handleFile(file: File) {
+    if (uploading) return;
     setError(null);
     setUploading(true);
     if (isImageType(file.type)) {
@@ -223,10 +225,16 @@ export function MessageInput({
       )}
       <div
         className="relative"
-        onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
-        onDragLeave={(e) => { e.preventDefault(); setDragging(false); }}
+        onDragEnter={(e) => { e.preventDefault(); dragDepth.current += 1; setDragging(true); }}
+        onDragOver={(e) => { e.preventDefault(); }}
+        onDragLeave={(e) => {
+          e.preventDefault();
+          dragDepth.current -= 1;
+          if (dragDepth.current <= 0) { dragDepth.current = 0; setDragging(false); }
+        }}
         onDrop={(e) => {
           e.preventDefault();
+          dragDepth.current = 0;
           setDragging(false);
           const f = e.dataTransfer.files?.[0];
           if (f) handleFile(f);
@@ -243,7 +251,8 @@ export function MessageInput({
               type="button"
               onClick={() => setMenuOpen((o) => !o)}
               title="Add"
-              className="w-8 h-8 flex items-center justify-center rounded-full bg-surface-2 text-muted hover:text-ink text-lg leading-none"
+              disabled={uploading}
+              className="w-8 h-8 flex items-center justify-center rounded-full bg-surface-2 text-muted hover:text-ink text-lg leading-none disabled:opacity-50"
             >
               ＋
             </button>

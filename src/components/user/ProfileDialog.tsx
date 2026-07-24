@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { uploadAvatar } from "@/lib/upload";
 import { Avatar } from "@/components/user/Avatar";
+import { clampProfileText, STATUS_MAX, BIO_MAX } from "@/lib/profile";
 
 export function ProfileDialog({ onClose }: { onClose: () => void }) {
   const supabase = createClient();
@@ -12,6 +13,8 @@ export function ProfileDialog({ onClose }: { onClose: () => void }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [status, setStatus] = useState(profile?.status ?? "");
+  const [bio, setBio] = useState(profile?.bio ?? "");
 
   async function onPick(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -37,6 +40,20 @@ export function ProfileDialog({ onClose }: { onClose: () => void }) {
     await refreshProfile();
   }
 
+  async function saveProfile() {
+    if (!user) return;
+    setError(null);
+    setBusy(true);
+    const { error: err } = await supabase
+      .from("profiles")
+      .update({ status: clampProfileText(status, STATUS_MAX), bio: clampProfileText(bio, BIO_MAX) })
+      .eq("id", user.id);
+    setBusy(false);
+    if (err) return setError("Couldn't save — try again");
+    await refreshProfile();
+    onClose();
+  }
+
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50" onClick={onClose}>
       <div
@@ -57,6 +74,37 @@ export function ProfileDialog({ onClose }: { onClose: () => void }) {
         >
           {busy ? "Uploading…" : "Upload image"}
         </button>
+        <div className="text-left mt-4 space-y-2">
+          <div>
+            <label className="text-muted text-xs">Status</label>
+            <input
+              value={status}
+              onChange={(e) => setStatus(e.target.value)}
+              maxLength={STATUS_MAX}
+              placeholder="What's happening?"
+              className="w-full p-2 rounded-xl bg-surface-2 text-ink text-sm mt-1"
+            />
+          </div>
+          <div>
+            <label className="text-muted text-xs">Bio</label>
+            <textarea
+              value={bio}
+              onChange={(e) => setBio(e.target.value)}
+              maxLength={BIO_MAX}
+              rows={3}
+              placeholder="Tell people about yourself"
+              className="w-full p-2 rounded-xl bg-surface-2 text-ink text-sm mt-1 resize-none"
+            />
+            <div className="text-muted text-[10px] text-right">{bio.length}/{BIO_MAX}</div>
+          </div>
+          <button
+            onClick={saveProfile}
+            disabled={busy}
+            className="w-full bg-accent hover:bg-accent-strong text-white font-medium rounded-xl p-2 disabled:opacity-50"
+          >
+            {busy ? "Saving…" : "Save"}
+          </button>
+        </div>
       </div>
     </div>
   );

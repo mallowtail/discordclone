@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { validateMessage } from "@/lib/validation";
-import { uploadImage } from "@/lib/upload";
+import { uploadImage, uploadFile, isImageType } from "@/lib/upload";
 import type { Message } from "@/types/db";
 import { MentionAutocomplete } from "@/components/messages/MentionAutocomplete";
 
@@ -42,8 +42,11 @@ export function MessageInput({
   const [pingAuthor, setPingAuthor] = useState(true);
   const [caret, setCaret] = useState(0);
   const [mentionMatches, setMentionMatches] = useState<string[]>([]);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [dragging, setDragging] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   const mentionQuery = mentionQueryAt(text, caret);
   const acOpen = mentionQuery !== null && mentionMatches.length > 0;
 
@@ -51,8 +54,29 @@ export function MessageInput({
     setPingAuthor(true);
   }, [replyTo?.id]);
 
+  // Close the + menu on outside-click / Escape.
+  useEffect(() => {
+    if (!menuOpen) return;
+    function onDown(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false);
+    }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setMenuOpen(false);
+    }
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [menuOpen]);
+
   function replyFields() {
     return replyTo ? { reply_to_id: replyTo.id, mention_author: pingAuthor } : {};
+  }
+
+  function resetHeight() {
+    if (taRef.current) taRef.current.style.height = "auto";
   }
 
   async function submit() {
@@ -62,6 +86,7 @@ export function MessageInput({
     setError(null);
     const draft = v.value;
     setText("");
+    resetHeight();
     const id = crypto.randomUUID();
     const optimistic: Message = {
       id,
@@ -98,20 +123,10 @@ export function MessageInput({
     submit();
   }
 
-  async function onPickFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (!file) return;
-    setError(null);
-    setUploading(true);
-    const result = await uploadImage(file);
-    setUploading(false);
-    if ("error" in result) {
-      setError(result.error);
-      return;
-    }
+  async function postAttachment(attach: { image_url?: string; file_url?: string; file_name?: string }) {
     const content = text.trim();
     setText("");
+    resetHeight();
     const id = crypto.randomUUID();
     const optimistic: Message = {
       id,
@@ -119,9 +134,9 @@ export function MessageInput({
       channel_id: "channel_id" in target ? target.channel_id : null,
       conversation_id: "conversation_id" in target ? target.conversation_id : null,
       content,
-      image_url: result.url,
-      file_url: null,
-      file_name: null,
+      image_url: attach.image_url ?? null,
+      file_url: attach.file_url ?? null,
+      file_name: attach.file_name ?? null,
       created_at: new Date().toISOString(),
       updated_at: null,
       reply_to_id: replyTo?.id ?? null,
@@ -133,13 +148,35 @@ export function MessageInput({
     addPending(optimistic);
     const { error: err } = await supabase
       .from("messages")
-      .insert({ id, author_id: user!.id, content, image_url: result.url, ...replyFields(), ...target });
+      .insert({ id, author_id: user!.id, content, ...attach, ...replyFields(), ...target });
     if (err) {
       removePending(id);
-      setError("Failed to send image — try again");
+      setError("Failed to send — try again");
       return;
     }
     onClearReply?.();
+  }
+
+  async function handleFile(file: File) {
+    setError(null);
+    setUploading(true);
+    if (isImageType(file.type)) {
+      const res = await uploadImage(file);
+      setUploading(false);
+      if ("error" in res) return setError(res.error);
+      await postAttachment({ image_url: res.url });
+    } else {
+      const res = await uploadFile(file);
+      setUploading(false);
+      if ("error" in res) return setError(res.error);
+      await postAttachment({ file_url: res.url, file_name: res.name });
+    }
+  }
+
+  function onPickFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (file) handleFile(file);
   }
 
   function pickMention(username: string) {
@@ -152,6 +189,11 @@ export function MessageInput({
       taRef.current?.focus();
       taRef.current?.setSelectionRange(before.length, before.length);
     });
+  }
+
+  function autoGrow(el: HTMLTextAreaElement) {
+    el.style.height = "auto";
+    el.style.height = Math.min(el.scrollHeight, 192) + "px";
   }
 
   return (
@@ -179,42 +221,71 @@ export function MessageInput({
           </span>
         </div>
       )}
-      <div className="flex items-center gap-2">
-        <button
-          type="button"
-          onClick={() => fileRef.current?.click()}
-          className="text-muted hover:text-ink"
-          title="Attach image"
-        >
-          📎
-        </button>
-        <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onPickFile} />
-        <textarea
-          ref={taRef}
-          value={text}
-          onChange={(e) => {
-            setText(e.target.value);
-            setCaret(e.target.selectionStart ?? e.target.value.length);
-          }}
-          onKeyUp={(e) => setCaret((e.target as HTMLTextAreaElement).selectionStart ?? 0)}
-          onClick={(e) => setCaret((e.target as HTMLTextAreaElement).selectionStart ?? 0)}
-          onKeyDown={(e) => {
-            // While the @-autocomplete is open, Enter/Tab accepts the top match
-            // instead of sending the message.
-            if (acOpen && (e.key === "Enter" || e.key === "Tab")) {
-              e.preventDefault();
-              pickMention(mentionMatches[0]);
-              return;
-            }
-            if (e.key === "Enter" && !e.shiftKey) {
-              e.preventDefault();
-              submit();
-            }
-          }}
-          rows={1}
-          placeholder={uploading ? "Uploading…" : placeholder}
-          className="flex-1 p-2 rounded-2xl border border-line bg-surface text-ink outline-none resize-none"
-        />
+      <div
+        className="relative"
+        onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+        onDragLeave={(e) => { e.preventDefault(); setDragging(false); }}
+        onDrop={(e) => {
+          e.preventDefault();
+          setDragging(false);
+          const f = e.dataTransfer.files?.[0];
+          if (f) handleFile(f);
+        }}
+      >
+        {dragging && (
+          <div className="absolute inset-0 z-10 flex items-center justify-center rounded-2xl border-2 border-dashed border-accent bg-surface/90 text-accent text-sm pointer-events-none">
+            Drop to upload
+          </div>
+        )}
+        <div className="flex items-end gap-2 rounded-2xl border border-line bg-surface px-3 py-2">
+          <div className="relative" ref={menuRef}>
+            <button
+              type="button"
+              onClick={() => setMenuOpen((o) => !o)}
+              title="Add"
+              className="w-8 h-8 flex items-center justify-center rounded-full bg-surface-2 text-muted hover:text-ink text-lg leading-none"
+            >
+              ＋
+            </button>
+            {menuOpen && (
+              <div className="absolute bottom-full mb-2 left-0 z-20 w-40 rounded-xl border border-line bg-surface shadow-lg py-1">
+                <button
+                  type="button"
+                  onClick={() => { setMenuOpen(false); fileRef.current?.click(); }}
+                  className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-ink hover:bg-surface-2 text-left"
+                >
+                  <span aria-hidden="true">📄</span> Upload a file
+                </button>
+              </div>
+            )}
+          </div>
+          <input ref={fileRef} type="file" accept="*/*" className="hidden" onChange={onPickFile} />
+          <textarea
+            ref={taRef}
+            value={text}
+            onChange={(e) => {
+              setText(e.target.value);
+              setCaret(e.target.selectionStart ?? e.target.value.length);
+              autoGrow(e.target);
+            }}
+            onKeyUp={(e) => setCaret((e.target as HTMLTextAreaElement).selectionStart ?? 0)}
+            onClick={(e) => setCaret((e.target as HTMLTextAreaElement).selectionStart ?? 0)}
+            onKeyDown={(e) => {
+              if (acOpen && (e.key === "Enter" || e.key === "Tab")) {
+                e.preventDefault();
+                pickMention(mentionMatches[0]);
+                return;
+              }
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                submit();
+              }
+            }}
+            rows={1}
+            placeholder={uploading ? "Uploading…" : placeholder}
+            className="flex-1 bg-transparent text-ink outline-none resize-none min-h-[44px] max-h-48 py-2"
+          />
+        </div>
       </div>
     </form>
   );

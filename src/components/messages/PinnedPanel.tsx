@@ -7,6 +7,7 @@ import type { Message, Profile } from "@/types/db";
 function snippet(m: Message): string {
   if (m.content) return m.content.length > 80 ? m.content.slice(0, 80) + "…" : m.content;
   if (m.image_url) return "📷 image";
+  if (m.file_url) return "📄 file";
   return "";
 }
 

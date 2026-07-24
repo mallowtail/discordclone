@@ -17,6 +17,7 @@ import type { ReactionPill } from "@/lib/reactions";
 function snippet(m: Message): string {
   if (m.content) return m.content.length > 60 ? m.content.slice(0, 60) + "…" : m.content;
   if (m.image_url) return "📷 image";
+  if (m.file_url) return "📄 file";
   return "";
 }
 
@@ -60,7 +61,7 @@ export function MessageItem({
 
   async function saveEdit() {
     const v = validateMessage(draft);
-    if (!v.ok && !msg.image_url) return setError(v.error);
+    if (!v.ok && !msg.image_url && !msg.file_url) return setError(v.error);
     const newContent = v.ok ? v.value : "";
     const { error: err } = await supabase
       .from("messages")

@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/components/providers/AuthProvider";
 import type { Profile } from "@/types/db";
 import { Avatar } from "@/components/user/Avatar";
+import { openDmWith } from "@/lib/dm";
 
 export function NewDmDialog() {
   const supabase = createClient();
@@ -26,34 +27,8 @@ export function NewDmDialog() {
   }
 
   async function startDm(other: Profile) {
-    // find an existing 1-on-1 conversation with this person, else create one
-    const { data: mine } = await supabase
-      .from("conversation_members").select("conversation_id").eq("user_id", user!.id);
-    const myIds = (mine ?? []).map((m) => m.conversation_id);
-    let convId: string | null = null;
-    if (myIds.length) {
-      const { data: shared } = await supabase
-        .from("conversation_members")
-        .select("conversation_id")
-        .eq("user_id", other.id)
-        .in("conversation_id", myIds);
-      convId = shared?.[0]?.conversation_id ?? null;
-    }
-    if (!convId) {
-      // Generate the id client-side. We can't read a new conversation back via
-      // .select() yet: RLS only lets *members* read a conversation, and we don't
-      // become a member until the next insert. So we avoid select-after-insert.
-      const newId = crypto.randomUUID();
-      const { error: convErr } = await supabase
-        .from("conversations").insert({ id: newId, is_group: false });
-      if (convErr) return;
-      const { error: memErr } = await supabase.from("conversation_members").insert([
-        { conversation_id: newId, user_id: user!.id },
-        { conversation_id: newId, user_id: other.id },
-      ]);
-      if (memErr) return;
-      convId = newId;
-    }
+    const convId = await openDmWith(supabase, user!.id, other.id);
+    if (!convId) return;
     setOpen(false);
     router.push(`/dms/${convId}`);
   }

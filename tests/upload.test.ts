@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { validateImage } from "@/lib/upload";
+import { validateImage, isImageType } from "@/lib/upload";
 
 const MB = 1024 * 1024;
 
@@ -17,5 +17,17 @@ describe("validateImage", () => {
   });
   it("rejects images over 5 MB", () => {
     expect(validateImage({ type: "image/png", size: 6 * MB }).ok).toBe(false);
+  });
+});
+
+describe("isImageType", () => {
+  it("is true for supported image MIME types", () => {
+    expect(isImageType("image/png")).toBe(true);
+    expect(isImageType("image/webp")).toBe(true);
+  });
+  it("is false for non-image types", () => {
+    expect(isImageType("application/pdf")).toBe(false);
+    expect(isImageType("text/plain")).toBe(false);
+    expect(isImageType("")).toBe(false);
   });
 });

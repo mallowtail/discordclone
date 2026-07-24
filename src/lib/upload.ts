@@ -71,7 +71,9 @@ export async function uploadFile(file: File): Promise<{ url: string; name: strin
   const path = `${crypto.randomUUID()}.${ext}`;
   const { error } = await supabase.storage
     .from("attachments")
-    .upload(path, file, { contentType: file.type || "application/octet-stream" });
+    // Force a non-executable content-type: files land in a PUBLIC bucket, so serving
+    // client-declared types (e.g. text/html, image/svg+xml) would be a stored-XSS vector.
+    .upload(path, file, { contentType: "application/octet-stream" });
   if (error) return { error: `Upload failed: ${error.message}` };
   const { data } = supabase.storage.from("attachments").getPublicUrl(path);
   return { url: data.publicUrl, name: file.name };

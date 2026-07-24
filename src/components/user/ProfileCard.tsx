@@ -96,6 +96,7 @@ export function ProfileCard({
   }, [onClose]);
 
   async function send() {
+    if (sending) return;
     const v = validateMessage(draft);
     if (!v.ok || !user) return;
     setSending(true);

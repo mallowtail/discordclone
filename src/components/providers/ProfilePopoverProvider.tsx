@@ -13,6 +13,7 @@ export function ProfilePopoverProvider({ children }: { children: React.ReactNode
   const open = useCallback((userId: string, anchorRect: DOMRect, serverId?: string) => {
     setState({ userId, anchorRect, serverId });
   }, []);
+  const close = useCallback(() => setState(null), []);
   return (
     <ProfilePopoverContext.Provider value={{ open }}>
       {children}
@@ -21,7 +22,7 @@ export function ProfilePopoverProvider({ children }: { children: React.ReactNode
           userId={state.userId}
           anchorRect={state.anchorRect}
           serverId={state.serverId}
-          onClose={() => setState(null)}
+          onClose={close}
         />
       )}
     </ProfilePopoverContext.Provider>

@@ -49,6 +49,8 @@ export type Message = {
   conversation_id: string | null;
   content: string;
   image_url: string | null;
+  file_url: string | null;
+  file_name: string | null;
   created_at: string;
   updated_at: string | null;
   reply_to_id: string | null;

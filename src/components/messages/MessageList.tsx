@@ -11,9 +11,11 @@ import { useReactions } from "@/hooks/useReactions";
 export function MessageList({
   messages,
   onReply,
+  serverId,
 }: {
   messages: Message[];
   onReply?: (m: Message, authorName: string) => void;
+  serverId?: string;
 }) {
   const supabase = createClient();
   const [profiles, setProfiles] = useState<Record<string, Profile>>({});
@@ -52,6 +54,7 @@ export function MessageList({
             repliedTo={repliedTo}
             repliedToName={repliedTo ? profiles[repliedTo.author_id]?.display_name : undefined}
             onReply={onReply}
+            serverId={serverId}
           />
         );
       })}

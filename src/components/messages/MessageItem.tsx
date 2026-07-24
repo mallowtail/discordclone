@@ -11,6 +11,7 @@ import { MessageContent } from "@/components/messages/MessageContent";
 import { MessageActions } from "@/components/messages/MessageActions";
 import { ReactionBar } from "@/components/messages/ReactionBar";
 import { Avatar } from "@/components/user/Avatar";
+import { useProfilePopover } from "@/components/providers/ProfilePopoverProvider";
 import type { ReactionPill } from "@/lib/reactions";
 
 function snippet(m: Message): string {
@@ -28,6 +29,7 @@ export function MessageItem({
   repliedTo,
   repliedToName,
   onReply,
+  serverId,
 }: {
   msg: Message;
   authorName: string;
@@ -37,9 +39,11 @@ export function MessageItem({
   repliedTo: Message | null;
   repliedToName?: string;
   onReply?: (m: Message, authorName: string) => void;
+  serverId?: string;
 }) {
   const { user, profile } = useAuth();
   const supabase = useMemo(() => createClient(), []);
+  const { open } = useProfilePopover();
   const isMine = user?.id === msg.author_id;
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(msg.content);
@@ -83,6 +87,10 @@ export function MessageItem({
     if (repliedTo) document.getElementById(`msg-${repliedTo.id}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
   }
 
+  function openProfile(e: React.MouseEvent<HTMLElement>) {
+    open(msg.author_id, e.currentTarget.getBoundingClientRect(), serverId);
+  }
+
   return (
     <div
       id={`msg-${msg.id}`}
@@ -95,7 +103,11 @@ export function MessageItem({
       )}
       <div className="flex gap-3">
         <div className="w-10 flex-none">
-          {showHeader && <Avatar url={authorAvatar} name={authorName} size="md" />}
+          {showHeader && (
+            <button onClick={openProfile} className="hover:opacity-80" aria-label={`View ${authorName}'s profile`}>
+              <Avatar url={authorAvatar} name={authorName} size="md" />
+            </button>
+          )}
         </div>
         <div className="flex-1 min-w-0">
           {msg.reply_to_id && (
@@ -121,7 +133,7 @@ export function MessageItem({
 
           {showHeader && (
             <div>
-              <span className="font-semibold text-ink">{authorName}</span>
+              <button onClick={openProfile} className="font-semibold text-ink hover:underline">{authorName}</button>
               <span className="text-xs text-muted ml-2">{formatTime(msg.created_at)}</span>
               {msg.pinned && <span className="text-xs text-muted ml-2" title="Pinned">📌</span>}
             </div>

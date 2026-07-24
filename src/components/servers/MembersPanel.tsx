@@ -5,12 +5,14 @@ import { createClient } from "@/lib/supabase/client";
 import type { Profile } from "@/types/db";
 import { Avatar } from "@/components/user/Avatar";
 import { useServerRole } from "@/hooks/useServerRole";
+import { useProfilePopover } from "@/components/providers/ProfilePopoverProvider";
 
 type Member = { user_id: string; role: "admin" | "member"; profile: Profile | null };
 
 export function MembersPanel({ serverId, onClose }: { serverId: string; onClose: () => void }) {
   const supabase = createClient();
   const { isManager } = useServerRole(serverId);
+  const { open } = useProfilePopover();
   const [ownerId, setOwnerId] = useState<string | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
 
@@ -56,11 +58,16 @@ export function MembersPanel({ serverId, onClose }: { serverId: string; onClose:
       <div className="flex-1 overflow-y-auto p-2 flex flex-col gap-1">
         {members.map((m) => (
           <div key={m.user_id} className="flex items-center gap-2 p-1.5 rounded hover:bg-surface">
-            <Avatar url={m.profile?.avatar_url ?? null} name={m.profile?.display_name} size="sm" />
-            <div className="flex-1 min-w-0">
-              <div className="text-ink text-sm truncate">{m.profile?.display_name ?? "Unknown"}</div>
-              {badge(m)}
-            </div>
+            <button
+              onClick={(e) => open(m.user_id, e.currentTarget.getBoundingClientRect(), serverId)}
+              className="flex items-center gap-2 flex-1 min-w-0 text-left"
+            >
+              <Avatar url={m.profile?.avatar_url ?? null} name={m.profile?.display_name} size="sm" />
+              <div className="min-w-0">
+                <div className="text-ink text-sm truncate">{m.profile?.display_name ?? "Unknown"}</div>
+                {badge(m)}
+              </div>
+            </button>
             {isManager && m.user_id !== ownerId && (
               m.role === "admin" ? (
                 <button onClick={() => setRole(m.user_id, "member")}

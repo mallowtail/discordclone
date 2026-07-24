@@ -9,11 +9,13 @@ import type { Profile } from "@/types/db";
 import { NewDmDialog } from "@/components/dms/NewDmDialog";
 import { Avatar } from "@/components/user/Avatar";
 import { ProfileDialog } from "@/components/user/ProfileDialog";
+import { useProfilePopover } from "@/components/providers/ProfilePopoverProvider";
 
 export function DmSidebar() {
   const supabase = createClient();
   const router = useRouter();
   const { user, profile, signOut } = useAuth();
+  const { open } = useProfilePopover();
   const [dms, setDms] = useState<{ id: string; other: Profile }[]>([]);
   const [showProfile, setShowProfile] = useState(false);
 
@@ -53,7 +55,12 @@ export function DmSidebar() {
         {dms.map((d) => (
           <Link key={d.id} href={`/dms/${d.id}`}
             className="flex items-center gap-2 px-2 py-1 rounded hover:bg-surface hover:text-ink">
-            <Avatar url={d.other?.avatar_url ?? null} name={d.other?.display_name} size="sm" />
+            <span
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); open(d.other.id, e.currentTarget.getBoundingClientRect()); }}
+              className="flex-none"
+            >
+              <Avatar url={d.other?.avatar_url ?? null} name={d.other?.display_name} size="sm" />
+            </span>
             {d.other?.display_name ?? "Unknown"}
           </Link>
         ))}

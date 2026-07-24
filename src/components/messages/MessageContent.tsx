@@ -19,6 +19,7 @@ function isHttpUrl(u: string): boolean {
 
 export function MessageContent({ msg }: { msg: Message }) {
   const safeImage = msg.image_url && isHttpUrl(msg.image_url) ? msg.image_url : null;
+  const safeFile = msg.file_url && isHttpUrl(msg.file_url) ? msg.file_url : null;
   return (
     <div className="text-ink break-words">
       {msg.content && (
@@ -52,6 +53,18 @@ export function MessageContent({ msg }: { msg: Message }) {
         <a href={safeImage} target="_blank" rel="noopener noreferrer">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={safeImage} alt="attachment" className="mt-1 max-h-80 max-w-sm rounded" />
+        </a>
+      )}
+      {safeFile && (
+        <a
+          href={safeFile}
+          download
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-1 flex items-center gap-2 rounded-xl border border-line bg-surface px-3 py-2 max-w-sm hover:bg-surface-2"
+        >
+          <span className="text-lg" aria-hidden="true">📄</span>
+          <span className="text-ink text-sm truncate">{msg.file_name ?? "file"}</span>
         </a>
       )}
       {msg.updated_at && <span className="text-xs text-muted ml-1">(edited)</span>}

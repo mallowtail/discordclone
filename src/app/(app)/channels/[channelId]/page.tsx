@@ -6,6 +6,7 @@ import type { Channel, Message } from "@/types/db";
 import { useMessages } from "@/hooks/useMessages";
 import { MessageList } from "@/components/messages/MessageList";
 import { MessageInput } from "@/components/messages/MessageInput";
+import { MessageDropZone } from "@/components/messages/MessageDropZone";
 import { PinnedPanel } from "@/components/messages/PinnedPanel";
 import { MembersPanel } from "@/components/servers/MembersPanel";
 
@@ -53,7 +54,12 @@ function ChannelView({ channel }: { channel: Channel }) {
         {showPins && <PinnedPanel pinned={pinned} onClose={() => setShowPins(false)} />}
       </header>
       <div className="flex flex-1 min-h-0">
-        <div className="flex-1 flex flex-col min-w-0">
+        <MessageDropZone
+          target={{ channel_id: channel.id }}
+          addPending={addPending}
+          removePending={removePending}
+          className="flex-1 flex flex-col min-w-0"
+        >
           <MessageList
             messages={messages}
             onReply={(m, name) => { setReplyTo(m); setReplyToName(name); }}
@@ -68,7 +74,7 @@ function ChannelView({ channel }: { channel: Channel }) {
             addPending={addPending}
             removePending={removePending}
           />
-        </div>
+        </MessageDropZone>
         {showMembers && <MembersPanel serverId={channel.server_id} onClose={() => setShowMembers(false)} />}
       </div>
     </>

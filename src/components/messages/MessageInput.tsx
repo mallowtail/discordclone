@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { validateMessage } from "@/lib/validation";
-import { uploadImage, uploadFile, isImageType } from "@/lib/upload";
+import { uploadAndPostFile } from "@/lib/sendAttachment";
 import type { Message } from "@/types/db";
 import { MentionAutocomplete } from "@/components/messages/MentionAutocomplete";
 import EmojiPicker, { Theme } from "emoji-picker-react";
@@ -44,13 +44,11 @@ export function MessageInput({
   const [caret, setCaret] = useState(0);
   const [mentionMatches, setMentionMatches] = useState<string[]>([]);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [dragging, setDragging] = useState(false);
   const [emojiOpen, setEmojiOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const emojiRef = useRef<HTMLDivElement>(null);
-  const dragDepth = useRef(0);
   const mentionQuery = mentionQueryAt(text, caret);
   const acOpen = mentionQuery !== null && mentionMatches.length > 0;
 
@@ -144,55 +142,26 @@ export function MessageInput({
     submit();
   }
 
-  async function postAttachment(attach: { image_url?: string; file_url?: string; file_name?: string }) {
-    const content = text.trim();
-    setText("");
-    resetHeight();
-    const id = crypto.randomUUID();
-    const optimistic: Message = {
-      id,
-      author_id: user!.id,
-      channel_id: "channel_id" in target ? target.channel_id : null,
-      conversation_id: "conversation_id" in target ? target.conversation_id : null,
-      content,
-      image_url: attach.image_url ?? null,
-      file_url: attach.file_url ?? null,
-      file_name: attach.file_name ?? null,
-      created_at: new Date().toISOString(),
-      updated_at: null,
-      reply_to_id: replyTo?.id ?? null,
-      mention_author: replyTo ? pingAuthor : false,
-      pinned: false,
-      pinned_at: null,
-      pending: true,
-    };
-    addPending(optimistic);
-    const { error: err } = await supabase
-      .from("messages")
-      .insert({ id, author_id: user!.id, content, ...attach, ...replyFields(), ...target });
-    if (err) {
-      removePending(id);
-      setError("Failed to send — try again");
-      return;
-    }
-    onClearReply?.();
-  }
-
   async function handleFile(file: File) {
     if (uploading) return;
     setError(null);
     setUploading(true);
-    if (isImageType(file.type)) {
-      const res = await uploadImage(file);
-      setUploading(false);
-      if ("error" in res) return setError(res.error);
-      await postAttachment({ image_url: res.url });
-    } else {
-      const res = await uploadFile(file);
-      setUploading(false);
-      if ("error" in res) return setError(res.error);
-      await postAttachment({ file_url: res.url, file_name: res.name });
-    }
+    const content = text.trim();
+    const res = await uploadAndPostFile({
+      supabase,
+      userId: user!.id,
+      target,
+      file,
+      content,
+      replyFields: replyFields(),
+      addPending,
+      removePending,
+    });
+    setUploading(false);
+    if (res.error) return setError(res.error);
+    setText("");
+    resetHeight();
+    onClearReply?.();
   }
 
   function onPickFile(e: React.ChangeEvent<HTMLInputElement>) {
@@ -256,28 +225,7 @@ export function MessageInput({
           </span>
         </div>
       )}
-      <div
-        className="relative"
-        onDragEnter={(e) => { e.preventDefault(); dragDepth.current += 1; setDragging(true); }}
-        onDragOver={(e) => { e.preventDefault(); }}
-        onDragLeave={(e) => {
-          e.preventDefault();
-          dragDepth.current -= 1;
-          if (dragDepth.current <= 0) { dragDepth.current = 0; setDragging(false); }
-        }}
-        onDrop={(e) => {
-          e.preventDefault();
-          dragDepth.current = 0;
-          setDragging(false);
-          const f = e.dataTransfer.files?.[0];
-          if (f) handleFile(f);
-        }}
-      >
-        {dragging && (
-          <div className="absolute inset-0 z-10 flex items-center justify-center rounded-2xl border-2 border-dashed border-accent bg-surface/90 text-accent text-sm pointer-events-none">
-            Drop to upload
-          </div>
-        )}
+      <div className="relative">
         <div className="flex items-end gap-2 rounded-2xl border border-line bg-surface px-3 py-2">
           <div className="relative" ref={menuRef}>
             <button

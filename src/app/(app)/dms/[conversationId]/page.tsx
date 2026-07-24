@@ -7,6 +7,7 @@ import type { Profile, Message } from "@/types/db";
 import { useMessages } from "@/hooks/useMessages";
 import { MessageList } from "@/components/messages/MessageList";
 import { MessageInput } from "@/components/messages/MessageInput";
+import { MessageDropZone } from "@/components/messages/MessageDropZone";
 import { PinnedPanel } from "@/components/messages/PinnedPanel";
 
 export default function DmPage({ params }: { params: Promise<{ conversationId: string }> }) {
@@ -44,22 +45,29 @@ export default function DmPage({ params }: { params: Promise<{ conversationId: s
         </button>
         {showPins && <PinnedPanel pinned={pinned} onClose={() => setShowPins(false)} />}
       </header>
-      <MessageList
-        messages={messages}
-        onReply={(m, name) => {
-          setReplyTo(m);
-          setReplyToName(name);
-        }}
-      />
-      <MessageInput
+      <MessageDropZone
         target={{ conversation_id: conversationId }}
-        placeholder={`Message ${other?.display_name ?? ""}`}
-        replyTo={replyTo}
-        replyToName={replyToName}
-        onClearReply={() => setReplyTo(null)}
         addPending={addPending}
         removePending={removePending}
-      />
+        className="flex-1 flex flex-col min-h-0"
+      >
+        <MessageList
+          messages={messages}
+          onReply={(m, name) => {
+            setReplyTo(m);
+            setReplyToName(name);
+          }}
+        />
+        <MessageInput
+          target={{ conversation_id: conversationId }}
+          placeholder={`Message ${other?.display_name ?? ""}`}
+          replyTo={replyTo}
+          replyToName={replyToName}
+          onClearReply={() => setReplyTo(null)}
+          addPending={addPending}
+          removePending={removePending}
+        />
+      </MessageDropZone>
     </>
   );
 }

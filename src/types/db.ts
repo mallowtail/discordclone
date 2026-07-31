@@ -25,6 +25,22 @@ export type ServerMember = {
   role: "admin" | "member";
 };
 
+export type Role = {
+  id: string;
+  server_id: string;
+  name: string;
+  color: string | null;
+  permissions: string[];
+  position: number;
+  created_at: string;
+};
+
+export type MemberRole = {
+  server_id: string;
+  user_id: string;
+  role_id: string;
+};
+
 export type Category = {
   id: string;
   server_id: string;

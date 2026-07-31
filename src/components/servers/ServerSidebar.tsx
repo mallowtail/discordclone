@@ -8,6 +8,7 @@ import { CreateChannelDialog } from "@/components/servers/CreateChannelDialog";
 import { CreateCategoryDialog } from "@/components/servers/CreateCategoryDialog";
 import { ServerSettingsDialog } from "@/components/servers/ServerSettingsDialog";
 import { InviteDialog } from "@/components/servers/InviteDialog";
+import { UserPanel } from "@/components/user/UserPanel";
 import { useServerRole } from "@/hooks/useServerRole";
 
 export function ServerSidebar({ serverId }: { serverId: string }) {
@@ -97,6 +98,9 @@ export function ServerSidebar({ serverId }: { serverId: string }) {
           </div>
         )}
       </nav>
+      <div className="p-2">
+        <UserPanel />
+      </div>
       {creating && <CreateChannelDialog serverId={serverId} categories={categories} onClose={() => setCreating(false)} />}
       {addingCategory && (
         <CreateCategoryDialog

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { Dropdown } from "@/components/ui/Dropdown";
 import type { Category } from "@/types/db";
 
 export function CreateChannelDialog({
@@ -45,12 +46,13 @@ export function CreateChannelDialog({
         <input autoFocus value={name} onChange={(e) => setName(e.target.value)}
           placeholder="channel-name" className="w-full p-2 rounded-xl bg-surface-2 text-ink mb-3" />
         {categories.length > 0 && (
-          <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)}
-            className="w-full p-2 rounded-xl bg-surface-2 text-ink mb-3">
-            {categories.map((c) => (
-              <option key={c.id} value={c.id}>{c.name}</option>
-            ))}
-          </select>
+          <div className="mb-3">
+            <Dropdown
+              value={categoryId}
+              onChange={setCategoryId}
+              options={categories.map((c) => ({ value: c.id, label: c.name }))}
+            />
+          </div>
         )}
         <button onClick={create} disabled={busy}
           className="w-full bg-accent hover:bg-accent-strong text-white font-medium rounded-xl p-2 disabled:opacity-50">

@@ -131,7 +131,7 @@ export function ProfileCard({
     >
       <div className="p-4">
         <div className="flex items-center gap-2">
-          <button onClick={openFullPage} title="View full profile" className="block">
+          <button onClick={openFullPage} title="View full profile" className="block flex-none">
             <Avatar url={profile?.avatar_url ?? null} name={profile?.display_name} size="lg" />
           </button>
           <StatusBubble status={profile?.status} />

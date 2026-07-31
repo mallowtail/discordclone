@@ -18,6 +18,7 @@ export function CreateCategoryDialog({
   const [error, setError] = useState<string | null>(null);
 
   async function create() {
+    if (busy) return;
     const trimmed = name.trim();
     if (!trimmed) return setError("Enter a category name");
     setError(null);

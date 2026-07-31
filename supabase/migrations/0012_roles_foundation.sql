@@ -56,19 +56,3 @@ create policy "admins delete member_roles" on public.member_roles for delete to 
 -- realtime
 alter publication supabase_realtime add table public.roles;
 alter publication supabase_realtime add table public.member_roles;
-
--- seed: an "Admin" role (all 5 perms) per server, assigned to current admins
-do $$
-declare s record; rid uuid;
-begin
-  for s in select id from public.servers loop
-    insert into public.roles (server_id, name, color, permissions, position)
-      values (s.id, 'Admin', '#7c9cff',
-        array['manage_channels','manage_server','manage_roles','kick_members','manage_messages'], 1)
-      returning id into rid;
-    insert into public.member_roles (server_id, user_id, role_id)
-      select s.id, m.user_id, rid
-      from public.server_members m
-      where m.server_id = s.id and m.role = 'admin';
-  end loop;
-end $$;

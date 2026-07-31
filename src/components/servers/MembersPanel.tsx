@@ -4,14 +4,12 @@ import { useCallback, useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { Profile } from "@/types/db";
 import { Avatar } from "@/components/user/Avatar";
-import { useServerRole } from "@/hooks/useServerRole";
 import { useProfilePopover } from "@/components/providers/ProfilePopoverProvider";
 
 type Member = { user_id: string; role: "admin" | "member"; profile: Profile | null };
 
 export function MembersPanel({ serverId, onClose }: { serverId: string; onClose: () => void }) {
   const supabase = createClient();
-  const { isManager } = useServerRole(serverId);
   const { open } = useProfilePopover();
   const [ownerId, setOwnerId] = useState<string | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
@@ -39,14 +37,9 @@ export function MembersPanel({ serverId, onClose }: { serverId: string; onClose:
     };
   }, [supabase, serverId, load]);
 
-  async function setRole(userId: string, role: "admin" | "member") {
-    await supabase.from("server_members").update({ role }).eq("server_id", serverId).eq("user_id", userId);
-  }
-
   function badge(m: Member) {
     if (m.user_id === ownerId) return <span className="text-accent text-[10px] font-semibold">OWNER</span>;
-    if (m.role === "admin") return <span className="text-muted text-[10px] font-semibold bg-surface-2 rounded px-1">ADMIN</span>;
-    return <span className="text-muted text-[10px]">member</span>;
+    return null;
   }
 
   return (
@@ -68,15 +61,6 @@ export function MembersPanel({ serverId, onClose }: { serverId: string; onClose:
                 {badge(m)}
               </div>
             </button>
-            {isManager && m.user_id !== ownerId && (
-              m.role === "admin" ? (
-                <button onClick={() => setRole(m.user_id, "member")}
-                  className="text-[10px] text-muted hover:text-ink">Remove admin</button>
-              ) : (
-                <button onClick={() => setRole(m.user_id, "admin")}
-                  className="text-[10px] text-accent hover:underline">Make admin</button>
-              )
-            )}
           </div>
         ))}
       </div>

@@ -14,7 +14,7 @@ import { validateMessage } from "@/lib/validation";
 
 const CARD_WIDTH = 256; // w-64
 
-type RoleLabel = "OWNER" | "ADMIN" | "member" | null;
+type RoleLabel = "OWNER" | null;
 
 export function ProfileCard({
   userId,
@@ -55,15 +55,9 @@ export function ProfileCard({
     if (!serverId) { setRole(null); return; }
     let active = true;
     (async () => {
-      const [{ data: s }, { data: m }] = await Promise.all([
-        supabase.from("servers").select("owner_id").eq("id", serverId).single(),
-        supabase.from("server_members").select("role").eq("server_id", serverId).eq("user_id", userId).maybeSingle(),
-      ]);
+      const { data: s } = await supabase.from("servers").select("owner_id").eq("id", serverId).single();
       if (!active) return;
-      if (s?.owner_id === userId) setRole("OWNER");
-      else if (m?.role === "admin") setRole("ADMIN");
-      else if (m?.role === "member") setRole("member");
-      else setRole(null);
+      setRole(s?.owner_id === userId ? "OWNER" : null);
     })();
     return () => { active = false; };
   }, [supabase, serverId, userId]);
@@ -139,8 +133,6 @@ export function ProfileCard({
         <div className="mt-2 flex items-center gap-2">
           <span className="text-ink font-semibold truncate">{profile?.display_name ?? "…"}</span>
           {role === "OWNER" && <span className="text-accent text-[10px] font-semibold">OWNER</span>}
-          {role === "ADMIN" && <span className="text-muted text-[10px] font-semibold bg-surface-2 rounded px-1">ADMIN</span>}
-          {role === "member" && <span className="text-muted text-[10px]">member</span>}
         </div>
         {profile?.username && <div className="text-muted text-sm">@{profile.username}</div>}
         {profile?.bio && (

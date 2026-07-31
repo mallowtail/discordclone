@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/components/providers/AuthProvider";
 import type { Profile } from "@/types/db";
 import { Avatar } from "@/components/user/Avatar";
+import { StatusBubble } from "@/components/user/StatusBubble";
 import { computePopoverPosition } from "@/lib/popover";
 import { openDmWith } from "@/lib/dm";
 import { validateMessage } from "@/lib/validation";
@@ -129,9 +130,12 @@ export function ProfileCard({
       className="z-50 bg-surface border border-line rounded-2xl shadow-xl overflow-hidden"
     >
       <div className="p-4">
-        <button onClick={openFullPage} title="View full profile" className="block">
-          <Avatar url={profile?.avatar_url ?? null} name={profile?.display_name} size="lg" />
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={openFullPage} title="View full profile" className="block">
+            <Avatar url={profile?.avatar_url ?? null} name={profile?.display_name} size="lg" />
+          </button>
+          <StatusBubble status={profile?.status} />
+        </div>
         <div className="mt-2 flex items-center gap-2">
           <span className="text-ink font-semibold truncate">{profile?.display_name ?? "…"}</span>
           {role === "OWNER" && <span className="text-accent text-[10px] font-semibold">OWNER</span>}
@@ -139,7 +143,6 @@ export function ProfileCard({
           {role === "member" && <span className="text-muted text-[10px]">member</span>}
         </div>
         {profile?.username && <div className="text-muted text-sm">@{profile.username}</div>}
-        {profile?.status && <div className="text-ink text-sm mt-2">{profile.status}</div>}
         {profile?.bio && (
           <div className="mt-2">
             <p ref={bioRef} className={`text-muted text-sm whitespace-pre-wrap ${expandBio ? "" : "line-clamp-3"}`}>

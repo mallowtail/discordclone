@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/components/providers/AuthProvider";
 import type { Profile } from "@/types/db";
 import { Avatar } from "@/components/user/Avatar";
+import { StatusBubble } from "@/components/user/StatusBubble";
 import { openDmWith } from "@/lib/dm";
 
 export default function UserPage({ params }: { params: Promise<{ id: string }> }) {
@@ -62,8 +63,8 @@ export default function UserPage({ params }: { params: Promise<{ id: string }> }
                 <h1 className="text-ink text-xl font-bold truncate">{profile.display_name}</h1>
                 <div className="text-muted">@{profile.username}</div>
               </div>
+              <StatusBubble status={profile.status} />
             </div>
-            {profile.status && <p className="text-ink mt-4">{profile.status}</p>}
             {profile.bio && (
               <div className="mt-4">
                 <h2 className="text-muted text-xs uppercase tracking-wide mb-1">About</h2>

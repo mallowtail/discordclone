@@ -5,6 +5,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import type { Server, Category, Channel } from "@/types/db";
 import { CreateChannelDialog } from "@/components/servers/CreateChannelDialog";
+import { CreateCategoryDialog } from "@/components/servers/CreateCategoryDialog";
 import { ServerSettingsDialog } from "@/components/servers/ServerSettingsDialog";
 import { InviteDialog } from "@/components/servers/InviteDialog";
 import { useServerRole } from "@/hooks/useServerRole";
@@ -16,6 +17,7 @@ export function ServerSidebar({ serverId }: { serverId: string }) {
   const [channels, setChannels] = useState<Channel[]>([]);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [creating, setCreating] = useState(false);
+  const [addingCategory, setAddingCategory] = useState(false);
   const [settings, setSettings] = useState(false);
   const [inviting, setInviting] = useState(false);
   const { isManager } = useServerRole(serverId);
@@ -43,11 +45,6 @@ export function ServerSidebar({ serverId }: { serverId: string }) {
     };
   }, [supabase, serverId, load]);
 
-  async function addCategory() {
-    const name = prompt("Category name")?.trim();
-    if (!name) return;
-    await supabase.from("categories").insert({ server_id: serverId, name, position: categories.length });
-  }
 
   function channelsIn(categoryId: string | null) {
     return channels.filter((c) => c.category_id === categoryId);
@@ -96,11 +93,18 @@ export function ServerSidebar({ serverId }: { serverId: string }) {
         {isManager && (
           <div className="flex gap-2 mt-3 text-xs">
             <button onClick={() => setCreating(true)} className="hover:text-ink">+ Channel</button>
-            <button onClick={addCategory} className="hover:text-ink">+ Category</button>
+            <button onClick={() => setAddingCategory(true)} className="hover:text-ink">+ Category</button>
           </div>
         )}
       </nav>
       {creating && <CreateChannelDialog serverId={serverId} categories={categories} onClose={() => setCreating(false)} />}
+      {addingCategory && (
+        <CreateCategoryDialog
+          serverId={serverId}
+          position={categories.length}
+          onClose={() => setAddingCategory(false)}
+        />
+      )}
       {settings && server && (
         <ServerSettingsDialog server={server} isManager={isManager} onSaved={load} onClose={() => setSettings(false)} />
       )}

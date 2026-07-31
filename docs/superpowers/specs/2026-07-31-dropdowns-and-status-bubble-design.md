@@ -1,6 +1,6 @@
 # Custom dropdowns + status thought-bubble — design
 
-**Date:** 2026-07-10
+**Date:** 2026-07-31
 **Sub-project:** UI/messaging batch, slices B + C (built together; then D roles, E settings)
 **Status:** approved, ready for planning
 

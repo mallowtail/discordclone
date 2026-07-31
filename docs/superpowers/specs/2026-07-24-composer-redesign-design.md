@@ -1,6 +1,6 @@
 # Composer redesign + file upload + emoji picker — design
 
-**Date:** 2026-07-10
+**Date:** 2026-07-24
 **Sub-project:** UI/messaging batch, slice A of 5 (then B dropdowns, C status bubble, D roles, E settings)
 **Status:** approved, ready for planning
 

@@ -1,6 +1,6 @@
 # Profile cards + bio/status + full user page — design
 
-**Date:** 2026-07-10
+**Date:** 2026-07-24
 **Sub-project:** Aesthetics pass, slice 2 of 2 (slice 1 = rail polish + softer corners, merged)
 **Status:** approved, ready for planning
 

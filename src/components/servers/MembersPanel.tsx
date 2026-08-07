@@ -6,6 +6,7 @@ import type { Profile } from "@/types/db";
 import { Avatar } from "@/components/user/Avatar";
 import { useProfilePopover } from "@/components/providers/ProfilePopoverProvider";
 import { useServerPermissions } from "@/hooks/useServerPermissions";
+import { useMemberRoleColors } from "@/hooks/useMemberRoleColors";
 import { MemberRolesDialog } from "@/components/servers/MemberRolesDialog";
 import { X, ShieldStar } from "@phosphor-icons/react";
 
@@ -15,16 +16,12 @@ export function MembersPanel({ serverId, onClose }: { serverId: string; onClose:
   const supabase = createClient();
   const { open } = useProfilePopover();
   const { has } = useServerPermissions(serverId);
-  const [ownerId, setOwnerId] = useState<string | null>(null);
+  const { colorFor } = useMemberRoleColors(serverId);
   const [members, setMembers] = useState<Member[]>([]);
   const [managingUser, setManagingUser] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    const [{ data: s }, { data: rows }] = await Promise.all([
-      supabase.from("servers").select("owner_id").eq("id", serverId).single(),
-      supabase.from("server_members").select("user_id, role, profiles(*)").eq("server_id", serverId),
-    ]);
-    setOwnerId((s?.owner_id as string) ?? null);
+    const { data: rows } = await supabase.from("server_members").select("user_id, role, profiles(*)").eq("server_id", serverId);
     setMembers(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (rows ?? []).map((r: any) => ({ user_id: r.user_id, role: r.role, profile: r.profiles }))
@@ -41,11 +38,6 @@ export function MembersPanel({ serverId, onClose }: { serverId: string; onClose:
       supabase.removeChannel(channel);
     };
   }, [supabase, serverId, load]);
-
-  function badge(m: Member) {
-    if (m.user_id === ownerId) return <span className="text-accent text-[10px] font-semibold">OWNER</span>;
-    return null;
-  }
 
   return (
     <aside className="w-56 bg-sidebar border-l border-line flex flex-col">
@@ -64,8 +56,9 @@ export function MembersPanel({ serverId, onClose }: { serverId: string; onClose:
             >
               <Avatar url={m.profile?.avatar_url ?? null} name={m.profile?.display_name} size="sm" />
               <div className="min-w-0">
-                <div className="text-ink text-sm truncate">{m.profile?.display_name ?? "Unknown"}</div>
-                {badge(m)}
+                <div className="text-ink text-sm truncate" style={{ color: colorFor(m.user_id) ?? undefined }}>
+                  {m.profile?.display_name ?? "Unknown"}
+                </div>
               </div>
             </button>
             {has("manage_roles") && (

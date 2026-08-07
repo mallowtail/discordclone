@@ -11,10 +11,10 @@ import { StatusBubble } from "@/components/user/StatusBubble";
 import { computePopoverPosition } from "@/lib/popover";
 import { openDmWith } from "@/lib/dm";
 import { validateMessage } from "@/lib/validation";
+import { useMemberRoleColors } from "@/hooks/useMemberRoleColors";
+import { RolePill } from "@/components/servers/RolePill";
 
 const CARD_WIDTH = 256; // w-64
-
-type RoleLabel = "OWNER" | null;
 
 export function ProfileCard({
   userId,
@@ -34,12 +34,13 @@ export function ProfileCard({
   const bioRef = useRef<HTMLParagraphElement>(null);
 
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [role, setRole] = useState<RoleLabel>(null);
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
   const [expandBio, setExpandBio] = useState(false);
   const [bioOverflows, setBioOverflows] = useState(false);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
+
+  const { colorFor, rolesFor } = useMemberRoleColors(serverId);
 
   const isSelf = user?.id === userId;
 
@@ -50,17 +51,6 @@ export function ProfileCard({
     });
     return () => { active = false; };
   }, [supabase, userId]);
-
-  useEffect(() => {
-    if (!serverId) { setRole(null); return; }
-    let active = true;
-    (async () => {
-      const { data: s } = await supabase.from("servers").select("owner_id").eq("id", serverId).single();
-      if (!active) return;
-      setRole(s?.owner_id === userId ? "OWNER" : null);
-    })();
-    return () => { active = false; };
-  }, [supabase, serverId, userId]);
 
   // Position after render, measuring the card's actual height. Recomputes when content changes.
   useLayoutEffect(() => {
@@ -75,7 +65,7 @@ export function ProfileCard({
     if (bioRef.current && !expandBio) {
       setBioOverflows(bioRef.current.scrollHeight > bioRef.current.clientHeight + 1);
     }
-  }, [anchorRect, profile, role, expandBio]);
+  }, [anchorRect, profile, expandBio, rolesFor]);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) { if (e.key === "Escape") onClose(); }
@@ -131,10 +121,14 @@ export function ProfileCard({
           <StatusBubble status={profile?.status} />
         </div>
         <div className="mt-2 flex items-center gap-2">
-          <span className="text-ink font-semibold truncate">{profile?.display_name ?? "…"}</span>
-          {role === "OWNER" && <span className="text-accent text-[10px] font-semibold">OWNER</span>}
+          <span className="text-ink font-semibold truncate" style={{ color: colorFor(userId) ?? undefined }}>{profile?.display_name ?? "…"}</span>
         </div>
         {profile?.username && <div className="text-muted text-sm">@{profile.username}</div>}
+        {rolesFor(userId).length > 0 && (
+          <div className="flex flex-wrap gap-1 mt-2">
+            {rolesFor(userId).map((r) => <RolePill key={r.id} role={r} />)}
+          </div>
+        )}
         {profile?.bio && (
           <div className="mt-2">
             <p ref={bioRef} className={`text-muted text-sm whitespace-pre-wrap ${expandBio ? "" : "line-clamp-3"}`}>

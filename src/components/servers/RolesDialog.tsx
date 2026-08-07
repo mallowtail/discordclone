@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useServerPermissions } from "@/hooks/useServerPermissions";
-import { canManageRoleClient } from "@/lib/roleHierarchy";
+import { canEditRoleClient } from "@/lib/roleHierarchy";
 import { RoleEditor } from "@/components/servers/RoleEditor";
 import type { Role } from "@/types/db";
 
@@ -42,9 +42,18 @@ export function RolesDialog({ serverId, onClose }: { serverId: string; onClose: 
     setError(null);
     const pa = a.position, pb = b.position;
     const r1 = await supabase.from("roles").update({ position: pb }).eq("id", a.id);
+    if (r1.error) {
+      setError("Couldn't reorder — try again");
+      return;
+    }
     const r2 = await supabase.from("roles").update({ position: pa }).eq("id", b.id);
-    if (r1.error || r2.error) setError("Couldn't reorder — try again");
+    if (r2.error) {
+      // revert the first update so positions don't get corrupted
+      await supabase.from("roles").update({ position: pa }).eq("id", a.id);
+      setError("Couldn't reorder — try again");
+    }
     reload();
+    refresh();
   }
 
   async function remove(role: Role) {
@@ -53,6 +62,7 @@ export function RolesDialog({ serverId, onClose }: { serverId: string; onClose: 
     const { error: err } = await supabase.from("roles").delete().eq("id", role.id);
     if (err) return setError("Couldn't delete — try again");
     reload();
+    refresh();
   }
 
   function handleDone() {
@@ -107,11 +117,15 @@ export function RolesDialog({ serverId, onClose }: { serverId: string; onClose: 
         {editing === null && roles.length > 0 && (
           <ul className="flex flex-col gap-1">
             {roles.map((role, i) => {
-              const manageable = canManageRoleClient(role.position, rank, isOwner);
+              const manageable = canEditRoleClient(role.permissions, role.position, perms, rank, isOwner);
               const canMoveUp =
-                i > 0 && manageable && canManageRoleClient(roles[i - 1].position, rank, isOwner);
+                i > 0 &&
+                manageable &&
+                canEditRoleClient(roles[i - 1].permissions, roles[i - 1].position, perms, rank, isOwner);
               const canMoveDown =
-                i < roles.length - 1 && manageable && canManageRoleClient(roles[i + 1].position, rank, isOwner);
+                i < roles.length - 1 &&
+                manageable &&
+                canEditRoleClient(roles[i + 1].permissions, roles[i + 1].position, perms, rank, isOwner);
               return (
                 <li key={role.id} className="flex items-center gap-2 p-2 rounded-xl hover:bg-surface-2">
                   <span

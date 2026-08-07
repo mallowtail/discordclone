@@ -32,6 +32,7 @@ export function MessageItem({
   repliedToName,
   onReply,
   serverId,
+  authorColor,
 }: {
   msg: Message;
   authorName: string;
@@ -42,6 +43,7 @@ export function MessageItem({
   repliedToName?: string;
   onReply?: (m: Message, authorName: string) => void;
   serverId?: string;
+  authorColor?: string | null;
 }) {
   const { user, profile } = useAuth();
   const supabase = useMemo(() => createClient(), []);
@@ -137,7 +139,7 @@ export function MessageItem({
 
           {showHeader && (
             <div>
-              <button onClick={openProfile} className="font-semibold text-ink hover:underline">{authorName}</button>
+              <button onClick={openProfile} className="font-semibold text-ink hover:underline" style={{ color: authorColor ?? undefined }}>{authorName}</button>
               <span className="text-xs text-muted ml-2">{formatTime(msg.created_at)}</span>
               {msg.pinned && (
                 <span className="text-muted ml-2 inline-flex align-middle" title="Pinned" aria-label="Pinned">

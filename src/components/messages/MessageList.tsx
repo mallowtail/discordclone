@@ -7,6 +7,7 @@ import { MessageItem } from "@/components/messages/MessageItem";
 import { startsNewGroup } from "@/lib/grouping";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { useReactions } from "@/hooks/useReactions";
+import { useMemberRoleColors } from "@/hooks/useMemberRoleColors";
 
 export function MessageList({
   messages,
@@ -23,6 +24,7 @@ export function MessageList({
   const { user } = useAuth();
   const reactionsByMessage = useReactions(messages.map((m) => m.id), user?.id ?? "");
   const byId = new Map(messages.map((m) => [m.id, m]));
+  const { colorFor } = useMemberRoleColors(serverId);
 
   useEffect(() => {
     const missing = [...new Set(messages.map((m) => m.author_id))].filter((id) => !profiles[id]);
@@ -55,6 +57,7 @@ export function MessageList({
             repliedToName={repliedTo ? profiles[repliedTo.author_id]?.display_name : undefined}
             onReply={onReply}
             serverId={serverId}
+            authorColor={colorFor(m.author_id)}
           />
         );
       })}

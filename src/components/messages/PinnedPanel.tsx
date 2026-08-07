@@ -37,7 +37,7 @@ export function PinnedPanel({ pinned, onClose }: { pinned: Message[]; onClose: (
 
   return (
     <div className="absolute right-3 top-12 w-72 bg-sidebar border border-line rounded-2xl p-2 shadow-xl z-50">
-      <div className="text-ink font-bold text-[11px] uppercase mb-2 flex items-center gap-1">
+      <div className="text-[11px] font-semibold uppercase tracking-wider text-muted mb-2 flex items-center gap-1">
         <PushPin size={12} aria-hidden="true" /> Pinned Messages
       </div>
       {pinned.length === 0 && <div className="text-muted text-sm px-1 py-2">No pinned messages yet.</div>}

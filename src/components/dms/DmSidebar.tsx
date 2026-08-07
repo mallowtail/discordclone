@@ -41,7 +41,7 @@ export function DmSidebar() {
     <aside className="w-60 bg-sidebar flex flex-col">
       <div className="p-3 font-semibold text-ink tracking-tight border-b border-line">Direct Messages</div>
       <nav className="flex-1 overflow-y-auto p-2 text-muted">
-        <div className="flex items-center justify-between text-xs uppercase mt-2 mb-1">
+        <div className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-wider text-muted mt-2 mb-1">
           Direct Messages <NewDmDialog />
         </div>
         {dms.map((d) => (

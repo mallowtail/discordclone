@@ -67,7 +67,7 @@ export default function UserPage({ params }: { params: Promise<{ id: string }> }
             </div>
             {profile.bio && (
               <div className="mt-4">
-                <h2 className="text-muted text-xs uppercase tracking-wide mb-1">About</h2>
+                <h2 className="text-muted text-[11px] font-semibold uppercase tracking-wider mb-1">About</h2>
                 <p className="text-ink whitespace-pre-wrap">{profile.bio}</p>
               </div>
             )}

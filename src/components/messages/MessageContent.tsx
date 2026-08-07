@@ -22,7 +22,7 @@ export function MessageContent({ msg }: { msg: Message }) {
   const safeImage = msg.image_url && isHttpUrl(msg.image_url) ? msg.image_url : null;
   const safeFile = msg.file_url && isHttpUrl(msg.file_url) ? msg.file_url : null;
   return (
-    <div className="text-ink break-words">
+    <div className="text-ink break-words leading-relaxed">
       {msg.content && (
         <ReactMarkdown
           remarkPlugins={[remarkGfm, remarkBreaks, remarkMentions]}

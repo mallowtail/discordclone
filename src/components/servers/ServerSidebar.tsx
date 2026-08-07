@@ -86,7 +86,7 @@ export function ServerSidebar({ serverId }: { serverId: string }) {
           <div key={cat.id}>
             <button
               onClick={() => setCollapsed((p) => ({ ...p, [cat.id]: !p[cat.id] }))}
-              className="w-full flex items-center gap-1 text-[10px] uppercase tracking-wide mt-3 mb-1 hover:text-ink"
+              className="w-full flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wider text-muted mt-3 mb-1 hover:text-ink"
             >
               <span>
                 {collapsed[cat.id] ? (

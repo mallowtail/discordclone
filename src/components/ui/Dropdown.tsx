@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { CaretDown } from "@phosphor-icons/react";
 
 export function Dropdown({
   options,
@@ -43,7 +44,9 @@ export function Dropdown({
         className="w-full flex items-center justify-between p-2 rounded-xl bg-surface-2 text-ink text-left"
       >
         <span className={selected ? "" : "text-muted"}>{selected?.label ?? placeholder}</span>
-        <span className="text-muted text-xs ml-2">▾</span>
+        <span className="text-muted text-xs ml-2">
+          <CaretDown size={14} weight="bold" />
+        </span>
       </button>
       {open && (
         <div className="absolute left-0 right-0 top-full mt-1 z-20 rounded-xl border border-line bg-surface shadow-lg py-1 max-h-60 overflow-y-auto">

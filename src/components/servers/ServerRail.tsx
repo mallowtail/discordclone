@@ -2,6 +2,7 @@
 
 import { useState, useRef } from "react";
 import { createPortal } from "react-dom";
+import { ChatCircle, Plus } from "@phosphor-icons/react";
 import { useServers } from "@/hooks/useServers";
 import { ServerIcon } from "@/components/servers/ServerIcon";
 import { AddServerDialog } from "@/components/servers/AddServerDialog";
@@ -80,7 +81,7 @@ export function ServerRail({
             activeServerId === null ? "bg-accent" : "bg-surface"
           }`}
         >
-          💬
+          <ChatCircle size={22} weight="regular" />
         </div>
       </RailItem>
       <div className="w-8 h-px bg-line my-1" />
@@ -100,7 +101,7 @@ export function ServerRail({
         onClick={() => setAdding(true)}
       >
         <div className="w-11 h-11 rounded-2xl bg-surface text-accent text-xl flex items-center justify-center">
-          +
+          <Plus size={18} weight="bold" />
         </div>
       </RailItem>
       {adding && <AddServerDialog onClose={() => setAdding(false)} />}

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { GearSix, Plus, CaretDown, CaretRight } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
 import type { Server, Category, Channel } from "@/types/db";
 import { CreateChannelDialog } from "@/components/servers/CreateChannelDialog";
@@ -64,14 +65,16 @@ export function ServerSidebar({ serverId }: { serverId: string }) {
           className="flex-1 p-3 font-bold text-ink flex items-center justify-between hover:bg-surface min-w-0"
         >
           <span className="truncate">{server?.name ?? "…"}</span>
-          <span className="text-muted text-sm">⚙</span>
+          <span className="text-muted text-sm">
+            <GearSix size={18} weight="regular" aria-label="Server settings" />
+          </span>
         </button>
         <button
           onClick={() => setInviting(true)}
           title="Invite people"
           className="px-3 py-3 text-muted hover:text-ink hover:bg-surface"
         >
-          ＋
+          <Plus size={18} weight="bold" />
         </button>
       </div>
       <nav className="flex-1 overflow-y-auto p-2 text-muted">
@@ -85,7 +88,14 @@ export function ServerSidebar({ serverId }: { serverId: string }) {
               onClick={() => setCollapsed((p) => ({ ...p, [cat.id]: !p[cat.id] }))}
               className="w-full flex items-center gap-1 text-[10px] uppercase tracking-wide mt-3 mb-1 hover:text-ink"
             >
-              <span>{collapsed[cat.id] ? "▸" : "▾"}</span> {cat.name}
+              <span>
+                {collapsed[cat.id] ? (
+                  <CaretRight size={12} weight="bold" />
+                ) : (
+                  <CaretDown size={12} weight="bold" />
+                )}
+              </span>{" "}
+              {cat.name}
             </button>
             {!collapsed[cat.id] &&
               channelsIn(cat.id).map((c) => (

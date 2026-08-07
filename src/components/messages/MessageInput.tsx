@@ -8,6 +8,7 @@ import { uploadAndPostFile } from "@/lib/sendAttachment";
 import type { Message } from "@/types/db";
 import { MentionAutocomplete } from "@/components/messages/MentionAutocomplete";
 import EmojiPicker, { Theme } from "emoji-picker-react";
+import { Plus, Smiley, File } from "@phosphor-icons/react";
 
 type Target = { channel_id: string } | { conversation_id: string };
 
@@ -235,7 +236,7 @@ export function MessageInput({
               disabled={uploading}
               className="w-8 h-8 flex items-center justify-center rounded-full bg-surface-2 text-muted hover:text-ink text-lg leading-none disabled:opacity-50"
             >
-              ＋
+              <Plus size={18} weight="bold" />
             </button>
             {menuOpen && (
               <div className="absolute bottom-full mb-2 left-0 z-20 w-40 rounded-xl border border-line bg-surface shadow-lg py-1">
@@ -244,7 +245,7 @@ export function MessageInput({
                   onClick={() => { setMenuOpen(false); fileRef.current?.click(); }}
                   className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-ink hover:bg-surface-2 text-left"
                 >
-                  <span aria-hidden="true">📄</span> Upload a file
+                  <File size={16} aria-hidden="true" /> Upload a file
                 </button>
               </div>
             )}
@@ -282,7 +283,7 @@ export function MessageInput({
               title="Emoji"
               className="w-8 h-8 flex items-center justify-center rounded-full text-muted hover:text-ink text-lg leading-none"
             >
-              🙂
+              <Smiley size={20} />
             </button>
             {emojiOpen && (
               <div className="absolute bottom-full right-0 mb-2 z-30">

@@ -9,6 +9,7 @@ import { MessageList } from "@/components/messages/MessageList";
 import { MessageInput } from "@/components/messages/MessageInput";
 import { MessageDropZone } from "@/components/messages/MessageDropZone";
 import { PinnedPanel } from "@/components/messages/PinnedPanel";
+import { PushPin } from "@phosphor-icons/react";
 
 export default function DmPage({ params }: { params: Promise<{ conversationId: string }> }) {
   const { conversationId } = use(params);
@@ -39,9 +40,9 @@ export default function DmPage({ params }: { params: Promise<{ conversationId: s
         <span>@ {other?.display_name ?? "Direct Message"}</span>
         <button
           onClick={() => setShowPins((s) => !s)}
-          className="text-xs font-normal text-muted hover:text-ink"
+          className="text-xs font-normal text-muted hover:text-ink flex items-center gap-1"
         >
-          📌 Pinned ({pinned.length})
+          <PushPin size={15} /> Pinned ({pinned.length})
         </button>
         {showPins && <PinnedPanel pinned={pinned} onClose={() => setShowPins(false)} />}
       </header>

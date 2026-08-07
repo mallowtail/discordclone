@@ -13,11 +13,12 @@ import { ReactionBar } from "@/components/messages/ReactionBar";
 import { Avatar } from "@/components/user/Avatar";
 import { useProfilePopover } from "@/components/providers/ProfilePopoverProvider";
 import type { ReactionPill } from "@/lib/reactions";
+import { ArrowBendUpLeft, PushPin } from "@phosphor-icons/react";
 
 function snippet(m: Message): string {
   if (m.content) return m.content.length > 60 ? m.content.slice(0, 60) + "…" : m.content;
-  if (m.image_url) return "📷 image";
-  if (m.file_url) return "📄 file";
+  if (m.image_url) return "Image";
+  if (m.file_url) return "File";
   return "";
 }
 
@@ -100,7 +101,9 @@ export function MessageItem({
       } ${msg.pending ? "opacity-50" : ""}`}
     >
       {!showHeader && msg.pinned && (
-        <span className="absolute left-1 top-0.5 text-[10px] text-muted" title="Pinned">📌</span>
+        <span className="absolute left-1 top-0.5 text-muted" title="Pinned" aria-label="Pinned">
+          <PushPin size={15} weight="fill" />
+        </span>
       )}
       <div className="flex gap-3">
         <div className="w-10 flex-none">
@@ -116,7 +119,7 @@ export function MessageItem({
               onClick={jumpToOriginal}
               className="flex items-center gap-1 text-[11px] text-muted mb-0.5 cursor-pointer"
             >
-              <span className="text-muted">↰</span>
+              <span className="text-muted"><ArrowBendUpLeft size={14} weight="bold" /></span>
               {repliedTo ? (
                 <>
                   {msg.mention_author ? (
@@ -136,7 +139,11 @@ export function MessageItem({
             <div>
               <button onClick={openProfile} className="font-semibold text-ink hover:underline">{authorName}</button>
               <span className="text-xs text-muted ml-2">{formatTime(msg.created_at)}</span>
-              {msg.pinned && <span className="text-xs text-muted ml-2" title="Pinned">📌</span>}
+              {msg.pinned && (
+                <span className="text-muted ml-2 inline-flex align-middle" title="Pinned" aria-label="Pinned">
+                  <PushPin size={15} weight="fill" />
+                </span>
+              )}
             </div>
           )}
 

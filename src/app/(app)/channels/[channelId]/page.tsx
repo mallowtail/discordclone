@@ -9,6 +9,7 @@ import { MessageInput } from "@/components/messages/MessageInput";
 import { MessageDropZone } from "@/components/messages/MessageDropZone";
 import { PinnedPanel } from "@/components/messages/PinnedPanel";
 import { MembersPanel } from "@/components/servers/MembersPanel";
+import { PushPin, Users } from "@phosphor-icons/react";
 
 export default function ChannelPage({ params }: { params: Promise<{ channelId: string }> }) {
   const { channelId: id } = use(params);
@@ -41,14 +42,14 @@ function ChannelView({ channel }: { channel: Channel }) {
       <header className="p-3 border-b border-line font-semibold text-ink flex items-center justify-between relative">
         <span># {channel.name}</span>
         <span className="flex items-center">
-          <button onClick={() => setShowPins((s) => !s)} className="text-xs font-normal text-muted hover:text-ink">
-            📌 Pinned ({pinned.length})
+          <button onClick={() => setShowPins((s) => !s)} className="text-xs font-normal text-muted hover:text-ink flex items-center gap-1">
+            <PushPin size={15} /> Pinned ({pinned.length})
           </button>
           <button
             onClick={() => setShowMembers((s) => !s)}
-            className="text-xs font-normal text-muted hover:text-ink ml-3"
+            className="text-xs font-normal text-muted hover:text-ink ml-3 flex items-center gap-1"
           >
-            👥 Members
+            <Users size={16} /> Members
           </button>
         </span>
         {showPins && <PinnedPanel pinned={pinned} onClose={() => setShowPins(false)} />}

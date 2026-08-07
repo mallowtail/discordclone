@@ -7,6 +7,7 @@ import { Avatar } from "@/components/user/Avatar";
 import { useProfilePopover } from "@/components/providers/ProfilePopoverProvider";
 import { useServerPermissions } from "@/hooks/useServerPermissions";
 import { MemberRolesDialog } from "@/components/servers/MemberRolesDialog";
+import { X, ShieldStar } from "@phosphor-icons/react";
 
 type Member = { user_id: string; role: "admin" | "member"; profile: Profile | null };
 
@@ -50,7 +51,9 @@ export function MembersPanel({ serverId, onClose }: { serverId: string; onClose:
     <aside className="w-56 bg-sidebar border-l border-line flex flex-col">
       <div className="p-3 font-bold text-ink border-b border-line flex items-center justify-between">
         <span>Members</span>
-        <button onClick={onClose} className="text-muted hover:text-ink text-sm">✕</button>
+        <button onClick={onClose} aria-label="Close" className="text-muted hover:text-ink text-sm">
+          <X size={16} weight="bold" />
+        </button>
       </div>
       <div className="flex-1 overflow-y-auto p-2 flex flex-col gap-1">
         {members.map((m) => (
@@ -67,7 +70,9 @@ export function MembersPanel({ serverId, onClose }: { serverId: string; onClose:
             </button>
             {has("manage_roles") && (
               <button onClick={() => setManagingUser(m.user_id)} title="Manage roles"
-                className="text-muted hover:text-ink text-xs flex-none">🏷</button>
+                className="text-muted hover:text-ink text-xs flex-none">
+                <ShieldStar size={16} />
+              </button>
             )}
           </div>
         ))}

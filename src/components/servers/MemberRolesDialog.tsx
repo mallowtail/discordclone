@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useServerPermissions } from "@/hooks/useServerPermissions";
 import { canManageRoleClient } from "@/lib/roleHierarchy";
 import type { Role } from "@/types/db";
+import { X } from "@phosphor-icons/react";
 
 export function MemberRolesDialog({
   serverId,
@@ -68,8 +69,8 @@ export function MemberRolesDialog({
       >
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-ink font-semibold text-lg">Roles for member</h2>
-          <button onClick={onClose} className="text-muted hover:text-ink">
-            ✕
+          <button onClick={onClose} aria-label="Close" className="text-muted hover:text-ink">
+            <X size={16} weight="bold" />
           </button>
         </div>
 

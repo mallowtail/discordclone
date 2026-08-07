@@ -6,6 +6,7 @@ import { useServerPermissions } from "@/hooks/useServerPermissions";
 import { canEditRoleClient } from "@/lib/roleHierarchy";
 import { RoleEditor } from "@/components/servers/RoleEditor";
 import type { Role } from "@/types/db";
+import { X, CaretUp, CaretDown, PencilSimple, Trash } from "@phosphor-icons/react";
 
 export function RolesDialog({ serverId, onClose }: { serverId: string; onClose: () => void }) {
   const supabase = useMemo(() => createClient(), []);
@@ -81,8 +82,8 @@ export function RolesDialog({ serverId, onClose }: { serverId: string; onClose: 
       >
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-ink font-semibold text-lg">Roles</h2>
-          <button onClick={onClose} className="text-muted hover:text-ink">
-            ✕
+          <button onClick={onClose} aria-label="Close" className="text-muted hover:text-ink">
+            <X size={16} weight="bold" />
           </button>
         </div>
 
@@ -139,7 +140,7 @@ export function RolesDialog({ serverId, onClose }: { serverId: string; onClose: 
                     className="text-muted hover:text-ink disabled:opacity-30 disabled:hover:text-muted"
                     title="Move up"
                   >
-                    ▲
+                    <CaretUp size={14} weight="bold" />
                   </button>
                   <button
                     onClick={() => swap(role, roles[i + 1])}
@@ -147,23 +148,25 @@ export function RolesDialog({ serverId, onClose }: { serverId: string; onClose: 
                     className="text-muted hover:text-ink disabled:opacity-30 disabled:hover:text-muted"
                     title="Move down"
                   >
-                    ▼
+                    <CaretDown size={14} weight="bold" />
                   </button>
                   <button
                     onClick={() => setEditing(role)}
                     disabled={!manageable}
+                    aria-label="Edit role"
                     className="text-muted hover:text-ink disabled:opacity-30 disabled:hover:text-muted"
                     title="Edit"
                   >
-                    ⚙
+                    <PencilSimple size={16} />
                   </button>
                   <button
                     onClick={() => remove(role)}
                     disabled={!manageable}
+                    aria-label="Delete role"
                     className="text-danger hover:opacity-80 disabled:opacity-30"
                     title="Delete"
                   >
-                    ✕
+                    <Trash size={16} />
                   </button>
                 </li>
               );

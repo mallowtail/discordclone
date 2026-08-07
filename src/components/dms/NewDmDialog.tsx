@@ -7,6 +7,7 @@ import { useAuth } from "@/components/providers/AuthProvider";
 import type { Profile } from "@/types/db";
 import { Avatar } from "@/components/user/Avatar";
 import { openDmWith } from "@/lib/dm";
+import { Plus } from "@phosphor-icons/react";
 
 export function NewDmDialog() {
   const supabase = createClient();
@@ -35,7 +36,9 @@ export function NewDmDialog() {
 
   return (
     <>
-      <button onClick={() => setOpen(true)} className="text-muted hover:text-ink" title="New DM">＋</button>
+      <button onClick={() => setOpen(true)} className="text-muted hover:text-ink" title="New DM">
+        <Plus size={18} weight="bold" />
+      </button>
       {open && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50"
              onClick={() => setOpen(false)}>

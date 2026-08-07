@@ -9,7 +9,7 @@ import { CreateCategoryDialog } from "@/components/servers/CreateCategoryDialog"
 import { ServerSettingsDialog } from "@/components/servers/ServerSettingsDialog";
 import { InviteDialog } from "@/components/servers/InviteDialog";
 import { UserPanel } from "@/components/user/UserPanel";
-import { useServerRole } from "@/hooks/useServerRole";
+import { useServerPermissions } from "@/hooks/useServerPermissions";
 
 export function ServerSidebar({ serverId }: { serverId: string }) {
   const supabase = createClient();
@@ -21,7 +21,10 @@ export function ServerSidebar({ serverId }: { serverId: string }) {
   const [addingCategory, setAddingCategory] = useState(false);
   const [settings, setSettings] = useState(false);
   const [inviting, setInviting] = useState(false);
-  const { isManager } = useServerRole(serverId);
+  const { has } = useServerPermissions(serverId);
+  const canManageChannels = has("manage_channels");
+  const canManageServer = has("manage_server");
+  const canManageRoles = has("manage_roles");
 
   const load = useCallback(async () => {
     const [{ data: s }, { data: cats }, { data: chs }] = await Promise.all([
@@ -91,7 +94,7 @@ export function ServerSidebar({ serverId }: { serverId: string }) {
               ))}
           </div>
         ))}
-        {isManager && (
+        {canManageChannels && (
           <div className="flex gap-2 mt-3 text-xs">
             <button onClick={() => setCreating(true)} className="hover:text-ink">+ Channel</button>
             <button onClick={() => setAddingCategory(true)} className="hover:text-ink">+ Category</button>
@@ -110,10 +113,10 @@ export function ServerSidebar({ serverId }: { serverId: string }) {
         />
       )}
       {settings && server && (
-        <ServerSettingsDialog server={server} isManager={isManager} onSaved={load} onClose={() => setSettings(false)} />
+        <ServerSettingsDialog server={server} canManageServer={canManageServer} canManageRoles={canManageRoles} onSaved={load} onClose={() => setSettings(false)} />
       )}
       {inviting && server && (
-        <InviteDialog server={server} isManager={isManager} onClose={() => setInviting(false)} />
+        <InviteDialog server={server} isManager={canManageServer} onClose={() => setInviting(false)} />
       )}
     </aside>
   );

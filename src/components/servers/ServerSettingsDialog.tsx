@@ -6,16 +6,19 @@ import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { uploadServerIcon } from "@/lib/upload";
 import { ServerIcon } from "@/components/servers/ServerIcon";
+import { RolesDialog } from "@/components/servers/RolesDialog";
 import type { Server } from "@/types/db";
 
 export function ServerSettingsDialog({
   server,
-  isManager,
+  canManageServer,
+  canManageRoles,
   onSaved,
   onClose,
 }: {
   server: Server;
-  isManager: boolean;
+  canManageServer: boolean;
+  canManageRoles: boolean;
   onSaved: () => void;
   onClose: () => void;
 }) {
@@ -27,6 +30,7 @@ export function ServerSettingsDialog({
   const [isPublic, setIsPublic] = useState(server.is_public);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showRoles, setShowRoles] = useState(false);
 
   async function leave() {
     if (!user) return;
@@ -78,11 +82,12 @@ export function ServerSettingsDialog({
   }
 
   return (
+    <>
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50" onClick={onClose}>
       <div className="bg-surface p-5 rounded-2xl w-80 border border-line" onClick={(e) => e.stopPropagation()}>
         <h2 className="text-ink font-semibold mb-3">Server settings</h2>
         {error && <p className="text-danger text-sm mb-2">{error}</p>}
-        {isManager && (
+        {canManageServer && (
           <>
             <div className="flex items-center gap-3 mb-3">
               <ServerIcon iconUrl={server.icon_url} name={server.name} size="lg" />
@@ -113,11 +118,19 @@ export function ServerSettingsDialog({
             </div>
           </>
         )}
+        {canManageRoles && (
+          <button onClick={() => setShowRoles(true)}
+            className="w-full bg-surface-2 hover:bg-line text-ink text-sm rounded-xl p-2 mt-3">
+            Manage roles
+          </button>
+        )}
         <button onClick={leave} disabled={busy}
           className="w-full text-danger text-sm mt-3 hover:underline disabled:opacity-50">
           Leave server
         </button>
       </div>
     </div>
+    {showRoles && <RolesDialog serverId={server.id} onClose={() => setShowRoles(false)} />}
+    </>
   );
 }

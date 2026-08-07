@@ -5,14 +5,18 @@ import { createClient } from "@/lib/supabase/client";
 import type { Profile } from "@/types/db";
 import { Avatar } from "@/components/user/Avatar";
 import { useProfilePopover } from "@/components/providers/ProfilePopoverProvider";
+import { useServerPermissions } from "@/hooks/useServerPermissions";
+import { MemberRolesDialog } from "@/components/servers/MemberRolesDialog";
 
 type Member = { user_id: string; role: "admin" | "member"; profile: Profile | null };
 
 export function MembersPanel({ serverId, onClose }: { serverId: string; onClose: () => void }) {
   const supabase = createClient();
   const { open } = useProfilePopover();
+  const { has } = useServerPermissions(serverId);
   const [ownerId, setOwnerId] = useState<string | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
+  const [managingUser, setManagingUser] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     const [{ data: s }, { data: rows }] = await Promise.all([
@@ -61,9 +65,16 @@ export function MembersPanel({ serverId, onClose }: { serverId: string; onClose:
                 {badge(m)}
               </div>
             </button>
+            {has("manage_roles") && (
+              <button onClick={() => setManagingUser(m.user_id)} title="Manage roles"
+                className="text-muted hover:text-ink text-xs flex-none">🏷</button>
+            )}
           </div>
         ))}
       </div>
+      {managingUser && (
+        <MemberRolesDialog serverId={serverId} userId={managingUser} onClose={() => setManagingUser(null)} />
+      )}
     </aside>
   );
 }

@@ -46,6 +46,7 @@ export function MessageInput({
   const [mentionMatches, setMentionMatches] = useState<string[]>([]);
   const [menuOpen, setMenuOpen] = useState(false);
   const [emojiOpen, setEmojiOpen] = useState(false);
+  const [multiline, setMultiline] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -97,6 +98,7 @@ export function MessageInput({
 
   function resetHeight() {
     if (taRef.current) taRef.current.style.height = "auto";
+    setMultiline(false);
   }
 
   async function submit() {
@@ -198,7 +200,10 @@ export function MessageInput({
 
   function autoGrow(el: HTMLTextAreaElement) {
     el.style.height = "auto";
-    el.style.height = Math.min(el.scrollHeight, 192) + "px";
+    const sh = el.scrollHeight;
+    el.style.height = Math.min(sh, 192) + "px";
+    // one line ≈ the 44px min-height; taller means it wrapped → top-align the side buttons.
+    setMultiline(sh > 48);
   }
 
   return (
@@ -227,7 +232,7 @@ export function MessageInput({
         </div>
       )}
       <div className="relative">
-        <div className="flex items-start gap-2 rounded-2xl border border-line bg-surface px-3 py-2">
+        <div className={`flex ${multiline ? "items-start" : "items-center"} gap-2 rounded-2xl border border-line bg-surface px-3 py-2`}>
           <div className="relative" ref={menuRef}>
             <button
               type="button"

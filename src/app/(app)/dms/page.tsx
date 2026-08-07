@@ -4,7 +4,7 @@ export default function DmHome() {
       <div>
         <p className="text-lg text-ink mb-1">No conversation open</p>
         <p className="text-sm">
-          Pick a server on the left, add one with ＋, or start a DM with the ＋ next to Direct Messages.
+          Pick a server on the left, add one with the add-server button, or start a direct message.
         </p>
       </div>
     </div>

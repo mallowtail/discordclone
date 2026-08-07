@@ -49,7 +49,7 @@ export function DmSidebar() {
             className="flex items-center gap-2 px-2 py-1 rounded hover:bg-surface hover:text-ink">
             <span
               onClick={(e) => { e.preventDefault(); e.stopPropagation(); if (!d.other) return; open(d.other.id, e.currentTarget.getBoundingClientRect()); }}
-              className="flex-none"
+              className="flex-none cursor-pointer"
             >
               <Avatar url={d.other?.avatar_url ?? null} name={d.other?.display_name} size="sm" />
             </span>

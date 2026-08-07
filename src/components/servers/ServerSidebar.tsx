@@ -62,7 +62,7 @@ export function ServerSidebar({ serverId }: { serverId: string }) {
       <div className="flex items-center border-b border-line">
         <button
           onClick={() => setSettings(true)}
-          className="flex-1 p-3 font-bold text-ink flex items-center justify-between hover:bg-surface min-w-0"
+          className="flex-1 p-3 font-semibold text-ink tracking-tight flex items-center justify-between hover:bg-surface min-w-0"
         >
           <span className="truncate">{server?.name ?? "…"}</span>
           <span className="text-muted text-sm">

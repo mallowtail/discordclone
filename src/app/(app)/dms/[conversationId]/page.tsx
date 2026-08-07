@@ -36,7 +36,7 @@ export default function DmPage({ params }: { params: Promise<{ conversationId: s
 
   return (
     <>
-      <header className="p-3 border-b border-line font-semibold text-ink flex items-center justify-between relative">
+      <header className="p-3 border-b border-line font-semibold text-ink tracking-tight flex items-center justify-between relative">
         <span>@ {other?.display_name ?? "Direct Message"}</span>
         <button
           onClick={() => setShowPins((s) => !s)}

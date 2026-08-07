@@ -39,7 +39,7 @@ function ChannelView({ channel }: { channel: Channel }) {
   const pinned = messages.filter((m) => m.pinned);
   return (
     <>
-      <header className="p-3 border-b border-line font-semibold text-ink flex items-center justify-between relative">
+      <header className="p-3 border-b border-line font-semibold text-ink tracking-tight flex items-center justify-between relative">
         <span># {channel.name}</span>
         <span className="flex items-center">
           <button onClick={() => setShowPins((s) => !s)} className="text-xs font-normal text-muted hover:text-ink flex items-center gap-1">

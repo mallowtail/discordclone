@@ -49,7 +49,7 @@ export function MembersPanel({ serverId, onClose }: { serverId: string; onClose:
 
   return (
     <aside className="w-56 bg-sidebar border-l border-line flex flex-col">
-      <div className="p-3 font-bold text-ink border-b border-line flex items-center justify-between">
+      <div className="p-3 font-semibold text-ink tracking-tight border-b border-line flex items-center justify-between">
         <span>Members</span>
         <button onClick={onClose} aria-label="Close" className="text-muted hover:text-ink text-sm">
           <X size={16} weight="bold" />

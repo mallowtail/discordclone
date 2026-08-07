@@ -43,7 +43,7 @@ export function NewDmDialog() {
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50"
              onClick={() => setOpen(false)}>
           <div className="bg-surface p-4 rounded-2xl w-80 border border-line" onClick={(e) => e.stopPropagation()}>
-            <h2 className="text-ink font-semibold mb-2">Start a DM</h2>
+            <h2 className="text-[15px] font-semibold text-ink tracking-tight mb-4">Start a DM</h2>
             <input autoFocus placeholder="Search username…"
               className="w-full p-2 rounded-xl bg-surface-2 text-ink"
               onChange={(e) => search(e.target.value)} />

@@ -34,7 +34,7 @@ export function CreateCategoryDialog({
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50" onClick={onClose}>
       <div className="bg-surface p-5 rounded-2xl w-80 border border-line" onClick={(e) => e.stopPropagation()}>
-        <h2 className="text-ink font-semibold mb-3">Create category</h2>
+        <h2 className="text-[15px] font-semibold text-ink tracking-tight mb-4">Create category</h2>
         {error && <p className="text-danger text-sm mb-2">{error}</p>}
         <input
           autoFocus

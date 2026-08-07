@@ -60,7 +60,7 @@ export default function UserPage({ params }: { params: Promise<{ id: string }> }
             <div className="flex items-center gap-4">
               <Avatar url={profile.avatar_url} name={profile.display_name} size="lg" />
               <div className="min-w-0">
-                <h1 className="text-ink text-xl font-bold truncate">{profile.display_name}</h1>
+                <h1 className="text-ink text-xl font-semibold tracking-tight truncate">{profile.display_name}</h1>
                 <div className="text-muted">@{profile.username}</div>
               </div>
               <StatusBubble status={profile.status} />

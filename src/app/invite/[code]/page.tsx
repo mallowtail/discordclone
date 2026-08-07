@@ -73,7 +73,7 @@ export default function InvitePage({ params }: { params: Promise<{ code: string 
             <div className="flex justify-center mb-3">
               <ServerIcon iconUrl={preview.icon_url} name={preview.name} size="lg" />
             </div>
-            <h1 className="text-lg font-bold text-ink">{preview.name}</h1>
+            <h1 className="text-lg font-semibold text-ink tracking-tight">{preview.name}</h1>
             <p className="text-sm text-muted mb-4">
               {preview.member_count} {preview.member_count === 1 ? "member" : "members"}
             </p>

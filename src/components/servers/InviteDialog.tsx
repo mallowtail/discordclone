@@ -46,7 +46,7 @@ export function InviteDialog({
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50" onClick={onClose}>
       <div className="bg-surface p-5 rounded-2xl w-96 border border-line" onClick={(e) => e.stopPropagation()}>
-        <h2 className="text-ink font-semibold mb-1">Invite people to {server.name}</h2>
+        <h2 className="text-[15px] font-semibold text-ink tracking-tight mb-4">Invite people to {server.name}</h2>
         <p className="text-muted text-xs mb-3">Anyone with this link can join.</p>
         {error && <p className="text-danger text-sm mb-2">{error}</p>}
         <div className="flex gap-2">

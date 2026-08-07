@@ -68,7 +68,7 @@ export function MemberRolesDialog({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-ink font-semibold text-lg">Roles for member</h2>
+          <h2 className="text-[15px] font-semibold text-ink tracking-tight mb-4">Roles for member</h2>
           <button onClick={onClose} aria-label="Close" className="text-muted hover:text-ink">
             <X size={16} weight="bold" />
           </button>

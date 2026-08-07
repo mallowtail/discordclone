@@ -45,7 +45,7 @@ function RegisterPageContent() {
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
       <form onSubmit={onSubmit} className="w-full max-w-sm bg-surface border border-line p-6 rounded-2xl space-y-3">
-        <h1 className="text-xl font-bold text-white">Create account</h1>
+        <h1 className="text-xl font-semibold text-ink tracking-tight">Create account</h1>
         {error && <p className="text-danger text-sm">{error}</p>}
         <input className="w-full p-2 rounded-xl bg-surface-2" placeholder="Username"
           value={username} onChange={(e) => setUsername(e.target.value)} />

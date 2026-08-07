@@ -60,7 +60,7 @@ export function ProfileDialog({ onClose }: { onClose: () => void }) {
         className="bg-surface p-5 rounded-2xl w-72 border border-line text-center"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="text-ink font-semibold mb-3">Your profile</h2>
+        <h2 className="text-[15px] font-semibold text-ink tracking-tight mb-4">Your profile</h2>
         <div className="flex justify-center mb-3">
           <Avatar url={profile?.avatar_url ?? null} name={profile?.display_name} size="lg" />
         </div>

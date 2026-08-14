@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useId, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/components/providers/AuthProvider";
 import type { Server } from "@/types/db";
@@ -9,6 +9,7 @@ export function useServers(): { servers: Server[]; reload: () => void } {
   const supabase = createClient();
   const { user } = useAuth();
   const [servers, setServers] = useState<Server[]>([]);
+  const instanceId = useId();
 
   const reload = useCallback(async () => {
     if (!user) {
@@ -29,14 +30,14 @@ export function useServers(): { servers: Server[]; reload: () => void } {
     reload();
     if (!user) return;
     const channel = supabase
-      .channel(`servers:${user.id}`)
+      .channel(`servers:${user.id}:${instanceId}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "server_members" }, () => reload())
       .on("postgres_changes", { event: "*", schema: "public", table: "servers" }, () => reload())
       .subscribe();
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [supabase, user, reload]);
+  }, [supabase, user, reload, instanceId]);
 
   return { servers, reload };
 }

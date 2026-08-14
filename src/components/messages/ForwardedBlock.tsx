@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Avatar } from "@/components/user/Avatar";
-import { isHttpUrl } from "@/lib/url";
+import { isHttpUrl, withDownloadName } from "@/lib/url";
 import type { ForwardSnapshot, Profile } from "@/types/db";
 import { ArrowBendUpRight } from "@phosphor-icons/react";
 
@@ -37,7 +37,7 @@ export function ForwardedBlock({ snapshot }: { snapshot: ForwardSnapshot }) {
         {snapshot.content && <div className="text-ink text-sm break-words leading-relaxed">{snapshot.content}</div>}
         {img && <img src={img} alt="" className="mt-1 max-h-60 rounded-lg" />}
         {file && (
-          <a href={file} target="_blank" rel="noreferrer" className="mt-1 inline-block text-accent text-sm hover:underline">
+          <a href={withDownloadName(file, snapshot.file_name)} download={snapshot.file_name ?? undefined} target="_blank" rel="noreferrer" className="mt-1 inline-block text-accent text-sm hover:underline">
             {snapshot.file_name ?? "Attachment"}
           </a>
         )}

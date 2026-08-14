@@ -4,7 +4,7 @@ import remarkBreaks from "remark-breaks";
 import type { Message } from "@/types/db";
 import { remarkMentions } from "@/lib/mentions";
 import { File } from "@phosphor-icons/react";
-import { isHttpUrl } from "@/lib/url";
+import { isHttpUrl, withDownloadName } from "@/lib/url";
 
 // Discord-style subset. Anything not in this list renders as plain text.
 const ALLOWED = ["p", "strong", "em", "del", "code", "pre", "blockquote", "a", "ul", "ol", "li", "br", "h1", "h2", "h3"];
@@ -49,8 +49,8 @@ export function MessageContent({ msg }: { msg: Message }) {
       )}
       {safeFile && (
         <a
-          href={safeFile}
-          download
+          href={withDownloadName(safeFile, msg.file_name)}
+          download={msg.file_name ?? undefined}
           target="_blank"
           rel="noopener noreferrer"
           className="mt-1 flex items-center gap-2 rounded-xl border border-line bg-surface px-3 py-2 max-w-sm hover:bg-surface-2"

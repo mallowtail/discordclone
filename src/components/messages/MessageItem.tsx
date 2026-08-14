@@ -45,7 +45,7 @@ export function MessageItem({
   serverId?: string;
   authorColor?: string | null;
 }) {
-  const { user, profile } = useAuth();
+  const { user, profile, refreshProfile } = useAuth();
   const supabase = useMemo(() => createClient(), []);
   const { open } = useProfilePopover();
   const isMine = user?.id === msg.author_id;
@@ -85,6 +85,23 @@ export function MessageItem({
     const { error: err } = await supabase.rpc("toggle_pin", { msg: msg.id });
     if (err) setError("Couldn't pin — try again");
     else setError(null);
+  }
+
+  async function react(emoji: string) {
+    if (!user) return;
+    const mine = pills.find((p) => p.emoji === emoji)?.mine ?? false;
+    if (mine) {
+      await supabase
+        .from("reactions")
+        .delete()
+        .eq("message_id", msg.id)
+        .eq("user_id", user.id)
+        .eq("emoji", emoji);
+    } else {
+      await supabase.from("reactions").insert({ message_id: msg.id, user_id: user.id, emoji });
+      await supabase.rpc("push_recent_emoji", { e: emoji });
+      await refreshProfile();
+    }
   }
 
   function jumpToOriginal() {
@@ -176,7 +193,7 @@ export function MessageItem({
           )}
           {error && !editing && <p className="text-danger text-sm">{error}</p>}
 
-          {!editing && <ReactionBar message={msg} pills={pills} />}
+          {!editing && <ReactionBar pills={pills} onReact={react} />}
         </div>
       </div>
       {!editing && (

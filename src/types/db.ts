@@ -5,6 +5,7 @@ export type Profile = {
   avatar_url: string | null;
   bio: string | null;
   status: string | null;
+  recent_emojis: string[];
   created_at: string;
 };
 

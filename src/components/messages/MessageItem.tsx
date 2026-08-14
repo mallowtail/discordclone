@@ -14,6 +14,7 @@ import { Avatar } from "@/components/user/Avatar";
 import { useProfilePopover } from "@/components/providers/ProfilePopoverProvider";
 import type { ReactionPill } from "@/lib/reactions";
 import { ArrowBendUpLeft, PushPin } from "@phosphor-icons/react";
+import { toolbarRecents } from "@/lib/recentEmojis";
 
 function snippet(m: Message): string {
   if (m.content) return m.content.length > 60 ? m.content.slice(0, 60) + "…" : m.content;
@@ -198,6 +199,8 @@ export function MessageItem({
       </div>
       {!editing && (
         <MessageActions
+          recents={toolbarRecents(profile?.recent_emojis ?? [])}
+          onReact={react}
           onReply={() => onReply?.(msg, authorName)}
           onPin={togglePin}
           pinned={msg.pinned}

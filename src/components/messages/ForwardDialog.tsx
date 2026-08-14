@@ -6,6 +6,7 @@ import { useAuth } from "@/components/providers/AuthProvider";
 import { useServers } from "@/hooks/useServers";
 import { buildForwardSnapshot } from "@/lib/forward";
 import type { Channel, Message } from "@/types/db";
+import { Hash, At, Check, MagnifyingGlass } from "@phosphor-icons/react";
 
 type Dest = { key: string; kind: "channel" | "dm"; id: string; label: string; group: string };
 
@@ -93,23 +94,46 @@ export function ForwardDialog({ message, onClose }: { message: Message; onClose:
       <div className="bg-surface rounded-2xl border border-line w-80 max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
         <div className="p-4 pb-2">
           <h2 className="text-[15px] font-semibold text-ink tracking-tight mb-3">Forward message</h2>
-          <input
-            autoFocus value={search} onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search channels and DMs"
-            className="w-full p-2 rounded-xl bg-surface-2 text-ink text-sm"
-          />
+          <div className="relative">
+            <MagnifyingGlass size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
+            <input
+              autoFocus value={search} onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search channels and DMs"
+              className="w-full pl-9 pr-3 py-2 rounded-xl bg-surface-2 text-ink text-sm outline-none focus:ring-1 focus:ring-accent"
+            />
+          </div>
         </div>
         <div className="flex-1 overflow-y-auto px-4 py-1">
           {Object.keys(groups).length === 0 && <p className="text-muted text-sm py-2">No destinations found.</p>}
           {Object.entries(groups).map(([group, rows]) => (
             <div key={group} className="mb-2">
               <div className="text-[11px] font-semibold uppercase tracking-wider text-muted mt-2 mb-1">{group}</div>
-              {rows.map((d) => (
-                <label key={d.key} className="flex items-center gap-2 px-1 py-1 rounded-lg hover:bg-surface-2 cursor-pointer">
-                  <input type="checkbox" checked={selected.has(d.key)} onChange={() => toggle(d.key)} />
-                  <span className="text-ink text-sm truncate">{d.label}</span>
-                </label>
-              ))}
+              {rows.map((d) => {
+                const on = selected.has(d.key);
+                return (
+                  <button
+                    key={d.key}
+                    type="button"
+                    onClick={() => toggle(d.key)}
+                    aria-pressed={on}
+                    className={`w-full flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-left transition ${
+                      on ? "bg-accent/15" : "hover:bg-surface-2"
+                    }`}
+                  >
+                    <span className="w-8 h-8 flex-none rounded-lg bg-surface-2 text-muted flex items-center justify-center">
+                      {d.kind === "channel" ? <Hash size={16} weight="bold" /> : <At size={16} weight="bold" />}
+                    </span>
+                    <span className={`flex-1 min-w-0 text-sm truncate ${on ? "text-ink font-medium" : "text-ink"}`}>{d.label}</span>
+                    <span
+                      className={`w-5 h-5 flex-none rounded-full flex items-center justify-center border transition ${
+                        on ? "bg-accent border-accent text-white" : "border-line text-transparent"
+                      }`}
+                    >
+                      <Check size={12} weight="bold" />
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           ))}
         </div>

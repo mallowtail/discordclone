@@ -31,6 +31,7 @@ export function MessageActions({
   onDelete: () => void;
 }) {
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerUp, setPickerUp] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const pickerRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -89,7 +90,18 @@ export function MessageActions({
 
       <div className="relative" ref={pickerRef}>
         <button
-          onClick={() => { setPickerOpen((o) => !o); setMenuOpen(false); }}
+          onClick={() => {
+            setPickerOpen((o) => {
+              const next = !o;
+              if (next) {
+                const rect = pickerRef.current?.getBoundingClientRect();
+                // EmojiPicker is ~450px tall; open upward if not enough room below.
+                setPickerUp(rect ? window.innerHeight - rect.bottom < 450 : false);
+              }
+              return next;
+            });
+            setMenuOpen(false);
+          }}
           title="Pick an emoji"
           aria-label="Pick an emoji"
           className="text-muted hover:text-ink w-7 h-7 flex items-center justify-center"
@@ -97,7 +109,7 @@ export function MessageActions({
           <Smiley size={18} />
         </button>
         {pickerOpen && (
-          <div className="absolute top-full right-0 mt-2 z-30">
+          <div className={`absolute right-0 z-30 ${pickerUp ? "bottom-full mb-2" : "top-full mt-2"}`}>
             <EmojiPicker
               theme={Theme.DARK}
               onEmojiClick={(d) => { onReact(d.emoji); setPickerOpen(false); }}

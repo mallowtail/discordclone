@@ -43,6 +43,7 @@ export async function uploadAndPostFile(opts: {
     mention_author: (replyFields.mention_author as boolean) ?? false,
     pinned: false,
     pinned_at: null,
+    forward_snapshot: null,
     pending: true,
   };
   addPending(optimistic);

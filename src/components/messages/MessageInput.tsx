@@ -125,6 +125,7 @@ export function MessageInput({
       mention_author: replyTo ? pingAuthor : false,
       pinned: false,
       pinned_at: null,
+      forward_snapshot: null,
       pending: true,
     };
     addPending(optimistic);

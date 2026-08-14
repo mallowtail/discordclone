@@ -59,6 +59,15 @@ export type Channel = {
   category_id: string | null;
 };
 
+export type ForwardSnapshot = {
+  author_id: string;
+  content: string;
+  image_url: string | null;
+  file_url: string | null;
+  file_name: string | null;
+  source: string;
+};
+
 export type Message = {
   id: string;
   author_id: string;
@@ -74,6 +83,7 @@ export type Message = {
   mention_author: boolean;
   pinned: boolean;
   pinned_at: string | null;
+  forward_snapshot: ForwardSnapshot | null;
   pending?: boolean;
 };
 

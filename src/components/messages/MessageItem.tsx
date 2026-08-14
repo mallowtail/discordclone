@@ -10,6 +10,8 @@ import { mentionsMe } from "@/lib/mentions";
 import { MessageContent } from "@/components/messages/MessageContent";
 import { MessageActions } from "@/components/messages/MessageActions";
 import { ReactionBar } from "@/components/messages/ReactionBar";
+import { ForwardDialog } from "@/components/messages/ForwardDialog";
+import { ForwardedBlock } from "@/components/messages/ForwardedBlock";
 import { Avatar } from "@/components/user/Avatar";
 import { useProfilePopover } from "@/components/providers/ProfilePopoverProvider";
 import type { ReactionPill } from "@/lib/reactions";
@@ -53,6 +55,7 @@ export function MessageItem({
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(msg.content);
   const [error, setError] = useState<string | null>(null);
+  const [forwarding, setForwarding] = useState(false);
 
   const highlighted = mentionsMe({
     content: msg.content,
@@ -192,6 +195,7 @@ export function MessageItem({
           ) : (
             <MessageContent msg={msg} />
           )}
+          {!editing && msg.forward_snapshot && <ForwardedBlock snapshot={msg.forward_snapshot} />}
           {error && !editing && <p className="text-danger text-sm">{error}</p>}
 
           {!editing && <ReactionBar pills={pills} onReact={react} />}
@@ -202,6 +206,7 @@ export function MessageItem({
           recents={toolbarRecents(profile?.recent_emojis ?? [])}
           onReact={react}
           onReply={() => onReply?.(msg, authorName)}
+          onForward={() => setForwarding(true)}
           onPin={togglePin}
           pinned={msg.pinned}
           canEdit={isMine}
@@ -212,6 +217,7 @@ export function MessageItem({
           onDelete={remove}
         />
       )}
+      {forwarding && <ForwardDialog message={msg} onClose={() => setForwarding(false)} />}
     </div>
   );
 }

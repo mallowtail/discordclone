@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import EmojiPicker, { Theme } from "emoji-picker-react";
 import {
   ArrowBendUpLeft,
+  ArrowBendUpRight,
   PushPin,
   PencilSimple,
   Trash,
@@ -15,6 +16,7 @@ export function MessageActions({
   recents,
   onReact,
   onReply,
+  onForward,
   onPin,
   pinned,
   canEdit,
@@ -24,6 +26,7 @@ export function MessageActions({
   recents: string[];
   onReact: (emoji: string) => void;
   onReply: () => void;
+  onForward: () => void;
   onPin: () => void;
   pinned: boolean;
   canEdit: boolean;
@@ -127,6 +130,15 @@ export function MessageActions({
         className="text-muted hover:text-ink w-7 h-7 flex items-center justify-center"
       >
         <ArrowBendUpLeft size={16} weight="bold" />
+      </button>
+
+      <button
+        onClick={onForward}
+        title="Forward"
+        aria-label="Forward"
+        className="text-muted hover:text-ink w-7 h-7 flex items-center justify-center"
+      >
+        <ArrowBendUpRight size={16} weight="bold" />
       </button>
 
       <div className="relative" ref={menuRef}>

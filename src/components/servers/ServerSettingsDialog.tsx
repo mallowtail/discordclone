@@ -1,12 +1,14 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/components/providers/AuthProvider";
+import { useServerPermissions } from "@/hooks/useServerPermissions";
 import { uploadServerIcon } from "@/lib/upload";
 import { ServerIcon } from "@/components/servers/ServerIcon";
 import { RolesDialog } from "@/components/servers/RolesDialog";
+import { Avatar } from "@/components/user/Avatar";
 import type { Server } from "@/types/db";
 
 export function ServerSettingsDialog({
@@ -31,6 +33,23 @@ export function ServerSettingsDialog({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showRoles, setShowRoles] = useState(false);
+  const { has, isOwner } = useServerPermissions(server.id);
+  const canBan = isOwner || has("ban_members");
+  const [bans, setBans] = useState<{ user_id: string; reason: string | null; profile: { display_name: string | null; avatar_url: string | null } | null }[]>([]);
+
+  const loadBans = useCallback(async () => {
+    if (!canBan) return;
+    const { data } = await supabase.from("bans").select("user_id, reason, profiles(display_name, avatar_url)").eq("server_id", server.id);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    setBans((data ?? []).map((b: any) => ({ user_id: b.user_id, reason: b.reason, profile: b.profiles })));
+  }, [supabase, server.id, canBan]);
+
+  useEffect(() => { loadBans(); }, [loadBans]);
+
+  async function unban(userId: string) {
+    await supabase.rpc("unban_member", { srv: server.id, target: userId });
+    loadBans();
+  }
 
   async function leave() {
     if (!user) return;
@@ -123,6 +142,23 @@ export function ServerSettingsDialog({
             className="w-full bg-surface-2 hover:bg-line text-ink text-sm rounded-xl p-2 mt-3">
             Manage roles
           </button>
+        )}
+        {canBan && bans.length > 0 && (
+          <div className="mt-4">
+            <div className="text-[11px] font-semibold uppercase tracking-wider text-muted mb-1">Banned</div>
+            <div className="flex flex-col gap-1 max-h-40 overflow-y-auto">
+              {bans.map((b) => (
+                <div key={b.user_id} className="flex items-center gap-2 text-sm">
+                  <Avatar url={b.profile?.avatar_url ?? null} name={b.profile?.display_name ?? undefined} size="sm" />
+                  <div className="min-w-0 flex-1">
+                    <div className="text-ink truncate">{b.profile?.display_name ?? "Unknown"}</div>
+                    {b.reason && <div className="text-muted text-xs truncate">{b.reason}</div>}
+                  </div>
+                  <button onClick={() => unban(b.user_id)} className="text-accent text-xs hover:underline flex-none">Unban</button>
+                </div>
+              ))}
+            </div>
+          </div>
         )}
         <button onClick={leave} disabled={busy}
           className="w-full text-danger text-sm mt-3 hover:underline disabled:opacity-50">

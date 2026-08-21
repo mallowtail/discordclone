@@ -53,6 +53,21 @@ export function MessageInput({
   const emojiRef = useRef<HTMLDivElement>(null);
   const mentionQuery = mentionQueryAt(text, caret);
   const acOpen = mentionQuery !== null && mentionMatches.length > 0;
+  const [timedOutUntil, setTimedOutUntil] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!user || !("channel_id" in target)) { setTimedOutUntil(null); return; }
+    let active = true;
+    (async () => {
+      const { data: ch } = await supabase.from("channels").select("server_id").eq("id", target.channel_id).single();
+      const serverId = (ch as { server_id: string } | null)?.server_id;
+      if (!serverId) return;
+      const { data: mem } = await supabase.from("server_members").select("timeout_until").eq("server_id", serverId).eq("user_id", user.id).single();
+      const until = (mem as { timeout_until: string | null } | null)?.timeout_until ?? null;
+      if (active) setTimedOutUntil(until && new Date(until) > new Date() ? until : null);
+    })();
+    return () => { active = false; };
+  }, [supabase, user, target]);
 
   useEffect(() => {
     setPingAuthor(true);
@@ -102,6 +117,7 @@ export function MessageInput({
   }
 
   async function submit() {
+    if (timedOutUntil) return;
     if (uploading) return;
     const v = validateMessage(text);
     if (!v.ok) return setError(v.error);
@@ -239,7 +255,7 @@ export function MessageInput({
               type="button"
               onClick={() => setMenuOpen((o) => !o)}
               title="Add"
-              disabled={uploading}
+              disabled={uploading || !!timedOutUntil}
               className="w-8 h-8 flex items-center justify-center rounded-full bg-surface-2 text-muted hover:text-ink text-lg leading-none disabled:opacity-50"
             >
               <Plus size={18} weight="bold" />
@@ -279,7 +295,14 @@ export function MessageInput({
               }
             }}
             rows={1}
-            placeholder={uploading ? "Uploading…" : placeholder}
+            disabled={!!timedOutUntil}
+            placeholder={
+              timedOutUntil
+                ? `You're timed out until ${new Date(timedOutUntil).toLocaleString()}`
+                : uploading
+                  ? "Uploading…"
+                  : placeholder
+            }
             className="flex-1 bg-transparent text-ink outline-none resize-none min-h-[44px] max-h-48 py-2"
           />
           <div className="relative" ref={emojiRef}>
@@ -287,6 +310,7 @@ export function MessageInput({
               type="button"
               onClick={() => setEmojiOpen((o) => !o)}
               title="Emoji"
+              disabled={!!timedOutUntil}
               className="w-8 h-8 flex items-center justify-center rounded-full text-muted hover:text-ink text-lg leading-none"
             >
               <Smiley size={20} />

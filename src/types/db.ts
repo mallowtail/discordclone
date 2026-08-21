@@ -93,3 +93,11 @@ export type Reaction = {
   emoji: string;
   created_at: string;
 };
+
+export type Ban = {
+  server_id: string;
+  user_id: string;
+  banned_by: string | null;
+  reason: string | null;
+  created_at: string;
+};

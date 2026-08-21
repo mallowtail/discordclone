@@ -106,6 +106,7 @@ begin
     raise exception 'not permitted';
   end if;
   delete from public.server_members where server_id = srv and user_id = target;
+  delete from public.member_roles where server_id = srv and user_id = target;
 end;
 $$;
 grant execute on function public.kick_member(uuid, uuid) to authenticated;
@@ -121,6 +122,7 @@ begin
     on conflict (server_id, user_id) do update
       set reason = excluded.reason, banned_by = excluded.banned_by;
   delete from public.server_members where server_id = srv and user_id = target;
+  delete from public.member_roles where server_id = srv and user_id = target;
 end;
 $$;
 grant execute on function public.ban_member(uuid, uuid, text) to authenticated;
@@ -151,10 +153,14 @@ end;
 $$;
 grant execute on function public.timeout_member(uuid, uuid, timestamptz) to authenticated;
 
--- 8. RLS: block rejoin while banned.
+-- 8. RLS: block rejoin while banned; keep the private-server (invite-only) gate.
 drop policy if exists "self join server" on public.server_members;
 create policy "self join server" on public.server_members for insert to authenticated
-  with check (user_id = auth.uid() and not public.is_banned(server_id));
+  with check (
+    user_id = auth.uid()
+    and not public.is_banned(server_id)
+    and exists (select 1 from public.servers s where s.id = server_id and s.is_public)
+  );
 
 -- 9. RLS: timed-out users can't send messages (channels only; DMs unaffected).
 drop policy if exists "send messages" on public.messages;

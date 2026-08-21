@@ -8,24 +8,34 @@ import { useProfilePopover } from "@/components/providers/ProfilePopoverProvider
 import { useServerPermissions } from "@/hooks/useServerPermissions";
 import { useMemberRoleColors } from "@/hooks/useMemberRoleColors";
 import { MemberRolesDialog } from "@/components/servers/MemberRolesDialog";
-import { X, ShieldStar } from "@phosphor-icons/react";
+import { useAuth } from "@/components/providers/AuthProvider";
+import { canModerate } from "@/lib/moderation";
+import { MemberModMenu } from "@/components/servers/MemberModMenu";
+import { X, ShieldStar, Clock } from "@phosphor-icons/react";
 
-type Member = { user_id: string; role: "admin" | "member"; profile: Profile | null };
+type Member = { user_id: string; timeout_until: string | null; profile: Profile | null };
 
 export function MembersPanel({ serverId, onClose }: { serverId: string; onClose: () => void }) {
   const supabase = createClient();
   const { open } = useProfilePopover();
-  const { has } = useServerPermissions(serverId);
-  const { colorFor } = useMemberRoleColors(serverId);
+  const { user } = useAuth();
+  const { has, isOwner, rank } = useServerPermissions(serverId);
+  const { colorFor, rolesFor } = useMemberRoleColors(serverId);
+  const [ownerId, setOwnerId] = useState<string | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
   const [managingUser, setManagingUser] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    const { data: rows } = await supabase.from("server_members").select("user_id, role, profiles(*)").eq("server_id", serverId);
+    const { data: rows } = await supabase.from("server_members").select("user_id, timeout_until, profiles(*)").eq("server_id", serverId);
     setMembers(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (rows ?? []).map((r: any) => ({ user_id: r.user_id, role: r.role, profile: r.profiles }))
+      (rows ?? []).map((r: any) => ({ user_id: r.user_id, timeout_until: r.timeout_until, profile: r.profiles }))
     );
+  }, [supabase, serverId]);
+
+  useEffect(() => {
+    supabase.from("servers").select("owner_id").eq("id", serverId).single()
+      .then(({ data }) => setOwnerId((data as { owner_id: string | null } | null)?.owner_id ?? null));
   }, [supabase, serverId]);
 
   useEffect(() => {
@@ -61,6 +71,33 @@ export function MembersPanel({ serverId, onClose }: { serverId: string; onClose:
                 </div>
               </div>
             </button>
+            {(() => {
+                const targetRank = rolesFor(m.user_id).reduce((mx, r) => Math.max(mx, r.position), -1);
+                const ctx = {
+                  isOwner, viewerRank: rank ?? -1, targetRank,
+                  targetIsOwner: m.user_id === ownerId, targetIsSelf: m.user_id === user?.id,
+                };
+                const timedOut = !!m.timeout_until && new Date(m.timeout_until) > new Date();
+                return (
+                  <>
+                    {timedOut && (
+                      <span className="text-muted flex-none" title={`Timed out until ${new Date(m.timeout_until!).toLocaleString()}`}>
+                        <Clock size={14} weight="fill" />
+                      </span>
+                    )}
+                    <MemberModMenu
+                      serverId={serverId}
+                      targetId={m.user_id}
+                      targetName={m.profile?.display_name ?? "member"}
+                      timedOut={timedOut}
+                      canKick={canModerate({ ...ctx, hasPerm: has("kick_members") })}
+                      canBan={canModerate({ ...ctx, hasPerm: has("ban_members") })}
+                      canTimeout={canModerate({ ...ctx, hasPerm: has("timeout_members") })}
+                      onDone={load}
+                    />
+                  </>
+                );
+              })()}
             {has("manage_roles") && (
               <button onClick={() => setManagingUser(m.user_id)} title="Manage roles"
                 className="text-muted hover:text-ink text-xs flex-none">

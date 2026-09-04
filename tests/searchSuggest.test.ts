@@ -11,11 +11,17 @@ describe("activeToken", () => {
   it("empty input yields an empty token", () => {
     expect(activeToken("", 0)).toEqual({ token: "", start: 0, end: 0 });
   });
+  it("caret in whitespace gap returns empty token with start === end === caret", () => {
+    expect(activeToken("a  b", 2)).toEqual({ token: "", start: 2, end: 2 });
+  });
 });
 
 describe("suggestKind", () => {
   it("no colon → operator suggestions", () => {
     expect(suggestKind("fr")).toEqual({ kind: "operator", partial: "fr" });
+  });
+  it("leading colon treated as operator", () => {
+    expect(suggestKind(":x")).toEqual({ kind: "operator", partial: ":x" });
   });
   it("from:/mentions: strip a leading @", () => {
     expect(suggestKind("from:@al")).toEqual({ kind: "from", partial: "al" });

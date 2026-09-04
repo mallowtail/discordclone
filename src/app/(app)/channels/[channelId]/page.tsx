@@ -10,7 +10,8 @@ import { MessageInput } from "@/components/messages/MessageInput";
 import { MessageDropZone } from "@/components/messages/MessageDropZone";
 import { PinnedPanel } from "@/components/messages/PinnedPanel";
 import { MembersPanel } from "@/components/servers/MembersPanel";
-import { PushPin, Users } from "@phosphor-icons/react";
+import { MessageSearchPanel } from "@/components/servers/MessageSearchPanel";
+import { PushPin, Users, MagnifyingGlass } from "@phosphor-icons/react";
 
 export default function ChannelPage({ params }: { params: Promise<{ channelId: string }> }) {
   const { channelId: id } = use(params);
@@ -45,6 +46,7 @@ function ChannelView({ channel }: { channel: Channel }) {
   const [replyToName, setReplyToName] = useState("");
   const [showPins, setShowPins] = useState(false);
   const [showMembers, setShowMembers] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
   const pinned = messages.filter((m) => m.pinned);
 
   function jumpToPresent() {
@@ -63,6 +65,13 @@ function ChannelView({ channel }: { channel: Channel }) {
             className="text-xs font-normal text-muted hover:text-ink ml-3 flex items-center gap-1"
           >
             <Users size={16} /> Members
+          </button>
+          <button
+            onClick={() => setShowSearch((s) => !s)}
+            className="text-xs font-normal text-muted hover:text-ink ml-3 flex items-center gap-1"
+            title="Search"
+          >
+            <MagnifyingGlass size={16} /> Search
           </button>
         </span>
         {showPins && <PinnedPanel pinned={pinned} onClose={() => setShowPins(false)} />}
@@ -99,7 +108,11 @@ function ChannelView({ channel }: { channel: Channel }) {
             removePending={removePending}
           />
         </MessageDropZone>
-        {showMembers && <MembersPanel serverId={channel.server_id} onClose={() => setShowMembers(false)} />}
+        {showSearch
+          ? <MessageSearchPanel serverId={channel.server_id} onClose={() => setShowSearch(false)} />
+          : showMembers
+          ? <MembersPanel serverId={channel.server_id} onClose={() => setShowMembers(false)} />
+          : null}
       </div>
     </>
   );

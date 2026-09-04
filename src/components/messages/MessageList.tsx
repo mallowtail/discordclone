@@ -14,16 +14,19 @@ export function MessageList({
   onReply,
   serverId,
   anchorId,
+  anchored,
 }: {
   messages: Message[];
   onReply?: (m: Message, authorName: string) => void;
   serverId?: string;
   anchorId?: string | null;
+  anchored?: boolean;
 }) {
   const supabase = createClient();
   const [profiles, setProfiles] = useState<Record<string, Profile>>({});
   const [flashId, setFlashId] = useState<string | null>(null);
   const bottom = useRef<HTMLDivElement>(null);
+  const flashedRef = useRef<string | null>(null);
   const { user } = useAuth();
   const reactionsByMessage = useReactions(messages.map((m) => m.id), user?.id ?? "");
   const byId = new Map(messages.map((m) => [m.id, m]));
@@ -40,18 +43,21 @@ export function MessageList({
   }, [messages, profiles, supabase]);
 
   useEffect(() => {
-    if (anchorId) {
+    if (anchorId && anchored) {
+      if (flashedRef.current === anchorId) return;           // already scrolled+flashed this anchor
       const el = document.getElementById(`msg-${anchorId}`);
       if (el) {
         el.scrollIntoView({ behavior: "smooth", block: "center" });
         setFlashId(anchorId);
+        flashedRef.current = anchorId;
         const t = setTimeout(() => setFlashId(null), 2000);
         return () => clearTimeout(t);
       }
-    } else {
-      bottom.current?.scrollIntoView({ behavior: "smooth" });
+      return;                                                // not mounted yet; a later messages update retries
     }
-  }, [messages, anchorId]);
+    flashedRef.current = null;                               // reset so returning to an anchor later re-flashes
+    bottom.current?.scrollIntoView({ behavior: "smooth" });  // normal / garbage-id path → go to present
+  }, [messages, anchorId, anchored]);
 
   return (
     <div className="flex-1 overflow-y-auto py-3">

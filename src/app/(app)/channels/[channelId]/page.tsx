@@ -79,6 +79,7 @@ function ChannelView({ channel }: { channel: Channel }) {
             onReply={(m, name) => { setReplyTo(m); setReplyToName(name); }}
             serverId={channel.server_id}
             anchorId={anchorId}
+            anchored={anchored}
           />
           {anchored && (
             <button

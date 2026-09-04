@@ -52,7 +52,8 @@ as $$
          or (has_type = 'file'  and m.file_url  is not null))
     and (before_ts is null or m.created_at <  before_ts)
     and (after_ts  is null or m.created_at >= after_ts)
-    and (mentions_user is null or m.content ~* ('@' || mentions_user || '\y'))
+    and (mentions_user is null
+         or m.content ~* ('@' || regexp_replace(mentions_user, '([\\^$.|?*+()\[\]{}])', '\\\1', 'g') || '\y'))
     and (not only_pinned or m.pinned)
   order by m.created_at desc
   limit greatest(1, least(lim, 50)) offset greatest(0, off_n);

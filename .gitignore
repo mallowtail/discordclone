@@ -43,3 +43,9 @@ next-env.d.ts
 
 # local tooling
 .superpowers/
+
+# agent tooling / skills (local, not part of the app)
+/.agents/
+/.claude/
+/scratchpad/
+skills-lock.json

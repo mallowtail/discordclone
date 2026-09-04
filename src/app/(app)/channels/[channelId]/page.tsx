@@ -1,6 +1,7 @@
 "use client";
 
-import { use, useEffect, useState } from "react";
+import { Suspense, use, useEffect, useState } from "react";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import type { Channel, Message } from "@/types/db";
 import { useMessages } from "@/hooks/useMessages";
@@ -27,16 +28,28 @@ export default function ChannelPage({ params }: { params: Promise<{ channelId: s
 
   if (missing) return <div className="p-4 text-muted">Channel not found.</div>;
   if (!channel) return <div className="p-4 text-muted">Loading channel…</div>;
-  return <ChannelView channel={channel} />;
+  return (
+    <Suspense fallback={<div className="p-4 text-muted">Loading channel…</div>}>
+      <ChannelView channel={channel} />
+    </Suspense>
+  );
 }
 
 function ChannelView({ channel }: { channel: Channel }) {
-  const { messages, addPending, removePending } = useMessages({ channelId: channel.id });
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+  const anchorId = searchParams.get("msg");
+  const { messages, addPending, removePending, anchored } = useMessages({ channelId: channel.id, anchorId });
   const [replyTo, setReplyTo] = useState<Message | null>(null);
   const [replyToName, setReplyToName] = useState("");
   const [showPins, setShowPins] = useState(false);
   const [showMembers, setShowMembers] = useState(false);
   const pinned = messages.filter((m) => m.pinned);
+
+  function jumpToPresent() {
+    router.replace(pathname);
+  }
   return (
     <>
       <header className="p-3 border-b border-line font-semibold text-ink tracking-tight flex items-center justify-between relative">
@@ -65,7 +78,16 @@ function ChannelView({ channel }: { channel: Channel }) {
             messages={messages}
             onReply={(m, name) => { setReplyTo(m); setReplyToName(name); }}
             serverId={channel.server_id}
+            anchorId={anchorId}
           />
+          {anchored && (
+            <button
+              onClick={jumpToPresent}
+              className="absolute bottom-20 right-6 z-10 rounded-full bg-accent text-white text-xs px-3 py-1.5 shadow hover:opacity-90"
+            >
+              Jump to present ↓
+            </button>
+          )}
           <MessageInput
             target={{ channel_id: channel.id }}
             placeholder={`Message #${channel.name}`}

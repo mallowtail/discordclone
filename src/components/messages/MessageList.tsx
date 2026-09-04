@@ -13,13 +13,16 @@ export function MessageList({
   messages,
   onReply,
   serverId,
+  anchorId,
 }: {
   messages: Message[];
   onReply?: (m: Message, authorName: string) => void;
   serverId?: string;
+  anchorId?: string | null;
 }) {
   const supabase = createClient();
   const [profiles, setProfiles] = useState<Record<string, Profile>>({});
+  const [flashId, setFlashId] = useState<string | null>(null);
   const bottom = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
   const reactionsByMessage = useReactions(messages.map((m) => m.id), user?.id ?? "");
@@ -37,8 +40,18 @@ export function MessageList({
   }, [messages, profiles, supabase]);
 
   useEffect(() => {
-    bottom.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+    if (anchorId) {
+      const el = document.getElementById(`msg-${anchorId}`);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        setFlashId(anchorId);
+        const t = setTimeout(() => setFlashId(null), 2000);
+        return () => clearTimeout(t);
+      }
+    } else {
+      bottom.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages, anchorId]);
 
   return (
     <div className="flex-1 overflow-y-auto py-3">
@@ -58,6 +71,7 @@ export function MessageList({
             onReply={onReply}
             serverId={serverId}
             authorColor={colorFor(m.author_id)}
+            flash={m.id === flashId}
           />
         );
       })}

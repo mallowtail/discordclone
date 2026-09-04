@@ -4,13 +4,16 @@ import { useCallback, useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { Message } from "@/types/db";
 
-type Target = { channelId: string } | { conversationId: string };
+type Target =
+  | { channelId: string; anchorId?: string | null }
+  | { conversationId: string };
 
 export function useMessages(target: Target) {
   const supabase = createClient();
   const [messages, setMessages] = useState<Message[]>([]);
   const column = "channelId" in target ? "channel_id" : "conversation_id";
   const value = "channelId" in target ? target.channelId : target.conversationId;
+  const anchorId = "channelId" in target ? target.anchorId ?? null : null;
 
   const addPending = useCallback((m: Message) => {
     setMessages((prev) => (prev.some((x) => x.id === m.id) ? prev : [...prev, m]));
@@ -23,6 +26,22 @@ export function useMessages(target: Target) {
     let active = true;
 
     async function load() {
+      if (anchorId) {
+        const { data: anchor } = await supabase
+          .from("messages").select("created_at").eq("id", anchorId).maybeSingle();
+        if (anchor?.created_at) {
+          const at = anchor.created_at as string;
+          const [before, after] = await Promise.all([
+            supabase.from("messages").select("*").eq(column, value)
+              .lte("created_at", at).order("created_at", { ascending: false }).limit(50),
+            supabase.from("messages").select("*").eq(column, value)
+              .gt("created_at", at).order("created_at", { ascending: true }).limit(50),
+          ]);
+          if (active) setMessages([...((before.data ?? []) as Message[]).reverse(), ...((after.data ?? []) as Message[])]);
+          return;
+        }
+        // anchor not readable → fall through to recent load
+      }
       const { data } = await supabase
         .from("messages")
         .select("*")
@@ -69,7 +88,7 @@ export function useMessages(target: Target) {
       active = false;
       supabase.removeChannel(channel);
     };
-  }, [supabase, column, value]);
+  }, [supabase, column, value, anchorId]);
 
-  return { messages, addPending, removePending };
+  return { messages, addPending, removePending, anchored: !!anchorId };
 }

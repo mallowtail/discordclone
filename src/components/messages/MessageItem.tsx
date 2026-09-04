@@ -36,6 +36,7 @@ export function MessageItem({
   onReply,
   serverId,
   authorColor,
+  flash,
 }: {
   msg: Message;
   authorName: string;
@@ -47,6 +48,7 @@ export function MessageItem({
   onReply?: (m: Message, authorName: string) => void;
   serverId?: string;
   authorColor?: string | null;
+  flash?: boolean;
 }) {
   const { user, profile, refreshProfile } = useAuth();
   const supabase = useMemo(() => createClient(), []);
@@ -120,7 +122,7 @@ export function MessageItem({
     <div
       id={`msg-${msg.id}`}
       className={`group relative px-4 hover:bg-black/10 ${showHeader ? "mt-3 pt-0.5" : ""} ${
-        highlighted ? "bg-amber/10 border-l-2 border-amber" : ""
+        highlighted || flash ? "bg-amber/10 border-l-2 border-amber" : ""
       } ${msg.pending ? "opacity-50" : ""}`}
     >
       {!showHeader && msg.pinned && (

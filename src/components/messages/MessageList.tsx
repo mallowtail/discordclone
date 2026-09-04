@@ -42,6 +42,7 @@ export function MessageList({
     });
   }, [messages, profiles, supabase]);
 
+  // scroll to / flash the anchor once per anchorId; otherwise go to present
   useEffect(() => {
     if (anchorId && anchored) {
       if (flashedRef.current === anchorId) return;           // already scrolled+flashed this anchor
@@ -50,14 +51,19 @@ export function MessageList({
         el.scrollIntoView({ behavior: "smooth", block: "center" });
         setFlashId(anchorId);
         flashedRef.current = anchorId;
-        const t = setTimeout(() => setFlashId(null), 2000);
-        return () => clearTimeout(t);
       }
       return;                                                // not mounted yet; a later messages update retries
     }
     flashedRef.current = null;                               // reset so returning to an anchor later re-flashes
     bottom.current?.scrollIntoView({ behavior: "smooth" });  // normal / garbage-id path → go to present
   }, [messages, anchorId, anchored]);
+
+  // flash auto-clears after 2s; keyed on flashId so message updates can't cancel it
+  useEffect(() => {
+    if (!flashId) return;
+    const t = setTimeout(() => setFlashId(null), 2000);
+    return () => clearTimeout(t);
+  }, [flashId]);
 
   return (
     <div className="flex-1 overflow-y-auto py-3">

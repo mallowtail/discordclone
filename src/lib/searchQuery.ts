@@ -46,8 +46,11 @@ function unitBounds(value: string): { start: string; next: string } | null {
   if (month) {
     const y = +month[1], mo = +month[2];
     if (mo < 1 || mo > 12) return null;
+    const dt = new Date(Date.UTC(y, mo - 1, 1));
+    // Date.UTC maps 2-digit years to 1900-1999, so round-trip check for year.
+    if (dt.getUTCFullYear() !== y) return null;
     return {
-      start: new Date(Date.UTC(y, mo - 1, 1)).toISOString(),
+      start: dt.toISOString(),
       next: new Date(Date.UTC(y, mo, 1)).toISOString(),
     };
   }

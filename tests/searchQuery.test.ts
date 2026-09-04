@@ -43,6 +43,30 @@ describe("parseSearchQuery", () => {
     expect(p.beforeTs).toBeUndefined();
     expect(p.text).toBe("before:nope");
   });
+  it("rejects impossible dates that pass the regex (calendar rollover)", () => {
+    const p1 = parseSearchQuery("before:2026-02-30");
+    expect(p1.beforeTs).toBeUndefined();
+    expect(p1.text).toBe("before:2026-02-30");
+    const p2 = parseSearchQuery("during:2026-13-01");
+    expect(p2.beforeTs).toBeUndefined();
+    expect(p2.afterTs).toBeUndefined();
+    expect(p2.text).toBe("during:2026-13-01");
+    const p3 = parseSearchQuery("after:0050-01");
+    expect(p3.afterTs).toBeUndefined();
+    expect(p3.text).toBe("after:0050-01");
+  });
+  it("before/after with month form (YYYY-MM) set day bounds", () => {
+    expect(parseSearchQuery("before:2026-09").beforeTs).toBe("2026-09-01T00:00:00.000Z");
+    expect(parseSearchQuery("after:2026-09").afterTs).toBe("2026-10-01T00:00:00.000Z");
+  });
+  it("quoted phrase that looks like an operator stays literal text", () => {
+    const p = parseSearchQuery('"from:@alex"');
+    expect(p.from).toBeUndefined();
+    expect(p.text).toBe("from:@alex");
+  });
+  it("pinned:1 is accepted", () => {
+    expect(parseSearchQuery("pinned:1").pinned).toBe(true);
+  });
   it("empty input yields empty text and no operators", () => {
     const p = parseSearchQuery("   ");
     expect(p).toEqual({ text: "" });

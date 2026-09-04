@@ -119,6 +119,54 @@ Notes:
   `@alexander`. `from_user` uses exact `username` equality (usernames are unique).
 - The plan must **read `is_server_member`'s signature** (`0005_servers.sql:47-50`) and call it exactly.
 
+## Operator autocomplete — pure helpers + dropdown
+
+Discord-style suggestion dropdown while the search input is focused, mirroring the composer's
+`@mention` autocomplete idiom (`src/components/messages/MentionAutocomplete.tsx` +
+`mentionQueryAt` in `MessageInput.tsx`).
+
+### Pure helpers — `src/lib/searchSuggest.ts` (unit-tested)
+```ts
+// The whitespace-delimited token containing the caret (for replacement on accept).
+export function activeToken(raw: string, caret: number): { token: string; start: number; end: number };
+
+// Classify what the active token wants suggested.
+export type SuggestKind = "operator" | "from" | "mentions" | "in" | "has" | "pinned" | "date" | null;
+export function suggestKind(token: string): { kind: SuggestKind; partial: string };
+
+// Replace the active token with `value`, returning the new raw string + new caret position.
+export function applySuggestion(
+  raw: string, caret: number, value: string
+): { raw: string; caret: number };
+```
+Rules:
+- `suggestKind`:
+  - Token contains no `:` → `{ kind: "operator", partial: token }` (suggest operator names filtered by
+    `partial`; an empty token suggests all operators).
+  - `from:x`/`mentions:x` → `{ kind: "from"|"mentions", partial: "x" }` (x may be empty; strip a leading `@`).
+  - `in:x` → `{ kind: "in", partial: "x" }` (strip a leading `#`).
+  - `has:x` → `{ kind: "has", partial: "x" }`.
+  - `pinned:x` → `{ kind: "pinned", partial: "x" }`.
+  - `before:`/`after:`/`during:` → `{ kind: "date", partial: "x" }`.
+  - Unknown `key:` → `{ kind: null }` (no suggestions).
+- `applySuggestion` replaces `[start,end)` with `value`, placing the caret at the end of `value`.
+  - Accepting an **operator** inserts e.g. `from:` (no trailing space — the caret stays ready for the value).
+  - Accepting a **value** (username/channel/`link`/`true`) inserts the value + a trailing space.
+
+### Dropdown — inside `MessageSearchPanel`
+- Data: **server members** (fetched via `server_members` → `profiles`, the `MembersPanel` pattern) and
+  **channels** (channels in this server, the `ForwardDialog` pattern). Fetched once when the panel opens.
+- Given `suggestKind`, render:
+  - `operator` → matching operator rows (label + short hint, e.g. `from:` — "messages from a user").
+  - `from`/`mentions` → members whose `username` or `display_name` matches `partial` (avatar + name; inserts `username`).
+  - `in` → channels whose `name` matches `partial` (`#name`; inserts `name`).
+  - `has` → `link` / `image` / `file` filtered by `partial`.
+  - `pinned` → `true`.
+  - `date` → a single non-selectable hint row: `YYYY-MM-DD or YYYY-MM`.
+- Keyboard (mirror `MentionAutocomplete`): ↑/↓ move the highlighted row; **Enter/Tab accept** the
+  highlighted suggestion via `applySuggestion`; **Esc closes the dropdown** (a second Esc / the ✕ closes
+  search). **Enter runs the search only when the dropdown is closed / has no suggestions.**
+
 ## Client query parser — `src/lib/searchQuery.ts` (pure, unit-tested)
 
 ```ts
@@ -196,8 +244,8 @@ Rules:
 ## Non-goals
 
 - No DM search (deferred — DM view has no panel).
-- No search-operator **autocomplete** dropdown (Discord's suggestion popover). Operators are typed
-  free-hand; the parser is forgiving. A later slice can add autocomplete.
+- Autocomplete suggests **operators and their values** (users, channels, `has`/`pinned` enums); it does
+  **not** try to validate free-text or predict dates beyond a format hint.
 - No relevance ranking beyond newest-first (no `ts_rank` sort). No highlighted match terms inside the
   snippet (plain truncation).
 - No global/cross-server search; no saved searches; no result counts ("X results") beyond what's loaded.
@@ -209,6 +257,11 @@ Rules:
   leading `@`/`#` stripped; `has:` validation; `pinned:` truthiness; `before`/`after`/`during` →
   correct ISO bounds for both `YYYY-MM-DD` and `YYYY-MM`; invalid dates dropped; quoted phrase kept
   intact; unknown `key:` and bare words fall into `text`; empty input → empty `text`, no operators.
+- **Unit** (`tests/searchSuggest.test.ts`): `activeToken` finds the token at various caret positions
+  (start/middle/end, across multiple tokens, empty input); `suggestKind` classifies each operator
+  prefix and returns the right `partial` (leading `@`/`#` stripped), bare word → `operator`, unknown
+  `key:` → `null`; `applySuggestion` replaces the active token and positions the caret (operator vs
+  value trailing-space behavior).
 - **Migration:** controller diffs `0020_message_search.sql` verbatim vs this spec, then applies it. A
   **security-focused review** confirms: `is_server_member` guard present, `c.server_id = srv` scoping,
   `security definer` + `set search_path = public`, `grant execute` to `authenticated` only, and that
@@ -225,6 +278,9 @@ Rules:
     without a full reload.
   - The search icon opens the panel in the Members slot; results replace an open Members list; ✕
     restores Members (or closes the panel if Members was closed).
+  - **Autocomplete:** typing a bare word suggests operators; `from:`/`mentions:` suggest members,
+    `in:` suggests channels, `has:` suggests link/image/file, `pinned:` suggests true; ↑/↓ + Enter/Tab
+    accept and insert the token; Enter with the dropdown closed runs the search.
 
 ## Operational note
 

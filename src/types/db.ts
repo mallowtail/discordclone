@@ -101,3 +101,19 @@ export type Ban = {
   reason: string | null;
   created_at: string;
 };
+
+export type SearchResult = {
+  id: string;
+  channel_id: string;
+  channel_name: string;
+  author_id: string;
+  author_username: string;
+  author_display_name: string;
+  author_avatar_url: string | null;
+  content: string | null;
+  image_url: string | null;
+  file_url: string | null;
+  file_name: string | null;
+  pinned: boolean;
+  created_at: string;
+};

@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, use, useEffect, useState } from "react";
+import { Suspense, use, useEffect, useState, type ReactNode } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import type { Channel, Message } from "@/types/db";
@@ -37,6 +37,24 @@ export default function ChannelPage({ params }: { params: Promise<{ channelId: s
   );
 }
 
+/** Header icon button: shows only the icon, revealing its label as a tooltip on hover/focus. */
+function HeaderButton({ label, onClick, children }: { label: string; onClick: () => void; children: ReactNode }) {
+  return (
+    <div className="group relative ml-3 flex items-center">
+      <button onClick={onClick} aria-label={label} className="flex items-center text-muted hover:text-ink">
+        {children}
+      </button>
+      <span
+        className="pointer-events-none absolute left-1/2 top-full z-40 mt-1.5 -translate-x-1/2 whitespace-nowrap rounded-lg
+          border border-line bg-surface-2 px-2 py-1 text-xs font-normal text-ink opacity-0 shadow-lg transition-opacity
+          group-hover:opacity-100 group-focus-within:opacity-100"
+      >
+        {label}
+      </span>
+    </div>
+  );
+}
+
 function ChannelView({ channel }: { channel: Channel }) {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -58,15 +76,12 @@ function ChannelView({ channel }: { channel: Channel }) {
       <header className="p-3 border-b border-line font-semibold text-ink tracking-tight flex items-center justify-between relative">
         <span># {channel.name}</span>
         <span className="flex items-center">
-          <button onClick={() => setShowPins((s) => !s)} className="text-xs font-normal text-muted hover:text-ink flex items-center gap-1">
-            <PushPin size={15} /> Pinned ({pinned.length})
-          </button>
-          <button
-            onClick={() => setShowMembers((s) => !s)}
-            className="text-xs font-normal text-muted hover:text-ink ml-3 flex items-center gap-1"
-          >
-            <Users size={16} /> Members
-          </button>
+          <HeaderButton label={`Pinned (${pinned.length})`} onClick={() => setShowPins((s) => !s)}>
+            <PushPin size={17} />
+          </HeaderButton>
+          <HeaderButton label="Show Member List" onClick={() => setShowMembers((s) => !s)}>
+            <Users size={17} />
+          </HeaderButton>
           <SearchBox search={search} />
         </span>
         {showPins && <PinnedPanel pinned={pinned} onClose={() => setShowPins(false)} />}

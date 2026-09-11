@@ -47,7 +47,7 @@ function HeaderButton({ label, onClick, children }: { label: string; onClick: ()
       <span
         className="pointer-events-none absolute left-1/2 top-full z-40 mt-1.5 -translate-x-1/2 whitespace-nowrap rounded-lg
           border border-line bg-surface-2 px-2 py-1 text-xs font-normal text-ink opacity-0 shadow-lg transition-opacity
-          group-hover:opacity-100 group-focus-within:opacity-100"
+          group-hover:opacity-100"
       >
         {label}
       </span>

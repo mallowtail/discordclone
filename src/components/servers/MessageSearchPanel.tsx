@@ -1,7 +1,9 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import type { MessageSearch } from "@/components/servers/useMessageSearch";
 import { SearchSuggestions } from "@/components/servers/SearchSuggestions";
+import { Pagination } from "@/components/servers/Pagination";
 import { Avatar } from "@/components/user/Avatar";
 import { MagnifyingGlass, Hash } from "@phosphor-icons/react";
 
@@ -36,11 +38,18 @@ export function SearchBox({ search }: { search: MessageSearch }) {
 
 /** Results list, shown in the right-hand slot (shares the Members panel's place) while a query is active. */
 export function SearchResultsPanel({ search }: { search: MessageSearch }) {
-  const { results, busy, error, done, loadMore, jumpTo } = search;
+  const { results, busy, error, page, totalPages, total, goToPage, jumpTo } = search;
+  const scrollRef = useRef<HTMLDivElement>(null);
+  // Jump back to the top of the list when the page changes.
+  useEffect(() => { scrollRef.current?.scrollTo({ top: 0 }); }, [page]);
+
   return (
-    <aside className="w-72 bg-sidebar border-l border-line flex flex-col">
-      <div className="p-3 text-sm font-semibold text-ink tracking-tight border-b border-line">Search results</div>
-      <div className="flex-1 overflow-y-auto p-2 flex flex-col gap-1">
+    <aside className="w-80 bg-sidebar border-l border-line flex flex-col">
+      <div className="p-3 text-sm font-semibold text-ink tracking-tight border-b border-line flex items-baseline justify-between">
+        <span>Search results</span>
+        {total > 0 && <span className="text-xs font-normal text-muted">{total} found</span>}
+      </div>
+      <div ref={scrollRef} className="flex-1 overflow-y-auto p-2 flex flex-col gap-1">
         {error && <p className="text-danger text-xs p-2">{error}</p>}
         {!busy && !error && results.length === 0 && <p className="text-muted text-xs p-2">No results.</p>}
         {results.map((r) => (
@@ -60,16 +69,12 @@ export function SearchResultsPanel({ search }: { search: MessageSearch }) {
             </span>
           </button>
         ))}
-        {results.length > 0 && !done && (
-          <button
-            onClick={loadMore}
-            disabled={busy}
-            className="text-xs text-accent hover:underline p-2 disabled:opacity-50"
-          >
-            {busy ? "Loading…" : "Load more"}
-          </button>
-        )}
       </div>
+      {totalPages > 1 && (
+        <div className="border-t border-line">
+          <Pagination page={page} totalPages={totalPages} onChange={goToPage} />
+        </div>
+      )}
     </aside>
   );
 }

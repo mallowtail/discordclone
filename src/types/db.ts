@@ -116,4 +116,5 @@ export type SearchResult = {
   file_name: string | null;
   pinned: boolean;
   created_at: string;
+  total_count: number;
 };

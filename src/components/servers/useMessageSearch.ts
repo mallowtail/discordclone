@@ -25,9 +25,9 @@ export function useMessageSearch(serverId: string) {
   const [results, setResults] = useState<SearchResult[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [done, setDone] = useState(false); // no more pages
+  const [page, setPage] = useState(1);     // 1-based current results page
+  const [total, setTotal] = useState(0);   // total matches for the committed query
   const inputRef = useRef<HTMLInputElement>(null);
-  const queryRef = useRef(query);
 
   const [members, setMembers] = useState<Member[]>([]);
   const [channels, setChannels] = useState<Channel[]>([]);
@@ -36,7 +36,6 @@ export function useMessageSearch(serverId: string) {
   const [activeIdx, setActiveIdx] = useState(0);
   const [prevToken, setPrevToken] = useState("");
 
-  useEffect(() => { queryRef.current = query; }, [query]);
 
   // Fetch server members + channels once (mirrors MembersPanel / ForwardDialog) for autocomplete.
   useEffect(() => {
@@ -61,34 +60,27 @@ export function useMessageSearch(serverId: string) {
   if (token !== prevToken) { setPrevToken(token); setActiveIdx(0); }
   const dropdownVisible = acOpen && suggestions.length > 0;
 
-  // Run a search only for the COMMITTED query (set on Enter) — never on every keystroke.
+  // Fetch the current page of the COMMITTED query (set on Enter) — never on every keystroke.
   useEffect(() => {
     const q = query.trim();
-    if (!q) { setResults([]); setError(null); setDone(false); return; }
+    if (!q) { setResults([]); setError(null); setTotal(0); return; }
     let active = true;
     (async () => {
       setBusy(true); setError(null);
       try {
-        const rows = await searchMessages(supabase, serverId, parseSearchQuery(query), { lim: PAGE, off: 0 });
-        if (active) { setResults(rows); setDone(rows.length < PAGE); }
+        const rows = await searchMessages(supabase, serverId, parseSearchQuery(query), { lim: PAGE, off: (page - 1) * PAGE });
+        if (active) { setResults(rows); setTotal(rows[0]?.total_count ?? 0); }
       } catch { if (active) setError("Search failed"); }
       finally { if (active) setBusy(false); }
     })();
     return () => { active = false; };
-  }, [query, serverId, supabase]);
+  }, [query, page, serverId, supabase]);
 
-  // Commit the current input as the search to run (called on Enter).
-  function runSearch() { setAcOpen(false); setQuery(raw); }
+  // Commit the current input as the search to run (called on Enter); always resets to page 1.
+  function runSearch() { setAcOpen(false); setPage(1); setQuery(raw); }
 
-  async function loadMore() {
-    const q = query; // guard: ignore this page if the committed query changes before it resolves
-    setBusy(true);
-    try {
-      const rows = await searchMessages(supabase, serverId, parseSearchQuery(query), { lim: PAGE, off: results.length });
-      if (queryRef.current === q) { setResults((prev) => [...prev, ...rows]); setDone(rows.length < PAGE); }
-    } catch { if (queryRef.current === q) setError("Search failed"); }
-    finally { if (queryRef.current === q) setBusy(false); }
-  }
+  const totalPages = Math.max(1, Math.ceil(total / PAGE));
+  function goToPage(p: number) { setPage(Math.min(Math.max(1, p), totalPages)); }
 
   function jumpTo(r: SearchResult) {
     const dest = `/channels/${r.channel_id}?msg=${r.id}`;
@@ -150,9 +142,10 @@ export function useMessageSearch(serverId: string) {
   function onBlur() { setTimeout(() => setAcOpen(false), 150); }
 
   return {
-    raw, query, results, busy, error, done, inputRef,
+    raw, query, results, busy, error, inputRef,
+    page, totalPages, total, goToPage,
     suggestions, activeIdx, setActiveIdx, dropdownVisible, acceptSuggestion,
-    loadMore, jumpTo,
+    jumpTo,
     onChange, onKeyDown, onKeyUp, onClick: trackCaret, onBlur,
   };
 }

@@ -103,7 +103,7 @@ function ChannelView({ channel }: { channel: Channel }) {
             removePending={removePending}
           />
         </MessageDropZone>
-        {search.raw.trim()
+        {search.query.trim()
           ? <SearchResultsPanel search={search} />
           : showMembers
           ? <MembersPanel serverId={channel.server_id} onClose={() => setShowMembers(false)} />

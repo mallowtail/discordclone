@@ -20,13 +20,14 @@ export function useMessageSearch(serverId: string) {
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
   const pathname = usePathname();
-  const [raw, setRaw] = useState("");
+  const [raw, setRaw] = useState("");       // live input value (drives autocomplete)
+  const [query, setQuery] = useState("");   // committed search term — set only on Enter
   const [results, setResults] = useState<SearchResult[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false); // no more pages
   const inputRef = useRef<HTMLInputElement>(null);
-  const rawRef = useRef(raw);
+  const queryRef = useRef(query);
 
   const [members, setMembers] = useState<Member[]>([]);
   const [channels, setChannels] = useState<Channel[]>([]);
@@ -35,7 +36,7 @@ export function useMessageSearch(serverId: string) {
   const [activeIdx, setActiveIdx] = useState(0);
   const [prevToken, setPrevToken] = useState("");
 
-  useEffect(() => { rawRef.current = raw; }, [raw]);
+  useEffect(() => { queryRef.current = query; }, [query]);
 
   // Fetch server members + channels once (mirrors MembersPanel / ForwardDialog) for autocomplete.
   useEffect(() => {
@@ -51,7 +52,7 @@ export function useMessageSearch(serverId: string) {
     return () => { active = false; };
   }, [supabase, serverId]);
 
-  const { kind, token, suggestions } = useMemo(
+  const { token, suggestions } = useMemo(
     () => getSuggestions(raw, caret, members, channels),
     [raw, caret, members, channels]
   );
@@ -60,30 +61,33 @@ export function useMessageSearch(serverId: string) {
   if (token !== prevToken) { setPrevToken(token); setActiveIdx(0); }
   const dropdownVisible = acOpen && suggestions.length > 0;
 
-  // Debounced fresh search whenever the query changes. Empty query → no request.
+  // Run a search only for the COMMITTED query (set on Enter) — never on every keystroke.
   useEffect(() => {
-    const q = raw.trim();
+    const q = query.trim();
     if (!q) { setResults([]); setError(null); setDone(false); return; }
     let active = true;
-    const t = setTimeout(async () => {
+    (async () => {
       setBusy(true); setError(null);
       try {
-        const rows = await searchMessages(supabase, serverId, parseSearchQuery(raw), { lim: PAGE, off: 0 });
+        const rows = await searchMessages(supabase, serverId, parseSearchQuery(query), { lim: PAGE, off: 0 });
         if (active) { setResults(rows); setDone(rows.length < PAGE); }
       } catch { if (active) setError("Search failed"); }
       finally { if (active) setBusy(false); }
-    }, 250);
-    return () => { active = false; clearTimeout(t); };
-  }, [raw, serverId, supabase]);
+    })();
+    return () => { active = false; };
+  }, [query, serverId, supabase]);
+
+  // Commit the current input as the search to run (called on Enter).
+  function runSearch() { setAcOpen(false); setQuery(raw); }
 
   async function loadMore() {
-    const q = raw; // guard: ignore this page if the query changes before it resolves
+    const q = query; // guard: ignore this page if the committed query changes before it resolves
     setBusy(true);
     try {
-      const rows = await searchMessages(supabase, serverId, parseSearchQuery(raw), { lim: PAGE, off: results.length });
-      if (rawRef.current === q) { setResults((prev) => [...prev, ...rows]); setDone(rows.length < PAGE); }
-    } catch { if (rawRef.current === q) setError("Search failed"); }
-    finally { if (rawRef.current === q) setBusy(false); }
+      const rows = await searchMessages(supabase, serverId, parseSearchQuery(query), { lim: PAGE, off: results.length });
+      if (queryRef.current === q) { setResults((prev) => [...prev, ...rows]); setDone(rows.length < PAGE); }
+    } catch { if (queryRef.current === q) setError("Search failed"); }
+    finally { if (queryRef.current === q) setBusy(false); }
   }
 
   function jumpTo(r: SearchResult) {
@@ -122,24 +126,21 @@ export function useMessageSearch(serverId: string) {
       if (e.key === "ArrowDown") { e.preventDefault(); setActiveIdx((a) => (a + 1) % suggestions.length); return; }
       if (e.key === "ArrowUp") { e.preventDefault(); setActiveIdx((a) => (a - 1 + suggestions.length) % suggestions.length); return; }
       if (e.key === "Tab") {
+        // Tab (and clicking) is how you accept an autocomplete suggestion — never Enter.
         const s = suggestions[activeIdx];
         if (s && s.selectable !== false) { e.preventDefault(); acceptSuggestion(s.value); }
         return;
       }
-      if (e.key === "Enter") {
-        // A bare word (operator suggestions) stays searchable text — Enter runs the search,
-        // it must NOT turn "d" into "during:". You commit to an operator by typing its ":" or
-        // clicking / Tab-ing the suggestion. Enter still accepts a concrete value (member, etc.).
-        if (kind === "operator") { e.preventDefault(); setAcOpen(false); return; }
-        const s = suggestions[activeIdx];
-        if (s && s.selectable !== false) { e.preventDefault(); acceptSuggestion(s.value); }
-        return;
-      }
+      // Enter always runs the search (it never completes a word into an operator). So "d" + Enter
+      // searches for "d"; to use an operator, type its ":" or Tab/click the suggestion first.
+      if (e.key === "Enter") { e.preventDefault(); runSearch(); return; }
       if (e.key === "Escape") { e.preventDefault(); setAcOpen(false); return; }
       return;
     }
-    // Dropdown closed: Escape clears the query (hides the results panel) and drops focus.
-    if (e.key === "Escape") { e.preventDefault(); if (raw) setRaw(""); inputRef.current?.blur(); }
+    // Dropdown closed:
+    if (e.key === "Enter") { e.preventDefault(); runSearch(); return; }
+    // Escape clears the query (hides the results panel) and drops focus.
+    if (e.key === "Escape") { e.preventDefault(); setRaw(""); setQuery(""); inputRef.current?.blur(); }
   }
 
   function onKeyUp(e: React.KeyboardEvent<HTMLInputElement>) {
@@ -149,7 +150,7 @@ export function useMessageSearch(serverId: string) {
   function onBlur() { setTimeout(() => setAcOpen(false), 150); }
 
   return {
-    raw, results, busy, error, done, inputRef,
+    raw, query, results, busy, error, done, inputRef,
     suggestions, activeIdx, setActiveIdx, dropdownVisible, acceptSuggestion,
     loadMore, jumpTo,
     onChange, onKeyDown, onKeyUp, onClick: trackCaret, onBlur,

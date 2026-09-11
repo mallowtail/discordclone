@@ -100,6 +100,7 @@ export function useMessageSearch(serverId: string) {
       inputRef.current?.focus();
       inputRef.current?.setSelectionRange(next.caret, next.caret);
     });
+    return next;
   }
 
   function trackCaret(e: React.SyntheticEvent<HTMLInputElement>) {
@@ -124,7 +125,15 @@ export function useMessageSearch(serverId: string) {
         const isValueKind =
           kind === "from" || kind === "mentions" || kind === "in" || kind === "has" || kind === "pinned";
         const s = suggestions[activeIdx];
-        if (isValueKind && s && s.selectable !== false) { e.preventDefault(); acceptSuggestion(s.value); return; }
+        if (isValueKind && s && s.selectable !== false) {
+          // Fill in the highlighted value AND run the search in one Enter (use next.raw, since
+          // the raw state update from acceptSuggestion isn't visible synchronously here).
+          e.preventDefault();
+          const next = acceptSuggestion(s.value);
+          setPage(1);
+          setQuery(next.raw);
+          return;
+        }
         e.preventDefault(); runSearch(); return;
       }
       // Tab is intentionally NOT an autofill key — it tabs out of the field as usual.

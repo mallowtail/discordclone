@@ -51,7 +51,7 @@ export function useMessageSearch(serverId: string) {
     return () => { active = false; };
   }, [supabase, serverId]);
 
-  const { token, suggestions } = useMemo(
+  const { kind, token, suggestions } = useMemo(
     () => getSuggestions(raw, caret, members, channels),
     [raw, caret, members, channels]
   );
@@ -117,15 +117,17 @@ export function useMessageSearch(serverId: string) {
     if (dropdownVisible) {
       if (e.key === "ArrowDown") { e.preventDefault(); setActiveIdx((a) => (a + 1) % suggestions.length); return; }
       if (e.key === "ArrowUp") { e.preventDefault(); setActiveIdx((a) => (a - 1 + suggestions.length) % suggestions.length); return; }
-      if (e.key === "Tab") {
-        // Tab (and clicking) is how you accept an autocomplete suggestion — never Enter.
+      if (e.key === "Enter") {
+        // Enter autofills ONLY when picking a parameter value — a person (from:/mentions:), a
+        // channel (in:), or a has:/pinned: value — navigable with the arrow keys. For a plain
+        // word or an operator name, Enter runs the search instead; those fill in only on click.
+        const isValueKind =
+          kind === "from" || kind === "mentions" || kind === "in" || kind === "has" || kind === "pinned";
         const s = suggestions[activeIdx];
-        if (s && s.selectable !== false) { e.preventDefault(); acceptSuggestion(s.value); }
-        return;
+        if (isValueKind && s && s.selectable !== false) { e.preventDefault(); acceptSuggestion(s.value); return; }
+        e.preventDefault(); runSearch(); return;
       }
-      // Enter always runs the search (it never completes a word into an operator). So "d" + Enter
-      // searches for "d"; to use an operator, type its ":" or Tab/click the suggestion first.
-      if (e.key === "Enter") { e.preventDefault(); runSearch(); return; }
+      // Tab is intentionally NOT an autofill key — it tabs out of the field as usual.
       if (e.key === "Escape") { e.preventDefault(); setAcOpen(false); return; }
       return;
     }

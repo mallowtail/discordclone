@@ -121,7 +121,7 @@ function ChannelView({ channel }: { channel: Channel }) {
         {search.query.trim()
           ? <SearchResultsPanel search={search} />
           : showMembers
-          ? <MembersPanel serverId={channel.server_id} onClose={() => setShowMembers(false)} />
+          ? <MembersPanel serverId={channel.server_id} />
           : null}
       </div>
     </>

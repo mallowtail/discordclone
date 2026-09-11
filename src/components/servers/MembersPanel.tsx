@@ -11,11 +11,11 @@ import { MemberRolesDialog } from "@/components/servers/MemberRolesDialog";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { canModerate } from "@/lib/moderation";
 import { MemberModMenu } from "@/components/servers/MemberModMenu";
-import { X, ShieldStar, Clock } from "@phosphor-icons/react";
+import { ShieldStar, Clock } from "@phosphor-icons/react";
 
 type Member = { user_id: string; timeout_until: string | null; profile: Profile | null };
 
-export function MembersPanel({ serverId, onClose }: { serverId: string; onClose: () => void }) {
+export function MembersPanel({ serverId }: { serverId: string }) {
   const supabase = createClient();
   const { open } = useProfilePopover();
   const { user } = useAuth();
@@ -51,11 +51,8 @@ export function MembersPanel({ serverId, onClose }: { serverId: string; onClose:
 
   return (
     <aside className="w-56 bg-sidebar border-l border-line flex flex-col">
-      <div className="p-3 font-semibold text-ink tracking-tight border-b border-line flex items-center justify-between">
-        <span>Members</span>
-        <button onClick={onClose} aria-label="Close" className="text-muted hover:text-ink text-sm">
-          <X size={16} weight="bold" />
-        </button>
+      <div className="p-3 font-semibold text-ink tracking-tight border-b border-line">
+        Members
       </div>
       <div className="flex-1 overflow-y-auto p-2 flex flex-col gap-1">
         {members.map((m) => (

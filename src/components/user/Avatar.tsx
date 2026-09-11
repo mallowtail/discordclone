@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-const SIZES = { sm: "w-6 h-6", md: "w-10 h-10", lg: "w-[72px] h-[72px]" } as const;
+const SIZES = { sm: "w-6 h-6", md: "w-10 h-10", lg: "w-[72px] h-[72px]", xl: "w-[96px] h-[96px]" } as const;
 
 export function Avatar({
   url,

@@ -21,11 +21,13 @@ export function ProfileCard({
   anchorRect,
   serverId,
   onClose,
+  onOpenFull,
 }: {
   userId: string;
   anchorRect: DOMRect;
   serverId?: string;
   onClose: () => void;
+  onOpenFull?: () => void;
 }) {
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
@@ -93,7 +95,7 @@ export function ProfileCard({
   }
 
   function openFullPage() {
-    router.push(`/users/${userId}`);
+    onOpenFull?.();
     onClose();
   }
 

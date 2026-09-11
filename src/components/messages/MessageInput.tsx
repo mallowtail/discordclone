@@ -119,6 +119,7 @@ export function MessageInput({
   async function submit() {
     if (timedOutUntil) return;
     if (uploading) return;
+    if (!text.trim()) return; // empty message: silently do nothing (no "Message is empty" warning)
     const v = validateMessage(text);
     if (!v.ok) return setError(v.error);
     setError(null);

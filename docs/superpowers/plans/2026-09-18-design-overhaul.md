@@ -274,3 +274,21 @@ These 15 files render styled UI but were untouched by Tasks 1–9. Without this 
 - [ ] **Step 3: `src/app/opengraph-image.tsx`.** Generated with `ImageResponse` from `next/og`, exporting `size` (1200×630), `contentType`, and `alt`. **Per G1 the default export must be `async` and must `await` any `params`/`id` props** — Next.js 16 passes them as Promises. Design it in the app's own palette: product name, one line of description, the mark. No external fonts or remote image fetches.
 - [ ] **Step 4: Auth pages.** Give `/login` and `/register` a real first impression: the mark and product name above the card, the card on `rounded-modal` with proper field labels and spacing, `autoComplete` attributes on the inputs (`email`, `current-password`, `new-password`), inline error text tied to its field via `aria-describedby`, and a disabled/busy button state. Keep the existing Supabase auth calls, the `safeNext` redirect logic, and the `Suspense` boundaries exactly as they are.
 - [ ] **Step 5:** Verify per G9 and commit.
+
+---
+
+## Task 12: Overlay Escape consistency
+
+**Files:** Modify `src/components/ui/overlayStack.ts`, `src/components/ui/Dropdown.tsx`, `src/components/user/UserSettings.tsx`, `src/components/user/ProfileCard.tsx`, `src/components/messages/PinnedPanel.tsx`, `src/components/messages/MessageActions.tsx`, `src/components/messages/MessageInput.tsx`, `src/components/messages/MessageItem.tsx`, `src/components/servers/MemberModMenu.tsx`
+
+**Why this task exists.** Task 2 fixed "one Escape closes every stacked dialog" *inside* `Modal` and `Drawer` by adding `overlayStack.ts`. Two later reviews independently found the same bug class still live everywhere else: eight components register their own unconditional `document`-level `keydown` listeners and never register with the stack. With any two of them open — a settings surface over a profile modal, a pinned panel over a dialog, a dropdown inside a dialog — a single Escape fires every listener and closes all of them at once.
+
+This is a real behaviour defect, pre-existing rather than introduced by this plan, and explicitly out of scope for Task 10 (which is appearance-only). It is fixed here.
+
+- [ ] **Step 1:** Audit every `document`-level Escape listener under `src/components/`. The current set is the eight files above plus `Modal.tsx` and `Drawer.tsx` (already correct). Confirm the list is still accurate before changing anything — earlier tasks may have added or removed one.
+- [ ] **Step 2:** Give `overlayStack.ts` whatever small API the non-`Modal` surfaces need to participate — most likely a hook (`useEscapeKey(onClose, enabled)`) that pushes a token while mounted/open, gates on `isTopOverlay`, and pops on cleanup. Keep it minimal; `Modal` and `Drawer` must keep working through whatever shape you land on, unchanged in behaviour.
+- [ ] **Step 3:** Convert the eight components to it. **The invariant: one Escape press closes exactly one surface — the topmost.** A dropdown open inside a dialog closes the dropdown and leaves the dialog open; a second Escape closes the dialog.
+- [ ] **Step 4:** Do not change anything else about these components — not their props, their click-outside handling, their data flow, or their appearance. Click-outside is a separate mechanism and stays as it is.
+- [ ] **Step 5:** Some of these surfaces are transient menus (the composer's `+` menu, the emoji picker, `Dropdown`, `MemberModMenu`) and some are panels (`PinnedPanel`, `UserSettings`). Both kinds participate — a menu opened last must always win the Escape.
+- [ ] **Step 6:** There is no jsdom in this repo (`vitest.config.ts` is frozen by G6), so this cannot be unit-tested. Verify by running the app and exercising at least these stacks, reporting what you observed for each: dropdown inside a dialog; `UserSettings` over `FullProfileModal`; `PinnedPanel` with a dialog open; `ConfirmDialog` over `RolesDialog` over `ServerSettingsDialog` (a triple stack that already worked — confirm it still does).
+- [ ] **Step 7:** Verify per G9 and commit.

@@ -38,10 +38,20 @@ export default function ChannelPage({ params }: { params: Promise<{ channelId: s
 }
 
 /** Header icon button: shows only the icon, revealing its label as a tooltip on hover/focus. */
-function HeaderButton({ label, onClick, children }: { label: string; onClick: () => void; children: ReactNode }) {
+function HeaderButton({
+  label,
+  onClick,
+  children,
+  triggerId,
+}: {
+  label: string;
+  onClick: () => void;
+  children: ReactNode;
+  triggerId?: string;
+}) {
   return (
     <div className="group relative ml-3 flex items-center">
-      <button onClick={onClick} aria-label={label} className="flex items-center text-muted hover:text-ink">
+      <button onClick={onClick} aria-label={label} data-trigger={triggerId} className="flex items-center text-muted hover:text-ink">
         {children}
       </button>
       <span
@@ -76,7 +86,7 @@ function ChannelView({ channel }: { channel: Channel }) {
       <header className="p-3 border-b border-line font-semibold text-ink tracking-tight flex items-center justify-between relative">
         <span># {channel.name}</span>
         <span className="flex items-center">
-          <HeaderButton label={`Pinned (${pinned.length})`} onClick={() => setShowPins((s) => !s)}>
+          <HeaderButton label={`Pinned (${pinned.length})`} triggerId="pins" onClick={() => setShowPins((s) => !s)}>
             <PushPin size={17} />
           </HeaderButton>
           <HeaderButton label="Show Member List" onClick={() => setShowMembers((s) => !s)}>

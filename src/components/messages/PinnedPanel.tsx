@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { Message, Profile } from "@/types/db";
 import { PushPin, X } from "@phosphor-icons/react";
@@ -15,6 +15,25 @@ function snippet(m: Message): string {
 export function PinnedPanel({ pinned, onClose }: { pinned: Message[]; onClose: () => void }) {
   const supabase = createClient();
   const [names, setNames] = useState<Record<string, string>>({});
+  const ref = useRef<HTMLDivElement>(null);
+
+  // Close when clicking outside the panel (or pressing Escape). The pins toggle button is
+  // excluded so clicking it still toggles cleanly instead of close-then-reopen.
+  useEffect(() => {
+    function onDown(e: MouseEvent) {
+      const el = e.target as Element | null;
+      if (!ref.current || ref.current.contains(el)) return;
+      if (el?.closest?.('[data-trigger="pins"]')) return;
+      onClose();
+    }
+    function onKey(e: KeyboardEvent) { if (e.key === "Escape") onClose(); }
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [onClose]);
 
   useEffect(() => {
     const ids = [...new Set(pinned.map((m) => m.author_id))];
@@ -36,7 +55,7 @@ export function PinnedPanel({ pinned, onClose }: { pinned: Message[]; onClose: (
   }
 
   return (
-    <div className="absolute right-3 top-12 w-72 bg-sidebar border border-line rounded-2xl p-2 shadow-xl z-50">
+    <div ref={ref} className="absolute right-3 top-12 w-72 bg-sidebar border border-line rounded-2xl p-2 shadow-xl z-50">
       <div className="text-[11px] font-semibold uppercase tracking-wider text-muted mb-2 flex items-center gap-1">
         <PushPin size={12} aria-hidden="true" /> Pinned Messages
       </div>

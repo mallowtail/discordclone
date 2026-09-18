@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { Reaction } from "@/types/db";
-import { aggregateReactions, type ReactionPill } from "@/lib/reactions";
+import { aggregateReactions, upsertReaction, removeReaction, type ReactionPill } from "@/lib/reactions";
 
 // Short, stable hash so the realtime channel name stays small even when `key`
 // is hundreds of joined UUIDs (channel names must not balloon to thousands of chars).
@@ -39,7 +39,8 @@ export function useReactions(messageIds: string[], currentUserId: string): Recor
         { event: "INSERT", schema: "public", table: "reactions" },
         (payload) => {
           const r = payload.new as Reaction;
-          if (messageIds.includes(r.message_id)) setRows((prev) => [...prev, r]);
+          // Dedupe: the SUBSCRIBED reload and this INSERT event can race over the same row.
+          if (messageIds.includes(r.message_id)) setRows((prev) => upsertReaction(prev, r));
         }
       )
       .on(
@@ -48,11 +49,7 @@ export function useReactions(messageIds: string[], currentUserId: string): Recor
         { event: "DELETE", schema: "public", table: "reactions" },
         (payload) => {
           const o = payload.old as Reaction;
-          setRows((prev) =>
-            prev.filter(
-              (x) => !(x.message_id === o.message_id && x.user_id === o.user_id && x.emoji === o.emoji)
-            )
-          );
+          setRows((prev) => removeReaction(prev, o));
         }
       )
       .subscribe((status) => {

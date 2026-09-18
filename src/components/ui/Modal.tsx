@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useId, useRef, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { X } from "@phosphor-icons/react";
+import { pushOverlay, popOverlay, isTopOverlay } from "@/components/ui/overlayStack";
 
 const SIZE_CLASSES = {
   sm: "w-[min(92vw,24rem)]",
@@ -33,8 +34,15 @@ export function Modal({
   const panelRef = useRef<HTMLDivElement>(null);
   const titleId = useId();
 
+  // Captured during render (the lazy useState initializer runs synchronously as part of this
+  // component's first render, before React commits anything — including before commit-phase
+  // autoFocus on a child like ConfirmDialog's confirm button can move focus). Reading
+  // document.activeElement here, rather than inside the effect below, is what makes this the
+  // trigger element and not a descendant of this panel that's about to unmount.
+  const [previouslyFocused] = useState<HTMLElement | null>(() => document.activeElement as HTMLElement | null);
+
   useEffect(() => {
-    const previouslyFocused = document.activeElement as HTMLElement | null;
+    const token = pushOverlay();
     const panel = panelRef.current;
 
     // Respect a child's own autoFocus (e.g. ConfirmDialog's confirm button); only fall back to
@@ -46,7 +54,9 @@ export function Modal({
 
     function onKeyDown(e: KeyboardEvent) {
       if (e.key === "Escape") {
-        onClose();
+        // Only the topmost overlay closes — otherwise a ConfirmDialog opened on top of an
+        // already-open Modal would close both on one Escape press.
+        if (isTopOverlay(token)) onClose();
         return;
       }
       if (e.key !== "Tab" || !panel) return;
@@ -74,11 +84,12 @@ export function Modal({
     document.body.style.overflow = "hidden";
 
     return () => {
+      popOverlay(token);
       document.removeEventListener("keydown", onKeyDown);
       document.body.style.overflow = prevOverflow;
       previouslyFocused?.focus();
     };
-  }, [onClose]);
+  }, [onClose, previouslyFocused]);
 
   return createPortal(
     <div

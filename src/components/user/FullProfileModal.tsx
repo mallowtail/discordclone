@@ -10,6 +10,7 @@ import { Avatar } from "@/components/user/Avatar";
 import { StatusBubble } from "@/components/user/StatusBubble";
 import { UserSettings } from "@/components/user/UserSettings";
 import { useMemberRoleColors } from "@/hooks/useMemberRoleColors";
+import { usePresence } from "@/hooks/usePresence";
 import { RolePill } from "@/components/servers/RolePill";
 import { openDmWith } from "@/lib/dm";
 import { Modal } from "@/components/ui/Modal";
@@ -40,7 +41,9 @@ export function FullProfileModal({
   const [busy, setBusy] = useState(false);
   const [editing, setEditing] = useState(false);
   const { colorFor, rolesFor } = useMemberRoleColors(serverId);
+  const { isOnline } = usePresence();
   const isSelf = user?.id === userId;
+  const online = isOnline(userId);
 
   useEffect(() => {
     let active = true;
@@ -89,7 +92,15 @@ export function FullProfileModal({
                 <div className="h-28 bg-gradient-to-br from-accent/60 via-mention to-app" />
                 <div className="px-5 pb-6">
                   <div className="-mt-12 mb-1 w-fit rounded-pill ring-4 ring-surface">
-                    <Avatar url={profile.avatar_url} name={profile.display_name} size="xl" />
+                    <Avatar
+                      url={profile.avatar_url}
+                      name={profile.display_name}
+                      seed={userId}
+                      presence={online ? "online" : "offline"}
+                      presenceRing="ring-surface"
+                      size="xl"
+                    />
+                    <span className="sr-only">{online ? "Online" : "Offline"}</span>
                   </div>
                   {profile.status && (
                     <div className="mt-2">

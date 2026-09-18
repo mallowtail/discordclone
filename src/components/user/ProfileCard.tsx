@@ -12,6 +12,7 @@ import { computePopoverPosition } from "@/lib/popover";
 import { openDmWith } from "@/lib/dm";
 import { validateMessage } from "@/lib/validation";
 import { useMemberRoleColors } from "@/hooks/useMemberRoleColors";
+import { usePresence } from "@/hooks/usePresence";
 import { RolePill } from "@/components/servers/RolePill";
 
 const CARD_WIDTH = 256; // w-64
@@ -43,8 +44,10 @@ export function ProfileCard({
   const [sending, setSending] = useState(false);
 
   const { colorFor, rolesFor } = useMemberRoleColors(serverId);
+  const { isOnline } = usePresence();
 
   const isSelf = user?.id === userId;
+  const online = isOnline(userId);
 
   useEffect(() => {
     let active = true;
@@ -117,8 +120,20 @@ export function ProfileCard({
     >
       <div className="p-4">
         <div className="flex items-center gap-2">
-          <button onClick={openFullPage} title="View full profile" className="block flex-none">
-            <Avatar url={profile?.avatar_url ?? null} name={profile?.display_name} size="lg" />
+          <button
+            onClick={openFullPage}
+            title="View full profile"
+            aria-label={`${profile?.display_name ?? "View full profile"} — ${online ? "Online" : "Offline"}`}
+            className="block flex-none"
+          >
+            <Avatar
+              url={profile?.avatar_url ?? null}
+              name={profile?.display_name}
+              seed={userId}
+              presence={online ? "online" : "offline"}
+              presenceRing="ring-surface"
+              size="lg"
+            />
           </button>
           <StatusBubble status={profile?.status} />
         </div>

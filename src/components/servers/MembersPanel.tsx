@@ -1,12 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { Profile } from "@/types/db";
 import { Avatar } from "@/components/user/Avatar";
 import { useProfilePopover } from "@/components/providers/ProfilePopoverProvider";
 import { useServerPermissions } from "@/hooks/useServerPermissions";
 import { useMemberRoleColors } from "@/hooks/useMemberRoleColors";
+import { usePresence } from "@/hooks/usePresence";
 import { MemberRolesDialog } from "@/components/servers/MemberRolesDialog";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { canModerate } from "@/lib/moderation";
@@ -21,6 +22,7 @@ export function MembersPanel({ serverId }: { serverId: string }) {
   const { user } = useAuth();
   const { has, isOwner, rank } = useServerPermissions(serverId);
   const { colorFor, rolesFor } = useMemberRoleColors(serverId);
+  const { isOnline } = usePresence();
   const [ownerId, setOwnerId] = useState<string | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
   const [managingUser, setManagingUser] = useState<string | null>(null);
@@ -49,60 +51,89 @@ export function MembersPanel({ serverId }: { serverId: string }) {
     };
   }, [supabase, serverId, load]);
 
+  const { online, offline } = useMemo(() => {
+    const online: Member[] = [];
+    const offline: Member[] = [];
+    for (const m of members) (isOnline(m.user_id) ? online : offline).push(m);
+    return { online, offline };
+  }, [members, isOnline]);
+
+  function renderMember(m: Member) {
+    const memberIsOnline = isOnline(m.user_id);
+    const displayName = m.profile?.display_name ?? "Unknown";
+    const targetRank = rolesFor(m.user_id).reduce((mx, r) => Math.max(mx, r.position), -1);
+    const ctx = {
+      isOwner, viewerRank: rank ?? -1, targetRank,
+      targetIsOwner: m.user_id === ownerId, targetIsSelf: m.user_id === user?.id,
+    };
+    const timedOut = !!m.timeout_until && new Date(m.timeout_until) > new Date();
+    return (
+      <div key={m.user_id} className="flex items-center gap-2 p-1.5 rounded-row hover:bg-surface">
+        <button
+          onClick={(e) => open(m.user_id, e.currentTarget.getBoundingClientRect(), serverId)}
+          aria-label={`${displayName} — ${memberIsOnline ? "Online" : "Offline"}`}
+          className={`flex items-center gap-2 flex-1 min-w-0 text-left ${memberIsOnline ? "" : "opacity-50"}`}
+        >
+          <Avatar
+            url={m.profile?.avatar_url ?? null}
+            name={m.profile?.display_name}
+            seed={m.user_id}
+            presence={memberIsOnline ? "online" : "offline"}
+            size="sm"
+          />
+          <div className="min-w-0">
+            <div className="text-ink text-body truncate" style={{ color: colorFor(m.user_id) ?? undefined }}>
+              {displayName}
+            </div>
+          </div>
+        </button>
+        {timedOut && (
+          <span className="text-muted flex-none" title={`Timed out until ${new Date(m.timeout_until!).toLocaleString()}`}>
+            <Clock size={14} weight="fill" />
+          </span>
+        )}
+        <MemberModMenu
+          serverId={serverId}
+          targetId={m.user_id}
+          targetName={m.profile?.display_name ?? "member"}
+          timedOut={timedOut}
+          canKick={canModerate({ ...ctx, hasPerm: has("kick_members") })}
+          canBan={canModerate({ ...ctx, hasPerm: has("ban_members") })}
+          canTimeout={canModerate({ ...ctx, hasPerm: has("timeout_members") })}
+          onDone={load}
+        />
+        {has("manage_roles") && (
+          <button onClick={() => setManagingUser(m.user_id)} title="Manage roles"
+            className="text-muted hover:text-ink text-meta flex-none">
+            <ShieldStar size={16} />
+          </button>
+        )}
+      </div>
+    );
+  }
+
   return (
     <aside className="w-56 bg-sidebar border-l border-line flex flex-col">
-      <div className="p-3 font-semibold text-ink tracking-tight border-b border-line">
+      <div className="p-3 text-title font-semibold text-ink tracking-tight border-b border-line">
         Members
       </div>
       <div className="flex-1 overflow-y-auto p-2 flex flex-col gap-1">
-        {members.map((m) => (
-          <div key={m.user_id} className="flex items-center gap-2 p-1.5 rounded hover:bg-surface">
-            <button
-              onClick={(e) => open(m.user_id, e.currentTarget.getBoundingClientRect(), serverId)}
-              className="flex items-center gap-2 flex-1 min-w-0 text-left"
-            >
-              <Avatar url={m.profile?.avatar_url ?? null} name={m.profile?.display_name} size="sm" />
-              <div className="min-w-0">
-                <div className="text-ink text-sm truncate" style={{ color: colorFor(m.user_id) ?? undefined }}>
-                  {m.profile?.display_name ?? "Unknown"}
-                </div>
-              </div>
-            </button>
-            {(() => {
-                const targetRank = rolesFor(m.user_id).reduce((mx, r) => Math.max(mx, r.position), -1);
-                const ctx = {
-                  isOwner, viewerRank: rank ?? -1, targetRank,
-                  targetIsOwner: m.user_id === ownerId, targetIsSelf: m.user_id === user?.id,
-                };
-                const timedOut = !!m.timeout_until && new Date(m.timeout_until) > new Date();
-                return (
-                  <>
-                    {timedOut && (
-                      <span className="text-muted flex-none" title={`Timed out until ${new Date(m.timeout_until!).toLocaleString()}`}>
-                        <Clock size={14} weight="fill" />
-                      </span>
-                    )}
-                    <MemberModMenu
-                      serverId={serverId}
-                      targetId={m.user_id}
-                      targetName={m.profile?.display_name ?? "member"}
-                      timedOut={timedOut}
-                      canKick={canModerate({ ...ctx, hasPerm: has("kick_members") })}
-                      canBan={canModerate({ ...ctx, hasPerm: has("ban_members") })}
-                      canTimeout={canModerate({ ...ctx, hasPerm: has("timeout_members") })}
-                      onDone={load}
-                    />
-                  </>
-                );
-              })()}
-            {has("manage_roles") && (
-              <button onClick={() => setManagingUser(m.user_id)} title="Manage roles"
-                className="text-muted hover:text-ink text-xs flex-none">
-                <ShieldStar size={16} />
-              </button>
-            )}
-          </div>
-        ))}
+        {online.length > 0 && (
+          <>
+            <div className="px-1.5 pt-2 pb-1 text-micro font-semibold uppercase tracking-wider text-muted">
+              Online — {online.length}
+            </div>
+            {online.map(renderMember)}
+          </>
+        )}
+        {offline.length > 0 && (
+          <>
+            <div className="px-1.5 pt-2 pb-1 text-micro font-semibold uppercase tracking-wider text-muted">
+              Offline — {offline.length}
+            </div>
+            {offline.map(renderMember)}
+          </>
+        )}
       </div>
       {managingUser && (
         <MemberRolesDialog serverId={serverId} userId={managingUser} onClose={() => setManagingUser(null)} />

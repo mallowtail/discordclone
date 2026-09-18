@@ -9,11 +9,13 @@ import { NewDmDialog } from "@/components/dms/NewDmDialog";
 import { Avatar } from "@/components/user/Avatar";
 import { UserPanel } from "@/components/user/UserPanel";
 import { useProfilePopover } from "@/components/providers/ProfilePopoverProvider";
+import { usePresence } from "@/hooks/usePresence";
 
 export function DmSidebar() {
   const supabase = createClient();
   const { user } = useAuth();
   const { open } = useProfilePopover();
+  const { isOnline } = usePresence();
   const [dms, setDms] = useState<{ id: string; other: Profile }[]>([]);
 
   useEffect(() => {
@@ -44,18 +46,29 @@ export function DmSidebar() {
         <div className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-wider text-muted mt-2 mb-1">
           Direct Messages <NewDmDialog />
         </div>
-        {dms.map((d) => (
-          <Link key={d.id} href={`/dms/${d.id}`}
-            className="flex items-center gap-2 px-2 py-1 rounded hover:bg-surface hover:text-ink">
-            <span
-              onClick={(e) => { e.preventDefault(); e.stopPropagation(); if (!d.other) return; open(d.other.id, e.currentTarget.getBoundingClientRect()); }}
-              className="flex-none cursor-pointer"
-            >
-              <Avatar url={d.other?.avatar_url ?? null} name={d.other?.display_name} size="sm" />
-            </span>
-            {d.other?.display_name ?? "Unknown"}
-          </Link>
-        ))}
+        {dms.map((d) => {
+          const online = !!d.other && isOnline(d.other.id);
+          const displayName = d.other?.display_name ?? "Unknown";
+          return (
+            <Link key={d.id} href={`/dms/${d.id}`}
+              aria-label={`${displayName} — ${online ? "Online" : "Offline"}`}
+              className="flex items-center gap-2 px-2 py-1 rounded-row hover:bg-surface hover:text-ink">
+              <span
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); if (!d.other) return; open(d.other.id, e.currentTarget.getBoundingClientRect()); }}
+                className="flex-none cursor-pointer"
+              >
+                <Avatar
+                  url={d.other?.avatar_url ?? null}
+                  name={d.other?.display_name}
+                  seed={d.other?.id}
+                  presence={online ? "online" : "offline"}
+                  size="sm"
+                />
+              </span>
+              {displayName}
+            </Link>
+          );
+        })}
       </nav>
       <UserPanel />
     </aside>

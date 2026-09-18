@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { GearSix, Plus, CaretDown, CaretRight } from "@phosphor-icons/react";
+import { usePathname } from "next/navigation";
+import { GearSix, Plus, CaretDown, CaretRight, Hash } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
 import type { Server, Category, Channel } from "@/types/db";
 import { CreateChannelDialog } from "@/components/servers/CreateChannelDialog";
@@ -14,6 +15,7 @@ import { useServerPermissions } from "@/hooks/useServerPermissions";
 
 export function ServerSidebar({ serverId }: { serverId: string }) {
   const supabase = createClient();
+  const pathname = usePathname();
   const [server, setServer] = useState<Server | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [channels, setChannels] = useState<Channel[]>([]);
@@ -26,6 +28,11 @@ export function ServerSidebar({ serverId }: { serverId: string }) {
   const canManageChannels = has("manage_channels");
   const canManageServer = has("manage_server");
   const canManageRoles = has("manage_roles");
+
+  // Extract active channel ID from pathname (e.g., /channels/abc123 -> abc123)
+  // Returns null on routes where nothing matches (e.g., /channels/first landing page)
+  const pathSegments = pathname.split("/");
+  const activeChannelId = pathSegments[1] === "channels" ? pathSegments[2] : null;
 
   const load = useCallback(async () => {
     const [{ data: s }, { data: cats }, { data: chs }] = await Promise.all([
@@ -78,10 +85,21 @@ export function ServerSidebar({ serverId }: { serverId: string }) {
         </button>
       </div>
       <nav className="flex-1 overflow-y-auto p-2 text-muted">
-        {uncategorized.map((c) => (
-          <Link key={c.id} href={`/channels/${c.id}`}
-            className="block px-2 py-1 rounded-lg hover:bg-surface hover:text-ink"># {c.name}</Link>
-        ))}
+        {uncategorized.map((c) => {
+          const isActive = c.id === activeChannelId;
+          return (
+            <Link key={c.id} href={`/channels/${c.id}`}
+              aria-current={isActive ? "page" : undefined}
+              className={`flex items-center gap-2 px-2 py-1 rounded-row text-body ${
+                isActive
+                  ? "bg-surface-2 text-ink"
+                  : "hover:bg-surface hover:text-ink"
+              }`}>
+              <Hash size={16} weight="bold" className={isActive ? "text-ink" : "text-muted"} aria-hidden="true" />
+              {c.name}
+            </Link>
+          );
+        })}
         {categories.map((cat) => (
           <div key={cat.id}>
             <button
@@ -98,10 +116,21 @@ export function ServerSidebar({ serverId }: { serverId: string }) {
               {cat.name}
             </button>
             {!collapsed[cat.id] &&
-              channelsIn(cat.id).map((c) => (
-                <Link key={c.id} href={`/channels/${c.id}`}
-                  className="block px-2 py-1 ml-2 rounded-lg hover:bg-surface hover:text-ink"># {c.name}</Link>
-              ))}
+              channelsIn(cat.id).map((c) => {
+                const isActive = c.id === activeChannelId;
+                return (
+                  <Link key={c.id} href={`/channels/${c.id}`}
+                    aria-current={isActive ? "page" : undefined}
+                    className={`flex items-center gap-2 px-2 py-1 ml-2 rounded-row text-body ${
+                      isActive
+                        ? "bg-surface-2 text-ink"
+                        : "hover:bg-surface hover:text-ink"
+                    }`}>
+                    <Hash size={16} weight="bold" className={isActive ? "text-ink" : "text-muted"} aria-hidden="true" />
+                    {c.name}
+                  </Link>
+                );
+              })}
           </div>
         ))}
         {canManageChannels && (

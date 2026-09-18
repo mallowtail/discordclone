@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/components/providers/AuthProvider";
 import type { Profile } from "@/types/db";
@@ -13,10 +14,16 @@ import { usePresence } from "@/hooks/usePresence";
 
 export function DmSidebar() {
   const supabase = createClient();
+  const pathname = usePathname();
   const { user } = useAuth();
   const { open } = useProfilePopover();
   const { isOnline } = usePresence();
   const [dms, setDms] = useState<{ id: string; other: Profile }[]>([]);
+
+  // Extract active conversation ID from pathname (e.g., /dms/abc123 -> abc123)
+  // Returns null on routes where nothing matches
+  const pathSegments = pathname.split("/");
+  const activeConversationId = pathSegments[1] === "dms" ? pathSegments[2] : null;
 
   useEffect(() => {
     if (!user) return;
@@ -49,10 +56,16 @@ export function DmSidebar() {
         {dms.map((d) => {
           const online = !!d.other && isOnline(d.other.id);
           const displayName = d.other?.display_name ?? "Unknown";
+          const isActive = d.id === activeConversationId;
           return (
             <Link key={d.id} href={`/dms/${d.id}`}
+              aria-current={isActive ? "page" : undefined}
               aria-label={`${displayName} — ${online ? "Online" : "Offline"}`}
-              className="flex items-center gap-2 px-2 py-1 rounded-row hover:bg-surface hover:text-ink">
+              className={`flex items-center gap-2 px-2 py-1 rounded-row text-body ${
+                isActive
+                  ? "bg-surface-2 text-ink"
+                  : "hover:bg-surface hover:text-ink"
+              }`}>
               <span
                 onClick={(e) => { e.preventDefault(); e.stopPropagation(); if (!d.other) return; open(d.other.id, e.currentTarget.getBoundingClientRect()); }}
                 className="flex-none cursor-pointer"

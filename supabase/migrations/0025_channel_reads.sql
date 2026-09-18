@@ -15,6 +15,13 @@ create policy "read own channel reads"
 create policy "insert own channel reads"
   on public.channel_reads for insert to authenticated
   with check (user_id = auth.uid());
+-- with check repeats the using predicate explicitly (Postgres would reuse it implicitly if
+-- omitted, since it references the same row-owning column) so the "can't repoint user_id"
+-- guarantee doesn't depend on the reader knowing that implicit-reuse rule.
+-- channel_id is intentionally left unconstrained here: a user repointing their own row to a
+-- different channel_id is still confined to their own (user_id, channel_id) row by RLS, so
+-- at worst it's bookkeeping noise, not a security issue.
 create policy "update own channel reads"
   on public.channel_reads for update to authenticated
-  using (user_id = auth.uid());
+  using (user_id = auth.uid())
+  with check (user_id = auth.uid());

@@ -61,7 +61,11 @@ function RailItem({
 
 /** A server's rail button, with an unread badge when any of its channels are unread.
  *  The badge sits on the icon's edge, opposite RailItem's left-edge active indicator,
- *  so the two never overlap. */
+ *  so the two never overlap. It uses `bg-ink` — the same neutral tone as the active-pill
+ *  indicator — rather than `bg-danger`: plain unread is a routine "there's new activity"
+ *  state, not an error/destructive one, and `danger` shouldn't be spent here when the
+ *  system already has purpose-built `mention`/`mention-ink` tokens reserved for a future,
+ *  genuinely urgent @mention badge. */
 function ServerRailButton({
   server,
   active,
@@ -78,7 +82,7 @@ function ServerRailButton({
         <ServerIcon iconUrl={server.icon_url} name={server.name} />
         {hasAnyUnread && (
           <span
-            className="absolute -top-0.5 -right-0.5 w-3 h-3 rounded-pill bg-danger ring-2 ring-surface-2"
+            className="absolute -top-0.5 -right-0.5 w-3 h-3 rounded-pill bg-ink ring-2 ring-surface-2"
             aria-hidden="true"
           />
         )}

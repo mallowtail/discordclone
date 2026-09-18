@@ -9,6 +9,7 @@ import { ServerSidebar } from "@/components/servers/ServerSidebar";
 import { DmSidebar } from "@/components/dms/DmSidebar";
 import { ProfilePopoverProvider } from "@/components/providers/ProfilePopoverProvider";
 import { PresenceProvider } from "@/components/providers/PresenceProvider";
+import { UnreadProvider } from "@/components/providers/UnreadProvider";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -43,17 +44,19 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <PresenceProvider>
-      <ProfilePopoverProvider>
-        <div className="flex h-screen">
-          <ServerRail
-            activeServerId={activeServer}
-            onSelectServer={(id) => router.push(`/channels/first?server=${id}`)}
-            onSelectHome={() => router.push("/dms")}
-          />
-          {activeServer === null ? <DmSidebar /> : <ServerSidebar serverId={activeServer} />}
-          <main className="flex-1 flex flex-col min-w-0">{children}</main>
-        </div>
-      </ProfilePopoverProvider>
+      <UnreadProvider>
+        <ProfilePopoverProvider>
+          <div className="flex h-screen">
+            <ServerRail
+              activeServerId={activeServer}
+              onSelectServer={(id) => router.push(`/channels/first?server=${id}`)}
+              onSelectHome={() => router.push("/dms")}
+            />
+            {activeServer === null ? <DmSidebar /> : <ServerSidebar serverId={activeServer} />}
+            <main className="flex-1 flex flex-col min-w-0">{children}</main>
+          </div>
+        </ProfilePopoverProvider>
+      </UnreadProvider>
     </PresenceProvider>
   );
 }

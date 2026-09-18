@@ -186,11 +186,13 @@ This task must not depend on Task 6. Active state ships whether or not unread la
 
 ## Task 6: Unread indicators
 
-**Files:** Create `supabase/migrations/0023_channel_reads.sql`, `src/hooks/useUnread.ts`, `src/lib/unread.ts`, `tests/unread.test.ts`; modify `src/types/db.ts`, `src/components/servers/ServerSidebar.tsx`, `src/components/servers/ServerRail.tsx`, `src/app/(app)/channels/[channelId]/page.tsx`
+**Files:** Create `supabase/migrations/0025_channel_reads.sql`, `src/hooks/useUnread.ts`, `src/lib/unread.ts`, `tests/unread.test.ts`; modify `src/types/db.ts`, `src/components/servers/ServerSidebar.tsx`, `src/components/servers/ServerRail.tsx`, `src/app/(app)/channels/[channelId]/page.tsx`
 
 Read `supabase/migrations/0001_init.sql`, `0005_servers.sql` and `0018_moderation.sql` first to match this project's established table, RLS-policy and naming conventions. Do not deviate from them.
 
-- [ ] **Step 1: Migration `0023_channel_reads.sql`.** A `channel_reads` table keyed on (`user_id`, `channel_id`) storing `last_read_at timestamptz not null default now()`. Both foreign keys cascade on delete. Enable RLS. Policies must allow a user to select, insert and update **only their own** rows — a user must never be able to read another user's read state. Follow the exact policy-naming style used in the existing migrations.
+> **Why `0025` and not `0023`:** concurrent work on `main` added and already applied `0024_get_or_create_dm.sql` to the live database. A new `0023` would be older than the newest applied migration, leaving the local and remote ledgers permanently mismatched. `0023` and `0024` are therefore skipped in this branch on purpose — Supabase orders migrations by name, not by contiguity, so the gap is harmless. Do not renumber to fill it.
+
+- [ ] **Step 1: Migration `0025_channel_reads.sql`.** A `channel_reads` table keyed on (`user_id`, `channel_id`) storing `last_read_at timestamptz not null default now()`. Both foreign keys cascade on delete. Enable RLS. Policies must allow a user to select, insert and update **only their own** rows — a user must never be able to read another user's read state. Follow the exact policy-naming style used in the existing migrations.
 - [ ] **Step 2: DO NOT RUN `supabase db push`.** Write the migration file only. The controller applies it to the live database after review. An implementer that runs a migration against production is a Critical finding.
 - [ ] **Step 3: `src/lib/unread.ts`.** Pure functions, no Supabase imports: `unreadCount(messages, lastReadAt, myUserId)` returns how many messages are newer than `lastReadAt` and not authored by `myUserId`; `hasUnread(...)` is the boolean form. Null/undefined `lastReadAt` means everything is unread. Messages authored by me are never unread.
 - [ ] **Step 4: TDD.** `tests/unread.test.ts` before the implementation: never-read channel, fully-read channel, partially-read channel, own messages excluded, empty message list, and a `lastReadAt` exactly equal to a message timestamp (equal is read, not unread). RED then GREEN in the report.

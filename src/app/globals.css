@@ -143,9 +143,18 @@ body {
     button:not(:disabled):active {
       transform: none;
     }
-    .animate-overlay-in,
-    .animate-panel-in {
-      animation: none;
-    }
+  }
+}
+
+/* Unlayered on purpose: Tailwind v4's master layer order is
+   `@layer theme, base, components, utilities;` (see node_modules/tailwindcss/index.css),
+   so the `animate-overlay-in` / `animate-panel-in` utilities generated into `@layer utilities`
+   from the --animate-* theme entries above would always beat a disable rule placed inside
+   `@layer base`. Per the cascade-layers spec, unlayered rules beat every layered rule
+   regardless of source order, so this must stay outside any @layer block to actually win. */
+@media (prefers-reduced-motion: reduce) {
+  .animate-overlay-in,
+  .animate-panel-in {
+    animation: none;
   }
 }

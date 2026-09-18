@@ -34,7 +34,12 @@ These bind every task. Reviewers check against them verbatim.
 
 **G8 — Dark-only app.** There is no light theme and none is being added. `color-scheme: dark` is declared so native UI (autofill, native scrollbars, date pickers) renders dark.
 
-**G9 — Verification.** `npx tsc --noEmit` and `npm run lint` must pass before any commit. `npm test` must pass (20 existing test files plus any added). Report the command and its output.
+**G9 — Verification is baseline-relative.** This repo does **not** start clean. Recorded baseline on `design-overhaul` at commit `7e044c1`:
+- `npm test` — **142 passing, 20 files, 0 failing.** This must stay green absolutely: any failing test is a blocker.
+- `npx tsc --noEmit` — **exactly 1 pre-existing error**, in `tests/grouping.test.ts` (fixture missing `Message` fields). That file is frozen by G6. Your work must introduce **no new** type errors; the count must stay at 1.
+- `npm run lint` — **71 problems (30 errors, 41 warnings)** pre-existing. Your work must not raise either number. Reducing them is welcome but never required, and never by disabling a rule.
+
+Run all three before committing and report each command with its output and its number, compared against these baselines. Do not "fix" pre-existing failures outside your task's files.
 
 **G10 — Accessibility is not optional.** Every interactive element keeps an accessible name (`aria-label` or visible text). New overlays (Modal, Drawer) trap focus, close on `Escape`, restore focus to the trigger on close, and set `role="dialog"` + `aria-modal="true"`. Decorative icons get `aria-hidden="true"`.
 

@@ -94,6 +94,12 @@ export type Reaction = {
   created_at: string;
 };
 
+export type ChannelRead = {
+  user_id: string;
+  channel_id: string;
+  last_read_at: string;
+};
+
 export type Ban = {
   server_id: string;
   user_id: string;

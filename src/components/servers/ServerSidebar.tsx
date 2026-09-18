@@ -12,6 +12,7 @@ import { ServerSettingsDialog } from "@/components/servers/ServerSettingsDialog"
 import { InviteDialog } from "@/components/servers/InviteDialog";
 import { UserPanel } from "@/components/user/UserPanel";
 import { useServerPermissions } from "@/hooks/useServerPermissions";
+import { useUnread } from "@/hooks/useUnread";
 
 export function ServerSidebar({ serverId }: { serverId: string }) {
   const supabase = createClient();
@@ -25,6 +26,7 @@ export function ServerSidebar({ serverId }: { serverId: string }) {
   const [settings, setSettings] = useState(false);
   const [inviting, setInviting] = useState(false);
   const { has } = useServerPermissions(serverId);
+  const { isUnread } = useUnread(serverId);
   const canManageChannels = has("manage_channels");
   const canManageServer = has("manage_server");
   const canManageRoles = has("manage_roles");
@@ -64,17 +66,29 @@ export function ServerSidebar({ serverId }: { serverId: string }) {
 
   function renderChannelLink(channel: Channel, hasMargin = false) {
     const isActive = channel.id === activeChannelId;
+    // The active channel is never shown as unread — you can't have unread messages in
+    // what you're currently looking at. Because of that, the unread dot and the active
+    // channel's left accent bar are mutually exclusive and never fight for the same spot.
+    const unread = !isActive && isUnread(channel.id);
     return (
       <Link key={channel.id} href={`/channels/${channel.id}`}
         aria-current={isActive ? "page" : undefined}
         className={`relative flex items-center gap-2 px-2 py-1 ${hasMargin ? "ml-2" : ""} rounded-row text-body ${
           isActive
             ? "bg-surface text-ink font-medium hover:bg-surface"
+            : unread
+            ? "hover:bg-surface/60 text-ink font-semibold"
             : "hover:bg-surface/60 text-muted hover:text-ink"
         }`}>
         {isActive && (
           <div
             className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-4 bg-accent rounded-full"
+            aria-hidden="true"
+          />
+        )}
+        {unread && (
+          <div
+            className="absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-1.5 bg-ink rounded-pill"
             aria-hidden="true"
           />
         )}

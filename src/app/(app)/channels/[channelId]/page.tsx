@@ -5,6 +5,7 @@ import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import type { Channel, Message } from "@/types/db";
 import { useMessages } from "@/hooks/useMessages";
+import { useUnread } from "@/hooks/useUnread";
 import { MessageList } from "@/components/messages/MessageList";
 import { MessageInput } from "@/components/messages/MessageInput";
 import { MessageDropZone } from "@/components/messages/MessageDropZone";
@@ -77,6 +78,15 @@ function ChannelView({ channel }: { channel: Channel }) {
   const [showMembers, setShowMembers] = useState(false);
   const search = useMessageSearch(channel.server_id);
   const pinned = messages.filter((m) => m.pinned);
+  const { markRead } = useUnread(channel.server_id);
+  const lastMessageId = messages[messages.length - 1]?.id;
+
+  // Mark this channel read on open, and again whenever a new message arrives while it's
+  // the open channel — `lastMessageId` changes each time useMessages' realtime subscription
+  // appends a row.
+  useEffect(() => {
+    markRead(channel.id);
+  }, [channel.id, lastMessageId, markRead]);
 
   function jumpToPresent() {
     router.replace(pathname);

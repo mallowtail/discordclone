@@ -4,8 +4,10 @@ import { useState, useRef } from "react";
 import { createPortal } from "react-dom";
 import { ChatCircle, Plus } from "@phosphor-icons/react";
 import { useServers } from "@/hooks/useServers";
+import { useUnread } from "@/hooks/useUnread";
 import { ServerIcon } from "@/components/servers/ServerIcon";
 import { AddServerDialog } from "@/components/servers/AddServerDialog";
+import type { Server } from "@/types/db";
 
 function RailItem({
   active,
@@ -57,6 +59,34 @@ function RailItem({
   );
 }
 
+/** A server's rail button, with an unread badge when any of its channels are unread.
+ *  The badge sits on the icon's edge, opposite RailItem's left-edge active indicator,
+ *  so the two never overlap. */
+function ServerRailButton({
+  server,
+  active,
+  onClick,
+}: {
+  server: Server;
+  active: boolean;
+  onClick: () => void;
+}) {
+  const { hasAnyUnread } = useUnread(server.id);
+  return (
+    <RailItem active={active} label={server.name} onClick={onClick}>
+      <span className="relative inline-flex">
+        <ServerIcon iconUrl={server.icon_url} name={server.name} />
+        {hasAnyUnread && (
+          <span
+            className="absolute -top-0.5 -right-0.5 w-3 h-3 rounded-pill bg-danger ring-2 ring-surface-2"
+            aria-hidden="true"
+          />
+        )}
+      </span>
+    </RailItem>
+  );
+}
+
 export function ServerRail({
   activeServerId,
   onSelectServer,
@@ -86,14 +116,12 @@ export function ServerRail({
       </RailItem>
       <div className="w-8 h-px bg-line my-1" />
       {servers.map((s) => (
-        <RailItem
+        <ServerRailButton
           key={s.id}
+          server={s}
           active={activeServerId === s.id}
-          label={s.name}
           onClick={() => onSelectServer(s.id)}
-        >
-          <ServerIcon iconUrl={s.icon_url} name={s.name} />
-        </RailItem>
+        />
       ))}
       <RailItem
         active={false}

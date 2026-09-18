@@ -21,7 +21,7 @@ export function DmSidebar() {
   const [dms, setDms] = useState<{ id: string; other: Profile }[]>([]);
 
   // Extract active conversation ID from pathname (e.g., /dms/abc123 -> abc123)
-  // Returns null on routes where nothing matches
+  // pathSegments[2] is the segment after /dms/, which matches a real id or nothing
   const pathSegments = pathname.split("/");
   const activeConversationId = pathSegments[1] === "dms" ? pathSegments[2] : null;
 
@@ -61,11 +61,17 @@ export function DmSidebar() {
             <Link key={d.id} href={`/dms/${d.id}`}
               aria-current={isActive ? "page" : undefined}
               aria-label={`${displayName} — ${online ? "Online" : "Offline"}`}
-              className={`flex items-center gap-2 px-2 py-1 rounded-row text-body ${
+              className={`relative flex items-center gap-2 px-2 py-1 rounded-row text-body ${
                 isActive
-                  ? "bg-surface-2 text-ink"
-                  : "hover:bg-surface hover:text-ink"
+                  ? "bg-surface text-ink font-medium hover:bg-surface"
+                  : "hover:bg-surface/60 text-muted hover:text-ink"
               }`}>
+              {isActive && (
+                <div
+                  className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-4 bg-accent rounded-full"
+                  aria-hidden="true"
+                />
+              )}
               <span
                 onClick={(e) => { e.preventDefault(); e.stopPropagation(); if (!d.other) return; open(d.other.id, e.currentTarget.getBoundingClientRect()); }}
                 className="flex-none cursor-pointer"

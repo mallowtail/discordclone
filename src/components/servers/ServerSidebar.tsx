@@ -30,7 +30,7 @@ export function ServerSidebar({ serverId }: { serverId: string }) {
   const canManageRoles = has("manage_roles");
 
   // Extract active channel ID from pathname (e.g., /channels/abc123 -> abc123)
-  // Returns null on routes where nothing matches (e.g., /channels/first landing page)
+  // On /channels/first landing page, pathSegments[2] is "first" which matches no real id
   const pathSegments = pathname.split("/");
   const activeChannelId = pathSegments[1] === "channels" ? pathSegments[2] : null;
 
@@ -62,6 +62,28 @@ export function ServerSidebar({ serverId }: { serverId: string }) {
     return channels.filter((c) => c.category_id === categoryId);
   }
 
+  function renderChannelLink(channel: Channel, hasMargin = false) {
+    const isActive = channel.id === activeChannelId;
+    return (
+      <Link key={channel.id} href={`/channels/${channel.id}`}
+        aria-current={isActive ? "page" : undefined}
+        className={`relative flex items-center gap-2 px-2 py-1 ${hasMargin ? "ml-2" : ""} rounded-row text-body ${
+          isActive
+            ? "bg-surface text-ink font-medium hover:bg-surface"
+            : "hover:bg-surface/60 text-muted hover:text-ink"
+        }`}>
+        {isActive && (
+          <div
+            className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-4 bg-accent rounded-full"
+            aria-hidden="true"
+          />
+        )}
+        <Hash size={16} weight="bold" className={isActive ? "text-ink" : "text-muted"} aria-hidden="true" />
+        {channel.name}
+      </Link>
+    );
+  }
+
   const uncategorized = channelsIn(null);
 
   return (
@@ -85,21 +107,7 @@ export function ServerSidebar({ serverId }: { serverId: string }) {
         </button>
       </div>
       <nav className="flex-1 overflow-y-auto p-2 text-muted">
-        {uncategorized.map((c) => {
-          const isActive = c.id === activeChannelId;
-          return (
-            <Link key={c.id} href={`/channels/${c.id}`}
-              aria-current={isActive ? "page" : undefined}
-              className={`flex items-center gap-2 px-2 py-1 rounded-row text-body ${
-                isActive
-                  ? "bg-surface-2 text-ink"
-                  : "hover:bg-surface hover:text-ink"
-              }`}>
-              <Hash size={16} weight="bold" className={isActive ? "text-ink" : "text-muted"} aria-hidden="true" />
-              {c.name}
-            </Link>
-          );
-        })}
+        {uncategorized.map((c) => renderChannelLink(c, false))}
         {categories.map((cat) => (
           <div key={cat.id}>
             <button
@@ -116,21 +124,7 @@ export function ServerSidebar({ serverId }: { serverId: string }) {
               {cat.name}
             </button>
             {!collapsed[cat.id] &&
-              channelsIn(cat.id).map((c) => {
-                const isActive = c.id === activeChannelId;
-                return (
-                  <Link key={c.id} href={`/channels/${c.id}`}
-                    aria-current={isActive ? "page" : undefined}
-                    className={`flex items-center gap-2 px-2 py-1 ml-2 rounded-row text-body ${
-                      isActive
-                        ? "bg-surface-2 text-ink"
-                        : "hover:bg-surface hover:text-ink"
-                    }`}>
-                    <Hash size={16} weight="bold" className={isActive ? "text-ink" : "text-muted"} aria-hidden="true" />
-                    {c.name}
-                  </Link>
-                );
-              })}
+              channelsIn(cat.id).map((c) => renderChannelLink(c, true))}
           </div>
         ))}
         {canManageChannels && (

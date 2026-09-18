@@ -7,6 +7,7 @@ import { useAuth } from "@/components/providers/AuthProvider";
 import type { Profile } from "@/types/db";
 import { Avatar } from "@/components/user/Avatar";
 import { openDmWith } from "@/lib/dm";
+import { Modal } from "@/components/ui/Modal";
 import { Plus } from "@phosphor-icons/react";
 
 export function NewDmDialog() {
@@ -40,18 +41,16 @@ export function NewDmDialog() {
         <Plus size={18} weight="bold" />
       </button>
       {open && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50"
-             onClick={() => setOpen(false)}>
-          <div className="bg-surface p-4 rounded-2xl w-80 border border-line" onClick={(e) => e.stopPropagation()}>
-            <h2 className="text-[15px] font-semibold text-ink tracking-tight mb-4">Start a DM</h2>
+        <Modal onClose={() => setOpen(false)} title="Start a DM" size="sm">
+          <div className="p-4">
             <input autoFocus placeholder="Search username…"
-              className="w-full p-2 rounded-xl bg-surface-2 text-ink"
+              className="w-full p-2 rounded-control bg-surface-2 text-ink"
               onChange={(e) => search(e.target.value)} />
             <ul className="mt-2 max-h-60 overflow-y-auto">
               {results.map((p) => (
                 <li key={p.id}>
                   <button onClick={() => startDm(p)}
-                    className="w-full text-left px-2 py-1 rounded hover:bg-surface text-ink flex items-center gap-2">
+                    className="w-full text-left px-2 py-1 rounded-row hover:bg-surface text-ink flex items-center gap-2">
                     <Avatar url={p.avatar_url ?? null} name={p.display_name} size="sm" />
                     <span className="truncate">{p.display_name} <span className="text-muted">@{p.username}</span></span>
                   </button>
@@ -59,7 +58,7 @@ export function NewDmDialog() {
               ))}
             </ul>
           </div>
-        </div>
+        </Modal>
       )}
     </>
   );

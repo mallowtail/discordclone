@@ -12,6 +12,7 @@ import { UserSettings } from "@/components/user/UserSettings";
 import { useMemberRoleColors } from "@/hooks/useMemberRoleColors";
 import { RolePill } from "@/components/servers/RolePill";
 import { openDmWith } from "@/lib/dm";
+import { Modal } from "@/components/ui/Modal";
 import { X } from "@phosphor-icons/react";
 
 const TABS = ["Board", "Activity", "Mutual Friends", "Mutual Servers"] as const;
@@ -51,12 +52,6 @@ export function FullProfileModal({
     return () => { active = false; };
   }, [supabase, userId]);
 
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) { if (e.key === "Escape") onClose(); }
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [onClose]);
-
   async function message() {
     if (!user || busy) return;
     setBusy(true);
@@ -72,110 +67,109 @@ export function FullProfileModal({
   const roles = serverId ? rolesFor(userId) : [];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onMouseDown={onClose}>
-      <div
-        onMouseDown={(e) => e.stopPropagation()}
-        className="relative flex w-full max-w-4xl h-[85vh] max-h-[680px] overflow-hidden rounded-2xl border border-line bg-surface shadow-2xl"
-      >
-        <button
-          onClick={onClose}
-          aria-label="Close"
-          className="absolute right-3 top-3 z-10 flex h-7 w-7 items-center justify-center rounded-full bg-surface-2/80 text-muted hover:text-ink"
-        >
-          <X size={16} weight="bold" />
-        </button>
+    <>
+      <Modal onClose={onClose} size="lg" height="tall">
+        <div className="relative flex h-full">
+          <button
+            onClick={onClose}
+            aria-label="Close"
+            className="absolute right-3 top-3 z-10 flex h-7 w-7 items-center justify-center rounded-pill bg-surface-2/80 text-muted hover:text-ink"
+          >
+            <X size={16} weight="bold" />
+          </button>
 
-        {notFound ? (
-          <div className="p-8 text-muted">User not found.</div>
-        ) : !profile ? (
-          <div className="p-8 text-muted">Loading…</div>
-        ) : (
-          <>
-            {/* Left: profile details */}
-            <div className="w-[320px] flex-none overflow-y-auto border-r border-line">
-              <div className="h-28 bg-gradient-to-br from-accent/60 via-mention to-app" />
-              <div className="px-5 pb-6">
-                <div className="-mt-12 mb-1 w-fit rounded-full ring-4 ring-surface">
-                  <Avatar url={profile.avatar_url} name={profile.display_name} size="xl" />
-                </div>
-                {profile.status && (
-                  <div className="mt-2">
-                    <StatusBubble status={profile.status} />
+          {notFound ? (
+            <div className="p-8 text-muted">User not found.</div>
+          ) : !profile ? (
+            <div className="p-8 text-muted">Loading…</div>
+          ) : (
+            <>
+              {/* Left: profile details */}
+              <div className="w-[320px] flex-none overflow-y-auto border-r border-line">
+                <div className="h-28 bg-gradient-to-br from-accent/60 via-mention to-app" />
+                <div className="px-5 pb-6">
+                  <div className="-mt-12 mb-1 w-fit rounded-pill ring-4 ring-surface">
+                    <Avatar url={profile.avatar_url} name={profile.display_name} size="xl" />
                   </div>
-                )}
-                <h1
-                  className="mt-3 text-2xl font-bold tracking-tight text-ink"
-                  style={{ color: colorFor(userId) ?? undefined }}
-                >
-                  {profile.display_name}
-                </h1>
-                <div className="text-sm text-muted">@{profile.username}</div>
+                  {profile.status && (
+                    <div className="mt-2">
+                      <StatusBubble status={profile.status} />
+                    </div>
+                  )}
+                  <h1
+                    className="mt-3 text-2xl font-bold tracking-tight text-ink"
+                    style={{ color: colorFor(userId) ?? undefined }}
+                  >
+                    {profile.display_name}
+                  </h1>
+                  <div className="text-body text-muted">@{profile.username}</div>
 
-                <div className="mt-4">
-                  {isSelf ? (
-                    <button
-                      onClick={() => setEditing(true)}
-                      className="w-full rounded-lg bg-surface-2 py-2 text-sm font-medium text-ink hover:bg-surface"
-                    >
-                      Edit Profile
-                    </button>
-                  ) : (
-                    <button
-                      onClick={message}
-                      disabled={busy}
-                      className="w-full rounded-lg bg-accent py-2 text-sm font-medium text-white hover:bg-accent-strong disabled:opacity-50"
-                    >
-                      {busy ? "…" : "Message"}
-                    </button>
+                  <div className="mt-4">
+                    {isSelf ? (
+                      <button
+                        onClick={() => setEditing(true)}
+                        className="w-full rounded-control bg-surface-2 py-2 text-body font-medium text-ink hover:bg-surface"
+                      >
+                        Edit Profile
+                      </button>
+                    ) : (
+                      <button
+                        onClick={message}
+                        disabled={busy}
+                        className="w-full rounded-control bg-accent py-2 text-body font-medium text-white hover:bg-accent-strong disabled:opacity-50"
+                      >
+                        {busy ? "…" : "Message"}
+                      </button>
+                    )}
+                  </div>
+
+                  {profile.bio && (
+                    <div className="mt-5">
+                      <h2 className="mb-1 text-micro font-semibold uppercase tracking-wider text-muted">About Me</h2>
+                      <p className="whitespace-pre-wrap text-body text-ink">{profile.bio}</p>
+                    </div>
+                  )}
+
+                  <div className="mt-5">
+                    <h2 className="mb-1 text-micro font-semibold uppercase tracking-wider text-muted">Member Since</h2>
+                    <p className="text-body text-ink">{memberSince}</p>
+                  </div>
+
+                  {roles.length > 0 && (
+                    <div className="mt-5">
+                      <h2 className="mb-1 text-micro font-semibold uppercase tracking-wider text-muted">Roles</h2>
+                      <div className="flex flex-wrap gap-1">
+                        {roles.map((r) => <RolePill key={r.id} role={r} />)}
+                      </div>
+                    </div>
                   )}
                 </div>
+              </div>
 
-                {profile.bio && (
-                  <div className="mt-5">
-                    <h2 className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-muted">About Me</h2>
-                    <p className="whitespace-pre-wrap text-sm text-ink">{profile.bio}</p>
-                  </div>
-                )}
-
-                <div className="mt-5">
-                  <h2 className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-muted">Member Since</h2>
-                  <p className="text-sm text-ink">{memberSince}</p>
+              {/* Right: tabbed content (empty for now) */}
+              <div className="flex min-w-0 flex-1 flex-col">
+                <div className="flex gap-5 border-b border-line px-5 pt-4">
+                  {TABS.map((t) => (
+                    <button
+                      key={t}
+                      onClick={() => setTab(t)}
+                      className={`-mb-px border-b-2 pb-2 text-body font-medium ${
+                        tab === t ? "border-ink text-ink" : "border-transparent text-muted hover:text-ink"
+                      }`}
+                    >
+                      {t}
+                    </button>
+                  ))}
                 </div>
-
-                {roles.length > 0 && (
-                  <div className="mt-5">
-                    <h2 className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-muted">Roles</h2>
-                    <div className="flex flex-wrap gap-1">
-                      {roles.map((r) => <RolePill key={r.id} role={r} />)}
-                    </div>
-                  </div>
-                )}
+                <div className="flex flex-1 items-center justify-center px-6 text-center text-body text-muted">
+                  Nothing here yet.
+                </div>
               </div>
-            </div>
-
-            {/* Right: tabbed content (empty for now) */}
-            <div className="flex min-w-0 flex-1 flex-col">
-              <div className="flex gap-5 border-b border-line px-5 pt-4">
-                {TABS.map((t) => (
-                  <button
-                    key={t}
-                    onClick={() => setTab(t)}
-                    className={`-mb-px border-b-2 pb-2 text-sm font-medium ${
-                      tab === t ? "border-ink text-ink" : "border-transparent text-muted hover:text-ink"
-                    }`}
-                  >
-                    {t}
-                  </button>
-                ))}
-              </div>
-              <div className="flex flex-1 items-center justify-center px-6 text-center text-sm text-muted">
-                Nothing here yet.
-              </div>
-            </div>
-          </>
-        )}
-      </div>
+            </>
+          )}
+        </div>
+      </Modal>
       {editing && createPortal(<UserSettings onClose={() => setEditing(false)} />, document.body)}
-    </div>
+    </>
   );
 }

@@ -30,7 +30,7 @@ export function UserSettings({ onClose }: { onClose: () => void }) {
   const navItem = (id: Section, label: string) => (
     <button
       onClick={() => setSection(id)}
-      className={`w-full text-left text-sm rounded-lg px-3 py-1.5 ${
+      className={`w-full text-left text-body rounded-row px-3 py-1.5 ${
         section === id ? "bg-surface-2 text-ink" : "text-muted hover:text-ink"
       }`}
     >
@@ -41,14 +41,14 @@ export function UserSettings({ onClose }: { onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-50 bg-app flex">
       <nav className="w-56 bg-sidebar border-r border-line flex flex-col p-3 gap-1">
-        <div className="text-[11px] font-semibold uppercase tracking-wider text-muted px-3 py-2">
+        <div className="text-micro font-semibold uppercase tracking-wider text-muted px-3 py-2">
           User Settings
         </div>
         {navItem("profile", "Profile")}
         {navItem("account", "Account")}
         <button
           onClick={logOut}
-          className="mt-auto w-full text-left text-sm rounded-lg px-3 py-1.5 text-danger hover:bg-surface-2"
+          className="mt-auto w-full text-left text-body rounded-row px-3 py-1.5 text-danger hover:bg-surface-2"
         >
           Log Out
         </button>
@@ -58,7 +58,7 @@ export function UserSettings({ onClose }: { onClose: () => void }) {
         <button
           onClick={onClose}
           title="Close (Esc)"
-          className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full text-muted hover:text-ink hover:bg-surface-2"
+          className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-pill text-muted hover:text-ink hover:bg-surface-2"
         >
           <X size={18} weight="bold" />
         </button>

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { Modal } from "@/components/ui/Modal";
 
 export function CreateCategoryDialog({
   serverId,
@@ -32,26 +33,25 @@ export function CreateCategoryDialog({
   }
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50" onClick={onClose}>
-      <div className="bg-surface p-5 rounded-2xl w-80 border border-line" onClick={(e) => e.stopPropagation()}>
-        <h2 className="text-[15px] font-semibold text-ink tracking-tight mb-4">Create category</h2>
-        {error && <p className="text-danger text-sm mb-2">{error}</p>}
+    <Modal onClose={onClose} title="Create category" size="sm">
+      <div className="p-5">
+        {error && <p className="text-danger text-body mb-2">{error}</p>}
         <input
           autoFocus
           value={name}
           onChange={(e) => setName(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter") create(); }}
           placeholder="Category name"
-          className="w-full p-2 rounded-xl bg-surface-2 text-ink mb-3"
+          className="w-full p-2 rounded-control bg-surface-2 text-ink mb-3"
         />
         <button
           onClick={create}
           disabled={busy}
-          className="w-full bg-accent hover:bg-accent-strong text-white font-medium rounded-xl p-2 disabled:opacity-50"
+          className="w-full bg-accent hover:bg-accent-strong text-white font-medium rounded-control p-2 disabled:opacity-50"
         >
           {busy ? "Creating…" : "Create"}
         </button>
       </div>
-    </div>
+    </Modal>
   );
 }

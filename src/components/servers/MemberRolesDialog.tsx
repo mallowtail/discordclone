@@ -4,8 +4,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useServerPermissions } from "@/hooks/useServerPermissions";
 import { canManageRoleClient } from "@/lib/roleHierarchy";
+import { Modal } from "@/components/ui/Modal";
 import type { Role } from "@/types/db";
-import { X } from "@phosphor-icons/react";
 
 export function MemberRolesDialog({
   serverId,
@@ -62,33 +62,23 @@ export function MemberRolesDialog({
   }
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50" onClick={onClose}>
-      <div
-        className="bg-surface p-5 rounded-2xl w-96 border border-line max-h-[80vh] overflow-y-auto"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-[15px] font-semibold text-ink tracking-tight mb-4">Roles for member</h2>
-          <button onClick={onClose} aria-label="Close" className="text-muted hover:text-ink">
-            <X size={16} weight="bold" />
-          </button>
-        </div>
-
-        {error && <p className="text-danger text-sm mb-2">{error}</p>}
+    <Modal onClose={onClose} title="Roles for member" size="sm">
+      <div className="p-5">
+        {error && <p className="text-danger text-body mb-2">{error}</p>}
 
         {roles.length === 0 ? (
-          <p className="text-muted text-sm">No roles yet — create some in server settings.</p>
+          <p className="text-muted text-body">No roles yet — create some in server settings.</p>
         ) : (
           <ul className="flex flex-col gap-1">
             {roles.map((role) => {
               const manageable = canManageRoleClient(role.position, rank, isOwner);
               return (
-                <li key={role.id} className="flex items-center gap-2 p-2 rounded-xl hover:bg-surface-2">
+                <li key={role.id} className="flex items-center gap-2 p-2 rounded-row hover:bg-surface-2">
                   <span
                     className="w-3 h-3 rounded-sm shrink-0"
                     style={{ background: role.color ?? "var(--color-surface-2)" }}
                   />
-                  <span className="text-ink text-sm flex-1 truncate">{role.name}</span>
+                  <span className="text-ink text-body flex-1 truncate">{role.name}</span>
                   <input
                     type="checkbox"
                     checked={assigned.has(role.id)}
@@ -103,11 +93,11 @@ export function MemberRolesDialog({
 
         <button
           onClick={onClose}
-          className="w-full bg-surface-2 hover:bg-surface-2/80 text-ink font-medium rounded-xl p-2 mt-3"
+          className="w-full bg-surface-2 hover:bg-surface-2/80 text-ink font-medium rounded-control p-2 mt-3"
         >
           Close
         </button>
       </div>
-    </div>
+    </Modal>
   );
 }

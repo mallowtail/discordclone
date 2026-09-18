@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { useServers } from "@/hooks/useServers";
 import { buildForwardSnapshot } from "@/lib/forward";
+import { Modal } from "@/components/ui/Modal";
 import type { Channel, Message } from "@/types/db";
 import { Hash, At, Check, MagnifyingGlass } from "@phosphor-icons/react";
 
@@ -46,12 +47,6 @@ export function ForwardDialog({ message, onClose }: { message: Message; onClose:
     return () => { active = false; };
   }, [supabase, user, serverIdsKey]);
 
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) { if (e.key === "Escape") onClose(); }
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [onClose]);
-
   const serverName = (id: string) => servers.find((s) => s.id === id)?.name ?? "Server";
   const dests: Dest[] = [
     ...channels.map((c) => ({ key: `channel:${c.id}`, kind: "channel" as const, id: c.id, label: `#${c.name}`, group: serverName(c.server_id) })),
@@ -90,24 +85,23 @@ export function ForwardDialog({ message, onClose }: { message: Message; onClose:
   }
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50" onClick={onClose}>
-      <div className="bg-surface rounded-2xl border border-line w-80 max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
-        <div className="p-4 pb-2">
-          <h2 className="text-[15px] font-semibold text-ink tracking-tight mb-3">Forward message</h2>
+    <Modal onClose={onClose} title="Forward message" size="sm">
+      <div className="flex h-full flex-col">
+        <div className="px-4 pt-3 pb-2">
           <div className="relative">
             <MagnifyingGlass size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
             <input
               autoFocus value={search} onChange={(e) => setSearch(e.target.value)}
               placeholder="Search channels and DMs"
-              className="w-full pl-9 pr-3 py-2 rounded-xl bg-surface-2 text-ink text-sm outline-none focus:ring-1 focus:ring-accent"
+              className="w-full pl-9 pr-3 py-2 rounded-control bg-surface-2 text-ink text-body outline-none focus:ring-1 focus:ring-accent"
             />
           </div>
         </div>
         <div className="flex-1 overflow-y-auto px-4 py-1">
-          {Object.keys(groups).length === 0 && <p className="text-muted text-sm py-2">No destinations found.</p>}
+          {Object.keys(groups).length === 0 && <p className="text-muted text-body py-2">No destinations found.</p>}
           {Object.entries(groups).map(([group, rows]) => (
             <div key={group} className="mb-2">
-              <div className="text-[11px] font-semibold uppercase tracking-wider text-muted mt-2 mb-1">{group}</div>
+              <div className="text-micro font-semibold uppercase tracking-wider text-muted mt-2 mb-1">{group}</div>
               {rows.map((d) => {
                 const on = selected.has(d.key);
                 return (
@@ -116,16 +110,16 @@ export function ForwardDialog({ message, onClose }: { message: Message; onClose:
                     type="button"
                     onClick={() => toggle(d.key)}
                     aria-pressed={on}
-                    className={`w-full flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-left transition ${
+                    className={`w-full flex items-center gap-2.5 px-2 py-1.5 rounded-row text-left transition ${
                       on ? "bg-accent/15" : "hover:bg-surface-2"
                     }`}
                   >
-                    <span className="w-8 h-8 flex-none rounded-lg bg-surface-2 text-muted flex items-center justify-center">
+                    <span className="w-8 h-8 flex-none rounded-row bg-surface-2 text-muted flex items-center justify-center">
                       {d.kind === "channel" ? <Hash size={16} weight="bold" /> : <At size={16} weight="bold" />}
                     </span>
-                    <span className={`flex-1 min-w-0 text-sm truncate ${on ? "text-ink font-medium" : "text-ink"}`}>{d.label}</span>
+                    <span className={`flex-1 min-w-0 text-body truncate ${on ? "text-ink font-medium" : "text-ink"}`}>{d.label}</span>
                     <span
-                      className={`w-5 h-5 flex-none rounded-full flex items-center justify-center border transition ${
+                      className={`w-5 h-5 flex-none rounded-pill flex items-center justify-center border transition ${
                         on ? "bg-accent border-accent text-white" : "border-line text-transparent"
                       }`}
                     >
@@ -138,20 +132,20 @@ export function ForwardDialog({ message, onClose }: { message: Message; onClose:
           ))}
         </div>
         <div className="p-4 pt-2 border-t border-line">
-          {error && <p className="text-danger text-sm mb-2">{error}</p>}
+          {error && <p className="text-danger text-body mb-2">{error}</p>}
           <input
             value={comment} onChange={(e) => setComment(e.target.value)}
             placeholder="Add a comment — optional"
-            className="w-full p-2 rounded-xl bg-surface-2 text-ink text-sm mb-2"
+            className="w-full p-2 rounded-control bg-surface-2 text-ink text-body mb-2"
           />
           <button
             onClick={forward} disabled={busy || selected.size === 0}
-            className="w-full bg-accent hover:bg-accent-strong text-white font-medium rounded-xl p-2 disabled:opacity-50"
+            className="w-full bg-accent hover:bg-accent-strong text-white font-medium rounded-control p-2 disabled:opacity-50"
           >
             {busy ? "Forwarding…" : selected.size ? `Forward to ${selected.size}` : "Forward"}
           </button>
         </div>
       </div>
-    </div>
+    </Modal>
   );
 }

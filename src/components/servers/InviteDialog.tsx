@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { inviteUrl } from "@/lib/invite";
+import { Modal } from "@/components/ui/Modal";
 import type { Server } from "@/types/db";
 
 export function InviteDialog({
@@ -44,25 +45,24 @@ export function InviteDialog({
   }
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50" onClick={onClose}>
-      <div className="bg-surface p-5 rounded-2xl w-96 border border-line" onClick={(e) => e.stopPropagation()}>
-        <h2 className="text-[15px] font-semibold text-ink tracking-tight mb-4">Invite people to {server.name}</h2>
-        <p className="text-muted text-xs mb-3">Anyone with this link can join.</p>
-        {error && <p className="text-danger text-sm mb-2">{error}</p>}
+    <Modal onClose={onClose} title={`Invite people to ${server.name}`} size="sm">
+      <div className="p-5">
+        <p className="text-muted text-meta mb-3">Anyone with this link can join.</p>
+        {error && <p className="text-danger text-body mb-2">{error}</p>}
         <div className="flex gap-2">
-          <input readOnly value={url} aria-label="Invite link" className="flex-1 p-2 rounded-xl bg-surface-2 text-ink text-sm" />
+          <input readOnly value={url} aria-label="Invite link" className="flex-1 p-2 rounded-control bg-surface-2 text-ink text-body" />
           <button onClick={copy}
-            className="text-sm bg-accent hover:bg-accent-strong text-white rounded-xl px-3 disabled:opacity-50">
+            className="text-body bg-accent hover:bg-accent-strong text-white rounded-control px-3 disabled:opacity-50">
             {copied ? "Copied" : "Copy"}
           </button>
         </div>
         {isManager && (
           <button onClick={regenerate} disabled={busy}
-            className="text-xs text-muted mt-3 hover:text-ink disabled:opacity-50">
+            className="text-meta text-muted mt-3 hover:text-ink disabled:opacity-50">
             {busy ? "Regenerating…" : "Regenerate link (invalidates the old one)"}
           </button>
         )}
       </div>
-    </div>
+    </Modal>
   );
 }

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Dropdown } from "@/components/ui/Dropdown";
+import { Modal } from "@/components/ui/Modal";
 import type { Category } from "@/types/db";
 
 export function CreateChannelDialog({
@@ -39,12 +40,11 @@ export function CreateChannelDialog({
   }
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50" onClick={onClose}>
-      <div className="bg-surface p-5 rounded-2xl w-80 border border-line" onClick={(e) => e.stopPropagation()}>
-        <h2 className="text-[15px] font-semibold text-ink tracking-tight mb-4">Create channel</h2>
-        {error && <p className="text-danger text-sm mb-2">{error}</p>}
+    <Modal onClose={onClose} title="Create channel" size="sm">
+      <div className="p-5">
+        {error && <p className="text-danger text-body mb-2">{error}</p>}
         <input autoFocus value={name} onChange={(e) => setName(e.target.value)}
-          placeholder="channel-name" className="w-full p-2 rounded-xl bg-surface-2 text-ink mb-3" />
+          placeholder="channel-name" className="w-full p-2 rounded-control bg-surface-2 text-ink mb-3" />
         {categories.length > 0 && (
           <div className="mb-3">
             <Dropdown
@@ -55,10 +55,10 @@ export function CreateChannelDialog({
           </div>
         )}
         <button onClick={create} disabled={busy}
-          className="w-full bg-accent hover:bg-accent-strong text-white font-medium rounded-xl p-2 disabled:opacity-50">
+          className="w-full bg-accent hover:bg-accent-strong text-white font-medium rounded-control p-2 disabled:opacity-50">
           {busy ? "Creating…" : "Create"}
         </button>
       </div>
-    </div>
+    </Modal>
   );
 }

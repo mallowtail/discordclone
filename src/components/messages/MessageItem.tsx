@@ -13,6 +13,7 @@ import { ReactionBar } from "@/components/messages/ReactionBar";
 import { ForwardDialog } from "@/components/messages/ForwardDialog";
 import { ForwardedBlock } from "@/components/messages/ForwardedBlock";
 import { Avatar } from "@/components/user/Avatar";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useProfilePopover } from "@/components/providers/ProfilePopoverProvider";
 import type { ReactionPill } from "@/lib/reactions";
 import { ArrowBendUpLeft, PushPin } from "@phosphor-icons/react";
@@ -58,6 +59,7 @@ export function MessageItem({
   const [draft, setDraft] = useState(msg.content);
   const [error, setError] = useState<string | null>(null);
   const [forwarding, setForwarding] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   const highlighted = mentionsMe({
     content: msg.content,
@@ -82,7 +84,6 @@ export function MessageItem({
   }
 
   async function remove() {
-    if (!confirm("Delete this message?")) return;
     const { error: err } = await supabase.from("messages").delete().eq("id", msg.id);
     if (err) setError("Couldn't delete — try again");
   }
@@ -216,10 +217,23 @@ export function MessageItem({
             setDraft(msg.content);
             setEditing(true);
           }}
-          onDelete={remove}
+          onDelete={() => setConfirmingDelete(true)}
         />
       )}
       {forwarding && <ForwardDialog message={msg} onClose={() => setForwarding(false)} />}
+      {confirmingDelete && (
+        <ConfirmDialog
+          title="Delete message"
+          message="Delete this message?"
+          confirmLabel="Delete"
+          destructive
+          onConfirm={() => {
+            setConfirmingDelete(false);
+            remove();
+          }}
+          onClose={() => setConfirmingDelete(false)}
+        />
+      )}
     </div>
   );
 }

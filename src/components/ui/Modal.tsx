@@ -11,6 +11,15 @@ const SIZE_CLASSES = {
   lg: "w-[min(92vw,56rem)]",
 } as const;
 
+const HEIGHT_CLASSES = {
+  auto: "max-h-[85vh]",
+  // A definite height, not just a ceiling — lets a `h-full` child (e.g. a two-column layout
+  // that needs its right column to stretch) actually fill the panel instead of collapsing to
+  // its content's intrinsic height. Matches FullProfileModal's original fixed `h-[85vh]
+  // max-h-[680px]` wrapper.
+  tall: "h-[85vh] max-h-[680px]",
+} as const;
+
 const FOCUSABLE_SELECTOR =
   'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
@@ -24,11 +33,16 @@ export function Modal({
   onClose,
   title,
   size = "md",
+  height = "auto",
   children,
 }: {
   onClose: () => void;
   title?: ReactNode;
   size?: "sm" | "md" | "lg";
+  /** "auto" (default) shrinks to content, capped at 85vh. "tall" gives the panel a definite
+   * height (85vh, capped at 680px) instead of just a ceiling — needed when a child relies on
+   * `h-full` to stretch (a definite-height ancestor `max-height` alone doesn't provide). */
+  height?: "auto" | "tall";
   children: ReactNode;
 }) {
   const panelRef = useRef<HTMLDivElement>(null);
@@ -103,7 +117,7 @@ export function Modal({
         aria-labelledby={title ? titleId : undefined}
         tabIndex={-1}
         onMouseDown={(e) => e.stopPropagation()}
-        className={`flex ${SIZE_CLASSES[size]} max-h-[85vh] flex-col overflow-hidden rounded-modal border border-line bg-surface shadow-2xl animate-panel-in`}
+        className={`flex ${SIZE_CLASSES[size]} ${HEIGHT_CLASSES[height]} flex-col overflow-hidden rounded-modal border border-line bg-surface shadow-2xl animate-panel-in`}
       >
         {title && (
           <div className="flex flex-none items-center justify-between gap-4 border-b border-line px-5 py-4">

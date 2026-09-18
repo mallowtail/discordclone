@@ -9,6 +9,8 @@ import { uploadServerIcon } from "@/lib/upload";
 import { ServerIcon } from "@/components/servers/ServerIcon";
 import { RolesDialog } from "@/components/servers/RolesDialog";
 import { Avatar } from "@/components/user/Avatar";
+import { Modal } from "@/components/ui/Modal";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import type { Server } from "@/types/db";
 
 export function ServerSettingsDialog({
@@ -33,6 +35,7 @@ export function ServerSettingsDialog({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showRoles, setShowRoles] = useState(false);
+  const [confirmingLeave, setConfirmingLeave] = useState(false);
   const { has, isOwner } = useServerPermissions(server.id);
   const canBan = isOwner || has("ban_members");
   const [bans, setBans] = useState<{ user_id: string; reason: string | null; profile: { display_name: string | null; avatar_url: string | null } | null }[]>([]);
@@ -53,7 +56,6 @@ export function ServerSettingsDialog({
 
   async function leave() {
     if (!user) return;
-    if (!confirm(`Leave ${server.name}?`)) return;
     await supabase.from("server_members").delete().eq("server_id", server.id).eq("user_id", user.id);
     onClose();
     router.replace("/channels/first");
@@ -102,36 +104,35 @@ export function ServerSettingsDialog({
 
   return (
     <>
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50" onClick={onClose}>
-      <div className="bg-surface p-5 rounded-2xl w-80 border border-line" onClick={(e) => e.stopPropagation()}>
-        <h2 className="text-[15px] font-semibold text-ink tracking-tight mb-4">Server settings</h2>
-        {error && <p className="text-danger text-sm mb-2">{error}</p>}
+    <Modal onClose={onClose} title="Server settings" size="sm">
+      <div className="p-5">
+        {error && <p className="text-danger text-body mb-2">{error}</p>}
         {canManageServer && (
           <>
             <div className="flex items-center gap-3 mb-3">
               <ServerIcon iconUrl={server.icon_url} name={server.name} size="lg" />
               <button onClick={() => fileRef.current?.click()} disabled={busy}
-                className="text-sm bg-accent hover:bg-accent-strong text-white rounded-xl px-3 py-1.5 disabled:opacity-50">
+                className="text-body bg-accent hover:bg-accent-strong text-white rounded-control px-3 py-1.5 disabled:opacity-50">
                 Upload icon
               </button>
               <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onPickIcon} />
             </div>
-            <label className="text-muted text-xs">Name</label>
+            <label className="text-muted text-meta">Name</label>
             <input value={name} onChange={(e) => setName(e.target.value)}
-              className="w-full p-2 rounded-xl bg-surface-2 text-ink mt-1 mb-3" />
+              className="w-full p-2 rounded-control bg-surface-2 text-ink mt-1 mb-3" />
             <button onClick={saveName} disabled={busy}
-              className="w-full bg-accent hover:bg-accent-strong text-white font-medium rounded-xl p-2 disabled:opacity-50">
+              className="w-full bg-accent hover:bg-accent-strong text-white font-medium rounded-control p-2 disabled:opacity-50">
               {busy ? "Saving…" : "Save"}
             </button>
             <div className="flex items-center justify-between mt-4">
               <div>
-                <p className="text-ink text-sm">{isPublic ? "Public" : "Private"}</p>
-                <p className="text-muted text-xs">
+                <p className="text-ink text-body">{isPublic ? "Public" : "Private"}</p>
+                <p className="text-muted text-meta">
                   {isPublic ? "Listed in the directory; anyone can join." : "Hidden; join by invite link only."}
                 </p>
               </div>
               <button onClick={toggleVisibility} disabled={busy}
-                className="text-sm bg-surface-2 hover:bg-line text-ink rounded-xl px-3 py-1.5 disabled:opacity-50">
+                className="text-body bg-surface-2 hover:bg-line text-ink rounded-control px-3 py-1.5 disabled:opacity-50">
                 Make {isPublic ? "private" : "public"}
               </button>
             </div>
@@ -139,33 +140,46 @@ export function ServerSettingsDialog({
         )}
         {canManageRoles && (
           <button onClick={() => setShowRoles(true)}
-            className="w-full bg-surface-2 hover:bg-line text-ink text-sm rounded-xl p-2 mt-3">
+            className="w-full bg-surface-2 hover:bg-line text-ink text-body rounded-control p-2 mt-3">
             Manage roles
           </button>
         )}
         {canBan && bans.length > 0 && (
           <div className="mt-4">
-            <div className="text-[11px] font-semibold uppercase tracking-wider text-muted mb-1">Banned</div>
+            <div className="text-micro font-semibold uppercase tracking-wider text-muted mb-1">Banned</div>
             <div className="flex flex-col gap-1 max-h-40 overflow-y-auto">
               {bans.map((b) => (
-                <div key={b.user_id} className="flex items-center gap-2 text-sm">
+                <div key={b.user_id} className="flex items-center gap-2 text-body">
                   <Avatar url={b.profile?.avatar_url ?? null} name={b.profile?.display_name ?? undefined} size="sm" />
                   <div className="min-w-0 flex-1">
                     <div className="text-ink truncate">{b.profile?.display_name ?? "Unknown"}</div>
-                    {b.reason && <div className="text-muted text-xs truncate">{b.reason}</div>}
+                    {b.reason && <div className="text-muted text-meta truncate">{b.reason}</div>}
                   </div>
-                  <button onClick={() => unban(b.user_id)} className="text-accent text-xs hover:underline flex-none">Unban</button>
+                  <button onClick={() => unban(b.user_id)} className="text-accent text-meta hover:underline flex-none">Unban</button>
                 </div>
               ))}
             </div>
           </div>
         )}
-        <button onClick={leave} disabled={busy}
-          className="w-full text-danger text-sm mt-3 hover:underline disabled:opacity-50">
+        <button onClick={() => setConfirmingLeave(true)} disabled={busy}
+          className="w-full text-danger text-body mt-3 hover:underline disabled:opacity-50">
           Leave server
         </button>
       </div>
-    </div>
+      {confirmingLeave && (
+        <ConfirmDialog
+          title="Leave server"
+          message={`Leave ${server.name}?`}
+          confirmLabel="Leave"
+          destructive
+          onConfirm={() => {
+            setConfirmingLeave(false);
+            leave();
+          }}
+          onClose={() => setConfirmingLeave(false)}
+        />
+      )}
+    </Modal>
     {showRoles && <RolesDialog serverId={server.id} onClose={() => setShowRoles(false)} />}
     </>
   );

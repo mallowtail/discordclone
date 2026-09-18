@@ -5,8 +5,10 @@ import { createClient } from "@/lib/supabase/client";
 import { useServerPermissions } from "@/hooks/useServerPermissions";
 import { canEditRoleClient } from "@/lib/roleHierarchy";
 import { RoleEditor } from "@/components/servers/RoleEditor";
+import { Modal } from "@/components/ui/Modal";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import type { Role } from "@/types/db";
-import { X, CaretUp, CaretDown, PencilSimple, Trash } from "@phosphor-icons/react";
+import { CaretUp, CaretDown, PencilSimple, Trash } from "@phosphor-icons/react";
 
 export function RolesDialog({ serverId, onClose }: { serverId: string; onClose: () => void }) {
   const supabase = useMemo(() => createClient(), []);
@@ -14,6 +16,7 @@ export function RolesDialog({ serverId, onClose }: { serverId: string; onClose: 
   const [roles, setRoles] = useState<Role[]>([]);
   const [editing, setEditing] = useState<Role | "new" | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [confirmingDelete, setConfirmingDelete] = useState<Role | null>(null);
 
   const reload = useCallback(async () => {
     const { data, error: err } = await supabase
@@ -58,7 +61,6 @@ export function RolesDialog({ serverId, onClose }: { serverId: string; onClose: 
   }
 
   async function remove(role: Role) {
-    if (!confirm(`Delete role "${role.name}"?`)) return;
     setError(null);
     const { error: err } = await supabase.from("roles").delete().eq("id", role.id);
     if (err) return setError("Couldn't delete — try again");
@@ -75,24 +77,14 @@ export function RolesDialog({ serverId, onClose }: { serverId: string; onClose: 
   const newPosition = roles.length ? Math.min(...roles.map((r) => r.position)) - 1 : 1;
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50" onClick={onClose}>
-      <div
-        className="bg-surface p-5 rounded-2xl w-96 border border-line max-h-[80vh] overflow-y-auto"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-[15px] font-semibold text-ink tracking-tight mb-4">Roles</h2>
-          <button onClick={onClose} aria-label="Close" className="text-muted hover:text-ink">
-            <X size={16} weight="bold" />
-          </button>
-        </div>
-
-        {error && <p className="text-danger text-sm mb-2">{error}</p>}
+    <Modal onClose={onClose} title="Roles" size="sm">
+      <div className="p-5">
+        {error && <p className="text-danger text-body mb-2">{error}</p>}
 
         <button
           onClick={() => setEditing("new")}
           disabled={editing !== null}
-          className="w-full bg-accent hover:bg-accent-strong text-white font-medium rounded-xl p-2 mb-3 disabled:opacity-50"
+          className="w-full bg-accent hover:bg-accent-strong text-white font-medium rounded-control p-2 mb-3 disabled:opacity-50"
         >
           + New role
         </button>
@@ -112,7 +104,7 @@ export function RolesDialog({ serverId, onClose }: { serverId: string; onClose: 
         )}
 
         {roles.length === 0 && editing === null && (
-          <p className="text-muted text-sm">No roles yet</p>
+          <p className="text-muted text-body">No roles yet</p>
         )}
 
         {editing === null && roles.length > 0 && (
@@ -128,12 +120,12 @@ export function RolesDialog({ serverId, onClose }: { serverId: string; onClose: 
                 manageable &&
                 canEditRoleClient(roles[i + 1].permissions, roles[i + 1].position, perms, rank, isOwner);
               return (
-                <li key={role.id} className="flex items-center gap-2 p-2 rounded-xl hover:bg-surface-2">
+                <li key={role.id} className="flex items-center gap-2 p-2 rounded-row hover:bg-surface-2">
                   <span
                     className="w-3 h-3 rounded-sm shrink-0"
                     style={{ background: role.color ?? "var(--color-surface-2)" }}
                   />
-                  <span className="text-ink text-sm flex-1 truncate">{role.name}</span>
+                  <span className="text-ink text-body flex-1 truncate">{role.name}</span>
                   <button
                     onClick={() => swap(role, roles[i - 1])}
                     disabled={!canMoveUp}
@@ -160,7 +152,7 @@ export function RolesDialog({ serverId, onClose }: { serverId: string; onClose: 
                     <PencilSimple size={16} />
                   </button>
                   <button
-                    onClick={() => remove(role)}
+                    onClick={() => setConfirmingDelete(role)}
                     disabled={!manageable}
                     aria-label="Delete role"
                     className="text-danger hover:opacity-80 disabled:opacity-30"
@@ -174,6 +166,20 @@ export function RolesDialog({ serverId, onClose }: { serverId: string; onClose: 
           </ul>
         )}
       </div>
-    </div>
+      {confirmingDelete && (
+        <ConfirmDialog
+          title="Delete role"
+          message={`Delete role "${confirmingDelete.name}"?`}
+          confirmLabel="Delete"
+          destructive
+          onConfirm={() => {
+            const role = confirmingDelete;
+            setConfirmingDelete(null);
+            remove(role);
+          }}
+          onClose={() => setConfirmingDelete(null)}
+        />
+      )}
+    </Modal>
   );
 }

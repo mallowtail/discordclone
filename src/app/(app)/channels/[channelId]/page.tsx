@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, use, useEffect, useRef, useState, type ReactNode } from "react";
+import { Suspense, use, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import type { Channel, Message } from "@/types/db";
@@ -126,9 +126,17 @@ function MembersOverlay({ onClose, children }: { onClose: () => void; children: 
     }
 
     document.addEventListener("keydown", onKeyDown);
+
+    // Same scroll lock Drawer.tsx uses: without it the chat behind this dialog stays
+    // scrollable while it's open, which is a half-built modal even though G10 doesn't name
+    // scroll-locking specifically.
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
     return () => {
       popOverlay(token);
       document.removeEventListener("keydown", onKeyDown);
+      document.body.style.overflow = prevOverflow;
       previouslyFocused?.focus();
     };
   }, [onClose, previouslyFocused]);
@@ -150,6 +158,12 @@ function ChannelView({ channel }: { channel: Channel }) {
   const [replyToName, setReplyToName] = useState("");
   const [showPins, setShowPins] = useState(false);
   const [showMembers, setShowMembers] = useState(false);
+  // Stable identity (same precedent as DrawerProvider's `closeDrawer`): MembersOverlay's effect
+  // depends on this callback, and `useMessages`' realtime subscription re-renders ChannelView on
+  // every incoming message — an inline `() => setShowMembers(false)` would get a new identity
+  // each time, tearing the overlay's focus trap/overlayStack registration down and back up on
+  // every message while it's open.
+  const closeMembers = useCallback(() => setShowMembers(false), []);
   const search = useMessageSearch(channel.server_id);
   const pinned = messages.filter((m) => m.pinned);
   const { markRead } = useUnread(channel.server_id);
@@ -251,11 +265,11 @@ function ChannelView({ channel }: { channel: Channel }) {
             <>
               <div
                 className="absolute inset-0 z-30"
-                onClick={() => setShowMembers(false)}
+                onClick={closeMembers}
                 aria-hidden="true"
               />
               <div className="absolute inset-y-0 right-0 z-40">
-                <MembersOverlay onClose={() => setShowMembers(false)}>
+                <MembersOverlay onClose={closeMembers}>
                   <MembersPanel serverId={channel.server_id} />
                 </MembersOverlay>
               </div>

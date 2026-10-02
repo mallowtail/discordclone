@@ -12,9 +12,21 @@ import { MemberRolesDialog } from "@/components/servers/MemberRolesDialog";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { canModerate } from "@/lib/moderation";
 import { MemberModMenu } from "@/components/servers/MemberModMenu";
-import { ShieldStar, Clock } from "@phosphor-icons/react";
+import { ShieldStar, Clock, Users } from "@phosphor-icons/react";
+import { Skeleton } from "@/components/ui/Skeleton";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 type Member = { user_id: string; timeout_until: string | null; profile: Profile | null };
+
+/** Placeholder for a single member row: avatar (sm, matching `Avatar size="sm"`) + one name line. */
+function MemberRowSkeleton() {
+  return (
+    <div className="flex items-center gap-2 p-1.5 min-h-11 md:min-h-0">
+      <Skeleton className="h-6 w-6 flex-none rounded-pill" />
+      <Skeleton className="h-3 w-24" />
+    </div>
+  );
+}
 
 export function MembersPanel({ serverId }: { serverId: string }) {
   const supabase = createClient();
@@ -25,6 +37,7 @@ export function MembersPanel({ serverId }: { serverId: string }) {
   const { isOnline } = usePresence();
   const [ownerId, setOwnerId] = useState<string | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
+  const [loaded, setLoaded] = useState(false);
   const [managingUser, setManagingUser] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -33,6 +46,7 @@ export function MembersPanel({ serverId }: { serverId: string }) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (rows ?? []).map((r: any) => ({ user_id: r.user_id, timeout_until: r.timeout_until, profile: r.profiles }))
     );
+    setLoaded(true);
   }, [supabase, serverId]);
 
   useEffect(() => {
@@ -41,6 +55,7 @@ export function MembersPanel({ serverId }: { serverId: string }) {
   }, [supabase, serverId]);
 
   useEffect(() => {
+    setLoaded(false); // switching servers: show the skeleton rather than flash the old roster
     load();
     const channel = supabase
       .channel(`members:${serverId}`)
@@ -118,20 +133,31 @@ export function MembersPanel({ serverId }: { serverId: string }) {
         Members
       </div>
       <div className="flex-1 overflow-y-auto p-2 flex flex-col gap-1">
-        {online.length > 0 && (
+        {!loaded ? (
+          Array.from({ length: 6 }).map((_, i) => <MemberRowSkeleton key={i} />)
+        ) : members.length === 0 ? (
+          <EmptyState
+            icon={<Users size={28} weight="bold" aria-hidden="true" />}
+            title="No members yet"
+          />
+        ) : (
           <>
-            <div className="px-1.5 pt-2 pb-1 text-micro font-semibold uppercase tracking-wider text-muted">
-              Online — {online.length}
-            </div>
-            {online.map(renderMember)}
-          </>
-        )}
-        {offline.length > 0 && (
-          <>
-            <div className="px-1.5 pt-2 pb-1 text-micro font-semibold uppercase tracking-wider text-muted">
-              Offline — {offline.length}
-            </div>
-            {offline.map(renderMember)}
+            {online.length > 0 && (
+              <>
+                <div className="px-1.5 pt-2 pb-1 text-micro font-semibold uppercase tracking-wider text-muted">
+                  Online — {online.length}
+                </div>
+                {online.map(renderMember)}
+              </>
+            )}
+            {offline.length > 0 && (
+              <>
+                <div className="px-1.5 pt-2 pb-1 text-micro font-semibold uppercase tracking-wider text-muted">
+                  Offline — {offline.length}
+                </div>
+                {offline.map(renderMember)}
+              </>
+            )}
           </>
         )}
       </div>

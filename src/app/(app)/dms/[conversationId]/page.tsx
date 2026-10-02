@@ -1,6 +1,7 @@
 "use client";
 
 import { use, useEffect, useState } from "react";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/components/providers/AuthProvider";
 import type { Profile, Message } from "@/types/db";
@@ -10,13 +11,17 @@ import { MessageInput } from "@/components/messages/MessageInput";
 import { MessageDropZone } from "@/components/messages/MessageDropZone";
 import { PinnedPanel } from "@/components/messages/PinnedPanel";
 import { useDrawer } from "@/components/providers/DrawerProvider";
-import { PushPin, List } from "@phosphor-icons/react";
+import { Skeleton } from "@/components/ui/Skeleton";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { PushPin, List, WarningCircle } from "@phosphor-icons/react";
 
 export default function DmPage({ params }: { params: Promise<{ conversationId: string }> }) {
   const { conversationId } = use(params);
   const supabase = createClient();
   const { user } = useAuth();
   const [other, setOther] = useState<Profile | null>(null);
+  const [otherLoaded, setOtherLoaded] = useState(false);
+  const [notFound, setNotFound] = useState(false);
   const [replyTo, setReplyTo] = useState<Message | null>(null);
   const [replyToName, setReplyToName] = useState("");
   const [showPins, setShowPins] = useState(false);
@@ -26,6 +31,7 @@ export default function DmPage({ params }: { params: Promise<{ conversationId: s
 
   useEffect(() => {
     if (!user) return;
+    let active = true;
     supabase
       .from("conversation_members")
       .select("profiles(*)")
@@ -33,8 +39,40 @@ export default function DmPage({ params }: { params: Promise<{ conversationId: s
       .neq("user_id", user.id)
       .single()
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .then(({ data }: any) => setOther(data?.profiles ?? null));
+      .then(({ data, error }: any) => {
+        if (!active) return;
+        if (error || !data?.profiles) {
+          setNotFound(true);
+          setOtherLoaded(true);
+          return;
+        }
+        setOther(data.profiles);
+        setOtherLoaded(true);
+      });
+    return () => {
+      active = false;
+    };
   }, [supabase, conversationId, user]);
+
+  if (notFound) {
+    return (
+      <div className="flex-1 flex items-center justify-center">
+        <EmptyState
+          icon={<WarningCircle size={32} weight="bold" aria-hidden="true" />}
+          title="Conversation not found"
+          description="It may have been deleted, or you don't have access to it."
+          action={
+            <Link
+              href="/dms"
+              className="rounded-control bg-accent hover:bg-accent-strong text-white text-body font-medium px-3 py-1.5"
+            >
+              Back to Direct Messages
+            </Link>
+          }
+        />
+      </div>
+    );
+  }
 
   return (
     <>
@@ -48,7 +86,9 @@ export default function DmPage({ params }: { params: Promise<{ conversationId: s
           >
             <List size={20} weight="bold" aria-hidden="true" />
           </button>
-          <span className="truncate">@ {other?.display_name ?? "Direct Message"}</span>
+          <span className="truncate">
+            {otherLoaded ? <>@ {other?.display_name ?? "Direct Message"}</> : <Skeleton className="h-4 w-28" />}
+          </span>
         </span>
         <button
           onClick={() => setShowPins((s) => !s)}

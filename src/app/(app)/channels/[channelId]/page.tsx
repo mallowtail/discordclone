@@ -2,6 +2,7 @@
 
 import { Suspense, use, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import type { Channel, Message } from "@/types/db";
 import { useMessages } from "@/hooks/useMessages";
@@ -15,7 +16,33 @@ import { SearchBox, SearchResultsPanel } from "@/components/servers/MessageSearc
 import { useMessageSearch } from "@/components/servers/useMessageSearch";
 import { useDrawer } from "@/components/providers/DrawerProvider";
 import { pushOverlay, popOverlay, isTopOverlay } from "@/components/ui/overlayStack";
-import { PushPin, Users, List } from "@phosphor-icons/react";
+import { Skeleton } from "@/components/ui/Skeleton";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { PushPin, Users, List, WarningCircle } from "@phosphor-icons/react";
+
+/** Placeholder for the channel header + first few message rows, shown while the channel itself
+ * (not yet its messages) is loading — mirrors `ChannelView`'s header (`p-3 border-b`) and the
+ * flex-1 scroll area so nothing shifts once the real header/message list mount. */
+function ChannelSkeleton() {
+  return (
+    <>
+      <header className="p-3 border-b border-line flex items-center min-w-0">
+        <Skeleton className="h-4 w-40" />
+      </header>
+      <div className="flex-1 min-h-0 overflow-y-auto p-3 flex flex-col gap-4">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div key={i} className="flex gap-3">
+            <Skeleton className="h-10 w-10 flex-none rounded-pill" />
+            <div className="flex-1 min-w-0 flex flex-col gap-2 pt-1">
+              <Skeleton className="h-3 w-24" />
+              <Skeleton className="h-3 w-2/3 max-w-sm" />
+            </div>
+          </div>
+        ))}
+      </div>
+    </>
+  );
+}
 
 // Mirrors Drawer.tsx's own FOCUSABLE_SELECTOR (not exported from there) — used by the members
 // overlay's focus trap below `xl`, the same contract Modal/Drawer use.
@@ -36,10 +63,28 @@ export default function ChannelPage({ params }: { params: Promise<{ channelId: s
       });
   }, [supabase, id]);
 
-  if (missing) return <div className="p-4 text-muted">Channel not found.</div>;
-  if (!channel) return <div className="p-4 text-muted">Loading channel…</div>;
+  if (missing) {
+    return (
+      <div className="flex-1 flex items-center justify-center">
+        <EmptyState
+          icon={<WarningCircle size={32} weight="bold" aria-hidden="true" />}
+          title="Channel not found"
+          description="It may have been deleted, or you don't have access to it."
+          action={
+            <Link
+              href="/channels/first"
+              className="rounded-control bg-accent hover:bg-accent-strong text-white text-body font-medium px-3 py-1.5"
+            >
+              Go to your channels
+            </Link>
+          }
+        />
+      </div>
+    );
+  }
+  if (!channel) return <ChannelSkeleton />;
   return (
-    <Suspense fallback={<div className="p-4 text-muted">Loading channel…</div>}>
+    <Suspense fallback={<ChannelSkeleton />}>
       <ChannelView channel={channel} />
     </Suspense>
   );

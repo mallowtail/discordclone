@@ -14,6 +14,18 @@ import { UserPanel } from "@/components/user/UserPanel";
 import { useServerPermissions } from "@/hooks/useServerPermissions";
 import { useUnread } from "@/hooks/useUnread";
 import { useDrawer } from "@/components/providers/DrawerProvider";
+import { Skeleton } from "@/components/ui/Skeleton";
+import { EmptyState } from "@/components/ui/EmptyState";
+
+/** Placeholder for a single channel link, shaped to match `renderChannelLink`'s row. */
+function ChannelLinkSkeleton({ hasMargin = false }: { hasMargin?: boolean }) {
+  return (
+    <div className={`flex items-center gap-2 px-2 py-1 min-h-11 md:min-h-0 ${hasMargin ? "ml-2" : ""}`}>
+      <Skeleton className="h-4 w-4 flex-none" />
+      <Skeleton className="h-3 w-24" />
+    </div>
+  );
+}
 
 export function ServerSidebar({ serverId }: { serverId: string }) {
   const supabase = createClient();
@@ -21,6 +33,7 @@ export function ServerSidebar({ serverId }: { serverId: string }) {
   const [server, setServer] = useState<Server | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [channels, setChannels] = useState<Channel[]>([]);
+  const [loaded, setLoaded] = useState(false);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [creating, setCreating] = useState(false);
   const [addingCategory, setAddingCategory] = useState(false);
@@ -47,9 +60,11 @@ export function ServerSidebar({ serverId }: { serverId: string }) {
     setServer((s as Server) ?? null);
     setCategories((cats as Category[]) ?? []);
     setChannels((chs as Channel[]) ?? []);
+    setLoaded(true);
   }, [supabase, serverId]);
 
   useEffect(() => {
+    setLoaded(false); // switching servers: show the skeleton rather than flash the old server's channels
     load();
     const channel = supabase
       .channel(`server-sidebar:${serverId}`)
@@ -110,7 +125,9 @@ export function ServerSidebar({ serverId }: { serverId: string }) {
           onClick={() => setSettings(true)}
           className="flex-1 min-h-11 p-3 font-semibold text-ink tracking-tight flex items-center justify-between hover:bg-surface min-w-0"
         >
-          <span className="truncate">{server?.name ?? "…"}</span>
+          <span className="truncate">
+            {loaded ? server?.name ?? "Unknown server" : <Skeleton className="h-4 w-28" />}
+          </span>
           <span className="text-muted text-sm">
             <GearSix size={18} weight="regular" aria-label="Server settings" />
           </span>
@@ -124,27 +141,57 @@ export function ServerSidebar({ serverId }: { serverId: string }) {
         </button>
       </div>
       <nav className="flex-1 overflow-y-auto p-2 text-muted">
-        {uncategorized.map((c) => renderChannelLink(c, false))}
-        {categories.map((cat) => (
-          <div key={cat.id}>
-            <button
-              onClick={() => setCollapsed((p) => ({ ...p, [cat.id]: !p[cat.id] }))}
-              className="w-full min-h-11 md:min-h-0 flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wider text-muted mt-3 mb-1 hover:text-ink"
-            >
-              <span>
-                {collapsed[cat.id] ? (
-                  <CaretRight size={12} weight="bold" />
-                ) : (
-                  <CaretDown size={12} weight="bold" />
-                )}
-              </span>{" "}
-              {cat.name}
-            </button>
-            {!collapsed[cat.id] &&
-              channelsIn(cat.id).map((c) => renderChannelLink(c, true))}
+        {!loaded ? (
+          <div className="flex flex-col gap-1">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <ChannelLinkSkeleton key={i} />
+            ))}
           </div>
-        ))}
-        {canManageChannels && (
+        ) : channels.length === 0 ? (
+          <EmptyState
+            icon={<Hash size={28} weight="bold" aria-hidden="true" />}
+            title="No channels yet"
+            description={
+              canManageChannels
+                ? "Create the first channel to get this server going."
+                : "Ask an admin to create one."
+            }
+            action={
+              canManageChannels ? (
+                <button
+                  onClick={() => setCreating(true)}
+                  className="rounded-control bg-accent hover:bg-accent-strong text-white text-body font-medium px-3 py-1.5"
+                >
+                  Create channel
+                </button>
+              ) : undefined
+            }
+          />
+        ) : (
+          <>
+            {uncategorized.map((c) => renderChannelLink(c, false))}
+            {categories.map((cat) => (
+              <div key={cat.id}>
+                <button
+                  onClick={() => setCollapsed((p) => ({ ...p, [cat.id]: !p[cat.id] }))}
+                  className="w-full min-h-11 md:min-h-0 flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wider text-muted mt-3 mb-1 hover:text-ink"
+                >
+                  <span>
+                    {collapsed[cat.id] ? (
+                      <CaretRight size={12} weight="bold" />
+                    ) : (
+                      <CaretDown size={12} weight="bold" />
+                    )}
+                  </span>{" "}
+                  {cat.name}
+                </button>
+                {!collapsed[cat.id] &&
+                  channelsIn(cat.id).map((c) => renderChannelLink(c, true))}
+              </div>
+            ))}
+          </>
+        )}
+        {loaded && canManageChannels && (
           <div className="flex gap-2 mt-3 text-xs">
             <button onClick={() => setCreating(true)} className="min-h-11 md:min-h-0 flex items-center hover:text-ink">+ Channel</button>
             <button onClick={() => setAddingCategory(true)} className="min-h-11 md:min-h-0 flex items-center hover:text-ink">+ Category</button>

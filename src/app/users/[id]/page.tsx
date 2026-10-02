@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { PresenceProvider } from "@/components/providers/PresenceProvider";
 import { FullProfileModal } from "@/components/user/FullProfileModal";
+import { Skeleton } from "@/components/ui/Skeleton";
 
 export default function UserPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -15,7 +16,16 @@ export default function UserPage({ params }: { params: Promise<{ id: string }> }
     if (!loading && !user) router.replace(`/login?next=/users/${id}`);
   }, [loading, user, id, router]);
 
-  if (loading || !user) return <div className="min-h-screen bg-app" />;
+  // Auth check only — near-instant, and we don't yet know whether this will redirect to /login
+  // or render the profile modal, so there's no real shape to mirror yet; a small centered
+  // skeleton (standing in for the eventual avatar) beats a silent, totally blank screen.
+  if (loading || !user) {
+    return (
+      <div className="min-h-screen bg-app flex items-center justify-center">
+        <Skeleton className="h-16 w-16 rounded-pill" />
+      </div>
+    );
+  }
 
   // Deep-linked full profile: render the same modal over the app background. This route sits
   // outside (app)/layout.tsx's tree (and so outside its PresenceProvider), so it mounts its own

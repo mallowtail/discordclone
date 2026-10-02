@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/components/providers/AuthProvider";
+import { Skeleton } from "@/components/ui/Skeleton";
 
 export default function FirstChannel() {
   const supabase = createClient();
@@ -32,5 +33,12 @@ export default function FirstChannel() {
     })();
   }, [supabase, user, loading, params, router]);
 
-  return <div className="p-4 text-muted">Opening…</div>;
+  // Purely transient: this route only ever redirects away, so there is no real shape to mirror —
+  // a small skeleton stands in for the eventual header rather than another bare "Loading…" string.
+  return (
+    <div className="flex-1 flex items-center justify-center" role="status">
+      <span className="sr-only">Opening…</span>
+      <Skeleton className="h-4 w-32" />
+    </div>
+  );
 }

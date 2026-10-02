@@ -2,9 +2,13 @@
 
 import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { ServerIcon } from "@/components/servers/ServerIcon";
+import { Skeleton } from "@/components/ui/Skeleton";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { LinkBreak } from "@phosphor-icons/react";
 
 type Preview = { id: string; name: string; icon_url: string | null; member_count: number };
 
@@ -65,9 +69,28 @@ export default function InvitePage({ params }: { params: Promise<{ code: string 
     <div className="min-h-screen flex items-center justify-center p-4">
       <div className="w-full max-w-sm bg-surface border border-line p-6 rounded-2xl text-center">
         {loading ? (
-          <p className="text-muted">Loading invite…</p>
+          <>
+            <div className="flex justify-center mb-3">
+              <Skeleton className="h-14 w-14 rounded-card" />
+            </div>
+            <Skeleton className="h-5 w-40 mx-auto mb-2" />
+            <Skeleton className="h-3 w-24 mx-auto mb-4" />
+            <Skeleton className="h-9 w-full rounded-control" />
+          </>
         ) : error ? (
-          <p className="text-danger">{error}</p>
+          <EmptyState
+            icon={<LinkBreak size={32} weight="bold" aria-hidden="true" />}
+            title="Invalid invite"
+            description={error}
+            action={
+              <Link
+                href="/"
+                className="rounded-control bg-accent hover:bg-accent-strong text-white text-body font-medium px-3 py-1.5 inline-block"
+              >
+                Go home
+              </Link>
+            }
+          />
         ) : preview ? (
           <>
             <div className="flex justify-center mb-3">

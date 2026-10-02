@@ -47,6 +47,22 @@ export function MessageActions({
   const open = pickerOpen || menuOpen || mobileOpen;
   const { isMobile } = useDrawer();
 
+  // Reset the mobile toolbar when a resize carries the viewport to `md`+, so widening the
+  // window without a remount can't leave it forced-visible at desktop widths until an outside
+  // click. Mirrors DrawerProvider's own `isMobile` tracking: `setMobileOpen` is only ever
+  // called from inside the media query's own `change` callback — a subscription callback, not
+  // the effect body itself — which is the shape this repo's `react-hooks/set-state-in-effect`
+  // rule accepts (an unconditional `setState` directly in the effect body, or mutating a ref
+  // during render as an alternative, both trip it).
+  useEffect(() => {
+    const mql = window.matchMedia("(max-width: 767px)");
+    function onChange(e: MediaQueryListEvent) {
+      if (!e.matches) setMobileOpen(false);
+    }
+    mql.addEventListener("change", onChange);
+    return () => mql.removeEventListener("change", onChange);
+  }, []);
+
   useEffect(() => {
     if (!pickerOpen) return;
     function onDown(e: MouseEvent) {

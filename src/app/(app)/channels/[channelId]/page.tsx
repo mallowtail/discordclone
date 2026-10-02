@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, use, useEffect, useState, type ReactNode } from "react";
+import { Suspense, use, useEffect, useRef, useState, type ReactNode } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import type { Channel, Message } from "@/types/db";
@@ -14,7 +14,13 @@ import { MembersPanel } from "@/components/servers/MembersPanel";
 import { SearchBox, SearchResultsPanel } from "@/components/servers/MessageSearchPanel";
 import { useMessageSearch } from "@/components/servers/useMessageSearch";
 import { useDrawer } from "@/components/providers/DrawerProvider";
+import { pushOverlay, popOverlay, isTopOverlay } from "@/components/ui/overlayStack";
 import { PushPin, Users, List } from "@phosphor-icons/react";
+
+// Mirrors Drawer.tsx's own FOCUSABLE_SELECTOR (not exported from there) — used by the members
+// overlay's focus trap below `xl`, the same contract Modal/Drawer use.
+const FOCUSABLE_SELECTOR =
+  'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 export default function ChannelPage({ params }: { params: Promise<{ channelId: string }> }) {
   const { channelId: id } = use(params);
@@ -72,6 +78,68 @@ function HeaderButton({
   );
 }
 
+/**
+ * Below `xl` the members list is a genuinely new overlay (Task 7), not just a repositioned
+ * panel — G10 binds every new overlay to Escape-to-close (scoped to the topmost one, via the
+ * same `overlayStack` Modal/Drawer use), `role="dialog"` + `aria-modal`, and focus containment.
+ * At `xl`+ this never mounts; `MembersPanel` renders bare, inline, no dialog semantics, because
+ * it isn't acting as an overlay there (trapping focus in an always-visible inline column would
+ * break normal keyboard flow into the chat/composer).
+ */
+function MembersOverlay({ onClose, children }: { onClose: () => void; children: ReactNode }) {
+  const panelRef = useRef<HTMLDivElement>(null);
+  // Captured once, at mount — same trick Drawer uses: the trigger (the header's "Show Member
+  // List" button) is `document.activeElement` at the moment this mounts, since the user just
+  // clicked it, so there's no need for a dedicated ref just to restore focus to it on close.
+  const [previouslyFocused] = useState<HTMLElement | null>(() => document.activeElement as HTMLElement | null);
+
+  useEffect(() => {
+    const token = pushOverlay();
+    const panel = panelRef.current;
+    if (panel && !panel.contains(document.activeElement)) {
+      const first = panel.querySelector<HTMLElement>(FOCUSABLE_SELECTOR);
+      (first ?? panel).focus();
+    }
+
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        if (isTopOverlay(token)) onClose();
+        return;
+      }
+      if (e.key !== "Tab" || !panel) return;
+      const items = Array.from(panel.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter(
+        (el) => el.offsetParent !== null
+      );
+      if (items.length === 0) {
+        e.preventDefault();
+        return;
+      }
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    }
+
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      popOverlay(token);
+      document.removeEventListener("keydown", onKeyDown);
+      previouslyFocused?.focus();
+    };
+  }, [onClose, previouslyFocused]);
+
+  return (
+    <div ref={panelRef} role="dialog" aria-modal="true" aria-label="Members" tabIndex={-1} className="h-full">
+      {children}
+    </div>
+  );
+}
+
 function ChannelView({ channel }: { channel: Channel }) {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -87,6 +155,12 @@ function ChannelView({ channel }: { channel: Channel }) {
   const { markRead } = useUnread(channel.server_id);
   const { open: drawerOpen, toggleDrawer } = useDrawer();
   const lastMessageId = messages[messages.length - 1]?.id;
+  // Whether the members list is acting as an overlay (below `xl`) vs. an inline column
+  // (`xl`+) — tracked in JS, not just CSS, because the overlay-only accessibility behavior
+  // (focus trap, Escape, dialog semantics) must not apply to the inline column.
+  const [membersOverlayMode, setMembersOverlayMode] = useState(
+    () => typeof window !== "undefined" && window.innerWidth < 1280
+  );
 
   // Mark this channel read on open, and again whenever a new message arrives while it's
   // the open channel — `lastMessageId` changes each time useMessages' realtime subscription
@@ -94,6 +168,17 @@ function ChannelView({ channel }: { channel: Channel }) {
   useEffect(() => {
     markRead(channel.id);
   }, [channel.id, lastMessageId, markRead]);
+
+  // The lazy initializer above already gets this right for the first render; this effect only
+  // needs to track *subsequent* crossings of the `xl` boundary, via the media query's own
+  // change event, so — as with DrawerProvider's `isMobile` — it has no reason to call
+  // `setMembersOverlayMode` synchronously from the effect body itself.
+  useEffect(() => {
+    const mql = window.matchMedia("(max-width: 1279px)");
+    const onChange = (e: MediaQueryListEvent) => setMembersOverlayMode(e.matches);
+    mql.addEventListener("change", onChange);
+    return () => mql.removeEventListener("change", onChange);
+  }, []);
 
   function jumpToPresent() {
     router.replace(pathname);
@@ -158,21 +243,28 @@ function ChannelView({ channel }: { channel: Channel }) {
         {search.query.trim() ? (
           <SearchResultsPanel search={search} />
         ) : (
-          showMembers && (
+          showMembers &&
+          (membersOverlayMode ? (
+            // Below `xl` the members list floats above the chat as a right-anchored overlay
+            // with a dismiss backdrop, Escape-to-close, and focus containment (G10) — not an
+            // inline column. The same header toggle drives both modes.
             <>
-              {/* Below `xl` the members list floats above the chat as a right-anchored overlay
-                  (with a dismiss backdrop) instead of an inline column; at `xl`+ it's inline,
-                  taking its place in this flex row. Same header toggle drives both. */}
               <div
-                className="absolute inset-0 z-30 xl:hidden"
+                className="absolute inset-0 z-30"
                 onClick={() => setShowMembers(false)}
                 aria-hidden="true"
               />
-              <div className="absolute inset-y-0 right-0 z-40 xl:static xl:inset-auto xl:z-auto">
-                <MembersPanel serverId={channel.server_id} />
+              <div className="absolute inset-y-0 right-0 z-40">
+                <MembersOverlay onClose={() => setShowMembers(false)}>
+                  <MembersPanel serverId={channel.server_id} />
+                </MembersOverlay>
               </div>
             </>
-          )
+          ) : (
+            // At `xl`+ it's a plain inline column, taking its place in this flex row — no
+            // dialog semantics, since it isn't acting as an overlay here.
+            <MembersPanel serverId={channel.server_id} />
+          ))
         )}
       </div>
     </>

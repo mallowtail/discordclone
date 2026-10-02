@@ -139,7 +139,13 @@ export function MessageItem({
             </button>
           )}
         </div>
-        <div className="flex-1 min-w-0">
+        {/* `pr-12` reserves space for the persistent mobile "more actions" trigger (a 44px
+            button pinned `right-2` of this row, i.e. flush with this column's own right edge)
+            so its opaque background never sits over live text — most visibly on a
+            continuation message (`showHeader=false`), whose first line starts flush at the
+            top of the row with nothing above it to push the trigger clear of. Not needed at
+            `md`+, where the toolbar (and this trigger) only ever shows on hover. */}
+        <div className="flex-1 min-w-0 pr-12 md:pr-0">
           {msg.reply_to_id && (
             <div
               onClick={jumpToOriginal}

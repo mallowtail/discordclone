@@ -68,7 +68,7 @@ export function MembersPanel({ serverId }: { serverId: string }) {
     };
     const timedOut = !!m.timeout_until && new Date(m.timeout_until) > new Date();
     return (
-      <div key={m.user_id} className="flex items-center gap-2 p-1.5 rounded-row hover:bg-surface">
+      <div key={m.user_id} className="flex items-center gap-2 p-1.5 min-h-11 md:min-h-0 rounded-row hover:bg-surface">
         <button
           onClick={(e) => open(m.user_id, e.currentTarget.getBoundingClientRect(), serverId)}
           aria-label={`${displayName} — ${memberIsOnline ? "Online" : "Offline"}`}
@@ -104,7 +104,7 @@ export function MembersPanel({ serverId }: { serverId: string }) {
         />
         {has("manage_roles") && (
           <button onClick={() => setManagingUser(m.user_id)} title="Manage roles"
-            className="text-muted hover:text-ink text-meta flex-none">
+            className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 flex items-center justify-center text-muted hover:text-ink text-meta flex-none">
             <ShieldStar size={16} />
           </button>
         )}
@@ -113,7 +113,7 @@ export function MembersPanel({ serverId }: { serverId: string }) {
   }
 
   return (
-    <aside className="w-56 bg-sidebar border-l border-line flex flex-col">
+    <aside className="w-[clamp(12.5rem,16vw,15rem)] h-full bg-sidebar border-l border-line flex flex-col">
       <div className="p-3 text-title font-semibold text-ink tracking-tight border-b border-line">
         Members
       </div>

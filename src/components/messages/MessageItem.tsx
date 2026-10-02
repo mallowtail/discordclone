@@ -122,7 +122,7 @@ export function MessageItem({
   return (
     <div
       id={`msg-${msg.id}`}
-      className={`group relative px-4 hover:bg-black/10 ${showHeader ? "mt-3 pt-0.5" : ""} ${
+      className={`group relative px-2 md:px-4 hover:bg-black/10 ${showHeader ? "mt-3 pt-0.5" : ""} ${
         highlighted || flash ? "bg-amber/10 border-l-2 border-amber" : ""
       } ${msg.pending ? "opacity-50" : ""}`}
     >
@@ -131,8 +131,8 @@ export function MessageItem({
           <PushPin size={15} weight="fill" />
         </span>
       )}
-      <div className="flex gap-3">
-        <div className="w-10 flex-none">
+      <div className="flex gap-2 md:gap-3">
+        <div className="w-8 md:w-10 flex-none">
           {showHeader && (
             <button onClick={openProfile} className="hover:opacity-80" aria-label={`View ${authorName}'s profile`}>
               <Avatar url={authorAvatar} name={authorName} size="md" />

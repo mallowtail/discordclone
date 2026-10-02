@@ -11,6 +11,7 @@ import { Avatar } from "@/components/user/Avatar";
 import { UserPanel } from "@/components/user/UserPanel";
 import { useProfilePopover } from "@/components/providers/ProfilePopoverProvider";
 import { usePresence } from "@/hooks/usePresence";
+import { useDrawer } from "@/components/providers/DrawerProvider";
 
 export function DmSidebar() {
   const supabase = createClient();
@@ -18,6 +19,7 @@ export function DmSidebar() {
   const { user } = useAuth();
   const { open } = useProfilePopover();
   const { isOnline } = usePresence();
+  const { closeDrawer } = useDrawer();
   const [dms, setDms] = useState<{ id: string; other: Profile }[]>([]);
 
   // Extract active conversation ID from pathname (e.g., /dms/abc123 -> abc123)
@@ -47,7 +49,7 @@ export function DmSidebar() {
   }, [supabase, user]);
 
   return (
-    <aside className="w-60 bg-sidebar flex flex-col">
+    <aside className="w-[clamp(12.5rem,18vw,16.25rem)] bg-sidebar flex flex-col">
       <div className="p-3 font-semibold text-ink tracking-tight border-b border-line">Direct Messages</div>
       <nav className="flex-1 overflow-y-auto p-2 text-muted">
         <div className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-wider text-muted mt-2 mb-1">
@@ -61,7 +63,8 @@ export function DmSidebar() {
             <Link key={d.id} href={`/dms/${d.id}`}
               aria-current={isActive ? "page" : undefined}
               aria-label={`${displayName} — ${online ? "Online" : "Offline"}`}
-              className={`relative flex items-center gap-2 px-2 py-1 rounded-row text-body ${
+              onClick={closeDrawer}
+              className={`relative flex items-center gap-2 px-2 py-1 min-h-11 md:min-h-0 rounded-row text-body ${
                 isActive
                   ? "bg-surface text-ink font-medium hover:bg-surface"
                   : "hover:bg-surface/60 text-muted hover:text-ink"

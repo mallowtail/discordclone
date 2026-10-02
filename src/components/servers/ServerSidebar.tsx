@@ -13,6 +13,7 @@ import { InviteDialog } from "@/components/servers/InviteDialog";
 import { UserPanel } from "@/components/user/UserPanel";
 import { useServerPermissions } from "@/hooks/useServerPermissions";
 import { useUnread } from "@/hooks/useUnread";
+import { useDrawer } from "@/components/providers/DrawerProvider";
 
 export function ServerSidebar({ serverId }: { serverId: string }) {
   const supabase = createClient();
@@ -27,6 +28,7 @@ export function ServerSidebar({ serverId }: { serverId: string }) {
   const [inviting, setInviting] = useState(false);
   const { has } = useServerPermissions(serverId);
   const { isUnread } = useUnread(serverId);
+  const { closeDrawer } = useDrawer();
   const canManageChannels = has("manage_channels");
   const canManageServer = has("manage_server");
   const canManageRoles = has("manage_roles");
@@ -73,7 +75,8 @@ export function ServerSidebar({ serverId }: { serverId: string }) {
     return (
       <Link key={channel.id} href={`/channels/${channel.id}`}
         aria-current={isActive ? "page" : undefined}
-        className={`relative flex items-center gap-2 px-2 py-1 ${hasMargin ? "ml-2" : ""} rounded-row text-body ${
+        onClick={closeDrawer}
+        className={`relative flex items-center gap-2 px-2 py-1 min-h-11 md:min-h-0 ${hasMargin ? "ml-2" : ""} rounded-row text-body ${
           isActive
             ? "bg-surface text-ink font-medium hover:bg-surface"
             : unread
@@ -101,11 +104,11 @@ export function ServerSidebar({ serverId }: { serverId: string }) {
   const uncategorized = channelsIn(null);
 
   return (
-    <aside className="w-60 bg-sidebar flex flex-col">
+    <aside className="w-[clamp(12.5rem,18vw,16.25rem)] bg-sidebar flex flex-col">
       <div className="flex items-center border-b border-line">
         <button
           onClick={() => setSettings(true)}
-          className="flex-1 p-3 font-semibold text-ink tracking-tight flex items-center justify-between hover:bg-surface min-w-0"
+          className="flex-1 min-h-11 p-3 font-semibold text-ink tracking-tight flex items-center justify-between hover:bg-surface min-w-0"
         >
           <span className="truncate">{server?.name ?? "…"}</span>
           <span className="text-muted text-sm">
@@ -115,7 +118,7 @@ export function ServerSidebar({ serverId }: { serverId: string }) {
         <button
           onClick={() => setInviting(true)}
           title="Invite people"
-          className="px-3 py-3 text-muted hover:text-ink hover:bg-surface"
+          className="min-h-11 min-w-11 flex items-center justify-center px-3 py-3 text-muted hover:text-ink hover:bg-surface"
         >
           <Plus size={18} weight="bold" />
         </button>
@@ -126,7 +129,7 @@ export function ServerSidebar({ serverId }: { serverId: string }) {
           <div key={cat.id}>
             <button
               onClick={() => setCollapsed((p) => ({ ...p, [cat.id]: !p[cat.id] }))}
-              className="w-full flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wider text-muted mt-3 mb-1 hover:text-ink"
+              className="w-full min-h-11 md:min-h-0 flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wider text-muted mt-3 mb-1 hover:text-ink"
             >
               <span>
                 {collapsed[cat.id] ? (
@@ -143,8 +146,8 @@ export function ServerSidebar({ serverId }: { serverId: string }) {
         ))}
         {canManageChannels && (
           <div className="flex gap-2 mt-3 text-xs">
-            <button onClick={() => setCreating(true)} className="hover:text-ink">+ Channel</button>
-            <button onClick={() => setAddingCategory(true)} className="hover:text-ink">+ Category</button>
+            <button onClick={() => setCreating(true)} className="min-h-11 md:min-h-0 flex items-center hover:text-ink">+ Channel</button>
+            <button onClick={() => setAddingCategory(true)} className="min-h-11 md:min-h-0 flex items-center hover:text-ink">+ Category</button>
           </div>
         )}
       </nav>

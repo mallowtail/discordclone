@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import EmojiPicker, { Theme } from "emoji-picker-react";
+import { useDrawer } from "@/components/providers/DrawerProvider";
 import {
   ArrowBendUpLeft,
   ArrowBendUpRight,
@@ -10,6 +11,7 @@ import {
   Trash,
   Smiley,
   DotsThree,
+  DotsThreeVertical,
 } from "@phosphor-icons/react";
 
 export function MessageActions({
@@ -36,9 +38,14 @@ export function MessageActions({
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerUp, setPickerUp] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  // Below `md` the toolbar is hover-unreachable (no hover on touch), so it's gated behind the
+  // persistent "more actions" trigger button rendered below instead.
+  const [mobileOpen, setMobileOpen] = useState(false);
   const pickerRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
-  const open = pickerOpen || menuOpen;
+  const mobileRef = useRef<HTMLDivElement>(null);
+  const open = pickerOpen || menuOpen || mobileOpen;
+  const { isMobile } = useDrawer();
 
   useEffect(() => {
     if (!pickerOpen) return;
@@ -72,110 +79,167 @@ export function MessageActions({
     };
   }, [menuOpen]);
 
+  // The persistent mobile trigger's own outside-click/Escape dismissal — scoped to
+  // `mobileRef`, which wraps the trigger button *and* the toolbar it reveals, so tapping
+  // inside the revealed toolbar (e.g. to open the emoji picker) doesn't close it.
+  useEffect(() => {
+    if (!mobileOpen) return;
+    function onDown(e: MouseEvent) {
+      if (mobileRef.current && !mobileRef.current.contains(e.target as Node)) setMobileOpen(false);
+    }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setMobileOpen(false);
+    }
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [mobileOpen]);
+
   return (
-    <div
-      className={`absolute right-2 top-0 ${
-        open ? "flex" : "hidden group-hover:flex"
-      } items-center gap-1 bg-surface rounded-xl border border-line px-1 py-0.5 text-sm`}
-    >
-      {recents.map((e) => (
-        <button
-          key={e}
-          onClick={() => onReact(e)}
-          title={`React ${e}`}
-          className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-surface-2 text-base leading-none"
-        >
-          {e}
-        </button>
-      ))}
-
-      <span className="mx-0.5 w-px self-stretch bg-line" />
-
-      <div className="relative" ref={pickerRef}>
-        <button
-          onClick={() => {
-            setPickerOpen((o) => {
-              const next = !o;
-              if (next) {
-                const rect = pickerRef.current?.getBoundingClientRect();
-                // EmojiPicker is ~450px tall; open upward if not enough room below.
-                setPickerUp(rect ? window.innerHeight - rect.bottom < 450 : false);
-              }
-              return next;
-            });
-            setMenuOpen(false);
-          }}
-          title="Pick an emoji"
-          aria-label="Pick an emoji"
-          className="text-muted hover:text-ink w-7 h-7 flex items-center justify-center"
-        >
-          <Smiley size={18} />
-        </button>
-        {pickerOpen && (
-          <div className={`absolute right-0 z-30 ${pickerUp ? "bottom-full mb-2" : "top-full mt-2"}`}>
-            <EmojiPicker
-              theme={Theme.DARK}
-              onEmojiClick={(d) => { onReact(d.emoji); setPickerOpen(false); }}
-              lazyLoadEmojis
-              skinTonesDisabled
-            />
-          </div>
-        )}
-      </div>
-
+    <div ref={mobileRef} className="absolute right-2 top-0 flex items-center">
+      {/* Persistent trigger: the toolbar below is hover-only and therefore unreachable on
+          touch, so below `md` this button is always visible (no group-hover needed) and
+          reveals the same toolbar on tap. Hidden once the toolbar is open so the two don't
+          stack on top of each other; irrelevant at `md`+, where hover already reveals it. */}
       <button
-        onClick={onReply}
-        title="Reply"
-        aria-label="Reply"
-        className="text-muted hover:text-ink w-7 h-7 flex items-center justify-center"
+        onClick={() => setMobileOpen((o) => !o)}
+        title="More actions"
+        aria-label="More actions"
+        aria-haspopup="true"
+        aria-expanded={mobileOpen}
+        className={`md:hidden ${mobileOpen ? "hidden" : "flex"} items-center justify-center w-11 h-11 rounded-control border border-line bg-surface text-muted hover:text-ink`}
       >
-        <ArrowBendUpLeft size={16} weight="bold" />
+        <DotsThreeVertical size={20} weight="bold" aria-hidden="true" />
       </button>
 
-      <button
-        onClick={onForward}
-        title="Forward"
-        aria-label="Forward"
-        className="text-muted hover:text-ink w-7 h-7 flex items-center justify-center"
+      <div
+        className={`items-center gap-1 bg-surface rounded-xl border border-line px-1 py-0.5 text-sm ${
+          open ? "flex" : "hidden group-hover:flex"
+        }`}
       >
-        <ArrowBendUpRight size={16} weight="bold" />
-      </button>
+        {recents.map((e) => (
+          <button
+            key={e}
+            onClick={() => { setMobileOpen(false); onReact(e); }}
+            title={`React ${e}`}
+            className="w-11 h-11 md:w-7 md:h-7 flex items-center justify-center rounded-lg hover:bg-surface-2 text-base leading-none"
+          >
+            {e}
+          </button>
+        ))}
 
-      <div className="relative" ref={menuRef}>
-        <button
-          onClick={() => { setMenuOpen((o) => !o); setPickerOpen(false); }}
-          title="More"
-          aria-label="More"
-          className="text-muted hover:text-ink w-7 h-7 flex items-center justify-center"
-        >
-          <DotsThree size={18} weight="bold" />
-        </button>
-        {menuOpen && (
-          <div className="absolute top-full right-0 mt-2 z-20 w-40 rounded-xl border border-line bg-surface shadow-lg py-1">
-            <button
-              onClick={() => { setMenuOpen(false); onPin(); }}
-              className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-ink hover:bg-surface-2 text-left"
+        <span className="mx-0.5 w-px self-stretch bg-line" />
+
+        <div className="relative" ref={pickerRef}>
+          <button
+            onClick={() => {
+              setPickerOpen((o) => {
+                const next = !o;
+                if (next) {
+                  const rect = pickerRef.current?.getBoundingClientRect();
+                  // EmojiPicker is ~450px tall; open upward if not enough room below.
+                  setPickerUp(rect ? window.innerHeight - rect.bottom < 450 : false);
+                }
+                return next;
+              });
+              setMenuOpen(false);
+            }}
+            title="Pick an emoji"
+            aria-label="Pick an emoji"
+            className="text-muted hover:text-ink w-11 h-11 md:w-7 md:h-7 flex items-center justify-center"
+          >
+            <Smiley size={18} />
+          </button>
+          {pickerOpen && isMobile && (
+            // Below `md`, the trigger can sit far enough off-center within the toolbar that
+            // anchoring the picker to it (as the `md`+ branch does) would push a
+            // viewport-width-constrained picker past the screen edge. Centering it as a
+            // lightweight overlay instead sidesteps that regardless of where the trigger is.
+            <div
+              className="fixed inset-0 z-30 flex items-center justify-center p-4"
+              onMouseDown={() => setPickerOpen(false)}
             >
-              <PushPin size={15} /> {pinned ? "Unpin" : "Pin"}
-            </button>
-            {canEdit && (
-              <>
-                <button
-                  onClick={() => { setMenuOpen(false); onEdit(); }}
-                  className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-ink hover:bg-surface-2 text-left"
-                >
-                  <PencilSimple size={15} /> Edit
-                </button>
-                <button
-                  onClick={() => { setMenuOpen(false); onDelete(); }}
-                  className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-danger hover:bg-surface-2 text-left"
-                >
-                  <Trash size={15} /> Delete
-                </button>
-              </>
-            )}
-          </div>
-        )}
+              <div onMouseDown={(e) => e.stopPropagation()}>
+                <EmojiPicker
+                  theme={Theme.DARK}
+                  onEmojiClick={(d) => { onReact(d.emoji); setPickerOpen(false); setMobileOpen(false); }}
+                  lazyLoadEmojis
+                  skinTonesDisabled
+                  width="min(90vw, 350px)"
+                  height="min(60vh, 450px)"
+                />
+              </div>
+            </div>
+          )}
+          {pickerOpen && !isMobile && (
+            <div className={`absolute right-0 z-30 ${pickerUp ? "bottom-full mb-2" : "top-full mt-2"}`}>
+              <EmojiPicker
+                theme={Theme.DARK}
+                onEmojiClick={(d) => { onReact(d.emoji); setPickerOpen(false); }}
+                lazyLoadEmojis
+                skinTonesDisabled
+              />
+            </div>
+          )}
+        </div>
+
+        <button
+          onClick={() => { setMobileOpen(false); onReply(); }}
+          title="Reply"
+          aria-label="Reply"
+          className="text-muted hover:text-ink w-11 h-11 md:w-7 md:h-7 flex items-center justify-center"
+        >
+          <ArrowBendUpLeft size={16} weight="bold" />
+        </button>
+
+        <button
+          onClick={() => { setMobileOpen(false); onForward(); }}
+          title="Forward"
+          aria-label="Forward"
+          className="text-muted hover:text-ink w-11 h-11 md:w-7 md:h-7 flex items-center justify-center"
+        >
+          <ArrowBendUpRight size={16} weight="bold" />
+        </button>
+
+        <div className="relative" ref={menuRef}>
+          <button
+            onClick={() => { setMenuOpen((o) => !o); setPickerOpen(false); }}
+            title="More"
+            aria-label="More"
+            className="text-muted hover:text-ink w-11 h-11 md:w-7 md:h-7 flex items-center justify-center"
+          >
+            <DotsThree size={18} weight="bold" />
+          </button>
+          {menuOpen && (
+            <div className="absolute top-full right-0 mt-2 z-20 w-40 rounded-xl border border-line bg-surface shadow-lg py-1">
+              <button
+                onClick={() => { setMenuOpen(false); setMobileOpen(false); onPin(); }}
+                className="w-full min-h-11 md:min-h-0 flex items-center gap-2 px-3 py-1.5 text-sm text-ink hover:bg-surface-2 text-left"
+              >
+                <PushPin size={15} /> {pinned ? "Unpin" : "Pin"}
+              </button>
+              {canEdit && (
+                <>
+                  <button
+                    onClick={() => { setMenuOpen(false); setMobileOpen(false); onEdit(); }}
+                    className="w-full min-h-11 md:min-h-0 flex items-center gap-2 px-3 py-1.5 text-sm text-ink hover:bg-surface-2 text-left"
+                  >
+                    <PencilSimple size={15} /> Edit
+                  </button>
+                  <button
+                    onClick={() => { setMenuOpen(false); setMobileOpen(false); onDelete(); }}
+                    className="w-full min-h-11 md:min-h-0 flex items-center gap-2 px-3 py-1.5 text-sm text-danger hover:bg-surface-2 text-left"
+                  >
+                    <Trash size={15} /> Delete
+                  </button>
+                </>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

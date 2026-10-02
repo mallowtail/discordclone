@@ -225,7 +225,7 @@ export function MessageInput({
   }
 
   return (
-    <form onSubmit={send} className="p-3 relative">
+    <form onSubmit={send} className="p-2 md:p-3 relative">
       <MentionAutocomplete query={mentionQuery} onPick={pickMention} onResults={setMentionMatches} />
       {error && <p className="text-danger text-sm mb-1">{error}</p>}
       {replyTo && (
@@ -237,13 +237,19 @@ export function MessageInput({
             <button
               type="button"
               onClick={() => setPingAuthor((p) => !p)}
-              className={`rounded-full px-2 font-semibold border ${
+              className={`min-h-11 md:min-h-0 rounded-full px-2 font-semibold border ${
                 pingAuthor ? "border-accent bg-mention text-mention-ink" : "border-line text-muted"
               }`}
             >
               {pingAuthor ? "@ ON" : "@ OFF"}
             </button>
-            <button type="button" onClick={onClearReply} title="Cancel reply" className="hover:text-ink">
+            <button
+              type="button"
+              onClick={onClearReply}
+              title="Cancel reply"
+              aria-label="Cancel reply"
+              className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 flex items-center justify-center hover:text-ink"
+            >
               ✕
             </button>
           </span>
@@ -256,8 +262,9 @@ export function MessageInput({
               type="button"
               onClick={() => setMenuOpen((o) => !o)}
               title="Add"
+              aria-label="Add attachment"
               disabled={uploading || !!timedOutUntil}
-              className="w-8 h-8 flex items-center justify-center rounded-full bg-surface-2 text-muted hover:text-ink text-lg leading-none disabled:opacity-50"
+              className="w-11 h-11 md:w-8 md:h-8 flex items-center justify-center rounded-full bg-surface-2 text-muted hover:text-ink text-lg leading-none disabled:opacity-50"
             >
               <Plus size={18} weight="bold" />
             </button>
@@ -266,7 +273,7 @@ export function MessageInput({
                 <button
                   type="button"
                   onClick={() => { setMenuOpen(false); fileRef.current?.click(); }}
-                  className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-ink hover:bg-surface-2 text-left"
+                  className="w-full min-h-11 md:min-h-0 flex items-center gap-2 px-3 py-1.5 text-sm text-ink hover:bg-surface-2 text-left"
                 >
                   <File size={16} aria-hidden="true" /> Upload a file
                 </button>
@@ -311,18 +318,24 @@ export function MessageInput({
               type="button"
               onClick={() => setEmojiOpen((o) => !o)}
               title="Emoji"
+              aria-label="Emoji"
               disabled={!!timedOutUntil}
-              className="w-8 h-8 flex items-center justify-center rounded-full text-muted hover:text-ink text-lg leading-none"
+              className="w-11 h-11 md:w-8 md:h-8 flex items-center justify-center rounded-full text-muted hover:text-ink text-lg leading-none"
             >
               <Smiley size={20} />
             </button>
             {emojiOpen && (
-              <div className="absolute bottom-full right-0 mb-2 z-30">
+              <div className="absolute bottom-full right-0 mb-2 z-30 max-w-[calc(100vw-2rem)]">
+                {/* emoji-picker-react renders at a fixed 350×450 by default, which overflows a
+                    phone — `min()` keeps that exact size from `md` up and shrinks to fit the
+                    viewport below it. */}
                 <EmojiPicker
                   theme={Theme.DARK}
                   onEmojiClick={(d) => insertEmoji(d.emoji)}
                   lazyLoadEmojis
                   skinTonesDisabled
+                  width="min(90vw, 350px)"
+                  height="min(60vh, 450px)"
                 />
               </div>
             )}

@@ -13,7 +13,8 @@ import { PinnedPanel } from "@/components/messages/PinnedPanel";
 import { MembersPanel } from "@/components/servers/MembersPanel";
 import { SearchBox, SearchResultsPanel } from "@/components/servers/MessageSearchPanel";
 import { useMessageSearch } from "@/components/servers/useMessageSearch";
-import { PushPin, Users } from "@phosphor-icons/react";
+import { useDrawer } from "@/components/providers/DrawerProvider";
+import { PushPin, Users, List } from "@phosphor-icons/react";
 
 export default function ChannelPage({ params }: { params: Promise<{ channelId: string }> }) {
   const { channelId: id } = use(params);
@@ -52,7 +53,12 @@ function HeaderButton({
 }) {
   return (
     <div className="group relative ml-3 flex items-center">
-      <button onClick={onClick} aria-label={label} data-trigger={triggerId} className="flex items-center text-muted hover:text-ink">
+      <button
+        onClick={onClick}
+        aria-label={label}
+        data-trigger={triggerId}
+        className="flex items-center justify-center min-h-11 min-w-11 md:min-h-0 md:min-w-0 text-muted hover:text-ink"
+      >
         {children}
       </button>
       <span
@@ -79,6 +85,7 @@ function ChannelView({ channel }: { channel: Channel }) {
   const search = useMessageSearch(channel.server_id);
   const pinned = messages.filter((m) => m.pinned);
   const { markRead } = useUnread(channel.server_id);
+  const { open: drawerOpen, toggleDrawer } = useDrawer();
   const lastMessageId = messages[messages.length - 1]?.id;
 
   // Mark this channel read on open, and again whenever a new message arrives while it's
@@ -93,9 +100,19 @@ function ChannelView({ channel }: { channel: Channel }) {
   }
   return (
     <>
-      <header className="p-3 border-b border-line font-semibold text-ink tracking-tight flex items-center justify-between relative">
-        <span># {channel.name}</span>
-        <span className="flex items-center">
+      <header className="p-3 border-b border-line font-semibold text-ink tracking-tight flex items-center justify-between relative min-w-0">
+        <span className="flex items-center gap-1 min-w-0">
+          <button
+            onClick={toggleDrawer}
+            aria-label="Open navigation"
+            aria-expanded={drawerOpen}
+            className="md:hidden -ml-1 flex items-center justify-center w-11 h-11 flex-none text-muted hover:text-ink"
+          >
+            <List size={20} weight="bold" aria-hidden="true" />
+          </button>
+          <span className="truncate"># {channel.name}</span>
+        </span>
+        <span className="flex items-center flex-none">
           <HeaderButton label={`Pinned (${pinned.length})`} triggerId="pins" onClick={() => setShowPins((s) => !s)}>
             <PushPin size={17} />
           </HeaderButton>
@@ -106,7 +123,7 @@ function ChannelView({ channel }: { channel: Channel }) {
         </span>
         {showPins && <PinnedPanel pinned={pinned} onClose={() => setShowPins(false)} />}
       </header>
-      <div className="flex flex-1 min-h-0">
+      <div className="flex flex-1 min-h-0 relative">
         <MessageDropZone
           target={{ channel_id: channel.id }}
           addPending={addPending}
@@ -138,11 +155,25 @@ function ChannelView({ channel }: { channel: Channel }) {
             removePending={removePending}
           />
         </MessageDropZone>
-        {search.query.trim()
-          ? <SearchResultsPanel search={search} />
-          : showMembers
-          ? <MembersPanel serverId={channel.server_id} />
-          : null}
+        {search.query.trim() ? (
+          <SearchResultsPanel search={search} />
+        ) : (
+          showMembers && (
+            <>
+              {/* Below `xl` the members list floats above the chat as a right-anchored overlay
+                  (with a dismiss backdrop) instead of an inline column; at `xl`+ it's inline,
+                  taking its place in this flex row. Same header toggle drives both. */}
+              <div
+                className="absolute inset-0 z-30 xl:hidden"
+                onClick={() => setShowMembers(false)}
+                aria-hidden="true"
+              />
+              <div className="absolute inset-y-0 right-0 z-40 xl:static xl:inset-auto xl:z-auto">
+                <MembersPanel serverId={channel.server_id} />
+              </div>
+            </>
+          )
+        )}
       </div>
     </>
   );

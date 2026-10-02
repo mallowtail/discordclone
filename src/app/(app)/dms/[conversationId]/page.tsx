@@ -9,7 +9,8 @@ import { MessageList } from "@/components/messages/MessageList";
 import { MessageInput } from "@/components/messages/MessageInput";
 import { MessageDropZone } from "@/components/messages/MessageDropZone";
 import { PinnedPanel } from "@/components/messages/PinnedPanel";
-import { PushPin } from "@phosphor-icons/react";
+import { useDrawer } from "@/components/providers/DrawerProvider";
+import { PushPin, List } from "@phosphor-icons/react";
 
 export default function DmPage({ params }: { params: Promise<{ conversationId: string }> }) {
   const { conversationId } = use(params);
@@ -21,6 +22,7 @@ export default function DmPage({ params }: { params: Promise<{ conversationId: s
   const [showPins, setShowPins] = useState(false);
   const { messages, addPending, removePending } = useMessages({ conversationId });
   const pinned = messages.filter((m) => m.pinned);
+  const { open: drawerOpen, toggleDrawer } = useDrawer();
 
   useEffect(() => {
     if (!user) return;
@@ -36,11 +38,21 @@ export default function DmPage({ params }: { params: Promise<{ conversationId: s
 
   return (
     <>
-      <header className="p-3 border-b border-line font-semibold text-ink tracking-tight flex items-center justify-between relative">
-        <span>@ {other?.display_name ?? "Direct Message"}</span>
+      <header className="p-3 border-b border-line font-semibold text-ink tracking-tight flex items-center justify-between relative min-w-0">
+        <span className="flex items-center gap-1 min-w-0">
+          <button
+            onClick={toggleDrawer}
+            aria-label="Open navigation"
+            aria-expanded={drawerOpen}
+            className="md:hidden -ml-1 flex items-center justify-center w-11 h-11 flex-none text-muted hover:text-ink"
+          >
+            <List size={20} weight="bold" aria-hidden="true" />
+          </button>
+          <span className="truncate">@ {other?.display_name ?? "Direct Message"}</span>
+        </span>
         <button
           onClick={() => setShowPins((s) => !s)}
-          className="text-xs font-normal text-muted hover:text-ink flex items-center gap-1"
+          className="min-h-11 flex-none text-xs font-normal text-muted hover:text-ink flex items-center gap-1"
         >
           <PushPin size={15} /> Pinned ({pinned.length})
         </button>

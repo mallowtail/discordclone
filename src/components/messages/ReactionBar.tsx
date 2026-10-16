@@ -23,8 +23,8 @@ export function ReactionBar({
               : "border-line bg-surface-2 hover:border-white/20 hover:bg-surface"
           }`}
         >
-          <span className="text-body">{p.emoji}</span>
-          <span className={`text-meta font-semibold tabular-nums ${p.mine ? "text-accent" : "text-muted"}`}>
+          <span className="text-body leading-none">{p.emoji}</span>
+          <span className={`text-meta leading-none font-semibold tabular-nums ${p.mine ? "text-accent" : "text-muted"}`}>
             {p.count}
           </span>
         </button>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { Message } from "@/types/db";
 import { formatTime } from "@/lib/format";
 import { useAuth } from "@/components/providers/AuthProvider";
@@ -74,6 +74,23 @@ export function MessageItem({
     repliedToAuthorId: repliedTo?.author_id ?? null,
   });
 
+  // Search-jump flash: accent tint that eases out over the flash window. Mention (amber) wins, so no flash then.
+  const rowRef = useRef<HTMLDivElement>(null);
+  const showFlash = !!flash && !highlighted;
+  useEffect(() => {
+    const el = rowRef.current;
+    if (!showFlash || !el || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const tint = "color-mix(in srgb, var(--color-accent) 25%, transparent)";
+    const anim = el.animate(
+      [
+        { backgroundColor: tint, boxShadow: "inset 2px 0 0 var(--color-accent)" },
+        { backgroundColor: "transparent", boxShadow: "inset 2px 0 0 transparent" },
+      ],
+      { duration: 2000, easing: "ease-out" },
+    );
+    return () => anim.cancel();
+  }, [showFlash]);
+
   async function saveEdit() {
     const v = validateMessage(draft);
     if (!v.ok && !msg.image_url && !msg.file_url) return setError(v.error);
@@ -125,9 +142,10 @@ export function MessageItem({
 
   return (
     <div
+      ref={rowRef}
       id={`msg-${msg.id}`}
       className={`group relative px-2 md:px-4 hover:bg-black/10 ${showHeader ? "mt-3 pt-0.5" : ""} ${
-        highlighted || flash ? "bg-amber/10 border-l-2 border-amber" : ""
+        highlighted ? "bg-amber/10 border-l-2 border-amber" : showFlash ? "motion-reduce:bg-accent/25" : ""
       } ${msg.pending ? "opacity-50" : ""}`}
     >
       {!showHeader && msg.pinned && (

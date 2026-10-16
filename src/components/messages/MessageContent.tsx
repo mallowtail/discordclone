@@ -43,8 +43,10 @@ export function MessageContent({ msg }: { msg: Message }) {
       )}
       {safeImage && (
         <a href={safeImage} target="_blank" rel="noopener noreferrer">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={safeImage} alt="attachment" className="mt-1 max-h-80 max-w-sm rounded" />
+          <span className="mt-1 block h-80 max-w-sm overflow-hidden rounded-control bg-surface-2">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={safeImage} alt="attachment" className="block max-h-full max-w-full object-contain" />
+          </span>
         </a>
       )}
       {safeFile && (

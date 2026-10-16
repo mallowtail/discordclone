@@ -18,7 +18,7 @@ import { useDrawer } from "@/components/providers/DrawerProvider";
 import { pushOverlay, popOverlay, isTopOverlay } from "@/components/ui/overlayStack";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { PushPin, Users, List, WarningCircle } from "@phosphor-icons/react";
+import { PushPin, Users, List, WarningCircle, Hash } from "@phosphor-icons/react";
 
 /** Placeholder for the channel header + first few message rows, shown while the channel itself
  * (not yet its messages) is loading — mirrors `ChannelView`'s header (`p-3 border-b`) and the
@@ -241,7 +241,7 @@ function ChannelView({ channel }: { channel: Channel }) {
   }
   return (
     <>
-      <header className="p-3 border-b border-line font-semibold text-ink tracking-tight flex items-center justify-between relative min-w-0">
+      <header className="p-3 border-b border-line font-semibold text-ink tracking-tight flex items-center justify-between relative z-10 min-w-0 shadow-[0_1px_3px_rgb(0_0_0/0.35)]">
         <span className="flex items-center gap-1 min-w-0">
           <button
             onClick={toggleDrawer}
@@ -251,7 +251,10 @@ function ChannelView({ channel }: { channel: Channel }) {
           >
             <List size={20} weight="bold" aria-hidden="true" />
           </button>
-          <span className="truncate"># {channel.name}</span>
+          <span className="flex items-center gap-1 min-w-0">
+            <Hash size={16} weight="bold" className="flex-none text-muted" aria-hidden="true" />
+            <span className="truncate">{channel.name}</span>
+          </span>
         </span>
         <span className="flex items-center flex-none">
           <HeaderButton label={`Pinned (${pinned.length})`} triggerId="pins" onClick={() => setShowPins((s) => !s)}>

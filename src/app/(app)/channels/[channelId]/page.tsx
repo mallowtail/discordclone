@@ -26,14 +26,18 @@ import { PushPin, Users, List, WarningCircle } from "@phosphor-icons/react";
 function ChannelSkeleton() {
   return (
     <>
+      {/* h-[26px] = the real header content height (search box), so total header height matches */}
       <header className="p-3 border-b border-line flex items-center min-w-0">
-        <Skeleton className="h-4 w-40" />
+        <div className="h-[26px] flex items-center">
+          <Skeleton className="h-4 w-40" />
+        </div>
       </header>
-      <div className="flex-1 min-h-0 overflow-y-auto p-3 flex flex-col gap-4">
-        {Array.from({ length: 5 }).map((_, i) => (
-          <div key={i} className="flex gap-3">
-            <Skeleton className="h-10 w-10 flex-none rounded-pill" />
-            <div className="flex-1 min-w-0 flex flex-col gap-2 pt-1">
+      {/* Same padding/gaps as MessageList + a header-style MessageItem row, so avatars land in place */}
+      <div className="flex-1 min-h-0 overflow-y-auto py-3">
+        {Array.from({ length: 2 }).map((_, i) => (
+          <div key={i} className="px-2 md:px-4 mt-3 pt-0.5 flex gap-2 md:gap-3">
+            <Skeleton className="h-8 w-8 md:h-10 md:w-10 flex-none rounded-pill" />
+            <div className="flex-1 min-w-0 flex flex-col gap-2 pt-0.5">
               <Skeleton className="h-3 w-24" />
               <Skeleton className="h-3 w-2/3 max-w-sm" />
             </div>

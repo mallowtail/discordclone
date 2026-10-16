@@ -18,20 +18,28 @@ import { ChatCircleDots } from "@phosphor-icons/react";
  * `!withHeader` mirrors a continuation row (no avatar, one indented line).
  */
 function MessageRowSkeleton({ withHeader }: { withHeader: boolean }) {
+  // Line boxes are sized to match a real single-line message (name line h-6, body line h-[26px],
+  // measured in-browser) so a one-line message replaces its skeleton without moving anything.
   if (!withHeader) {
     return (
       <div className="px-2 md:px-4 flex gap-2 md:gap-3">
         <div className="w-8 md:w-10 flex-none" aria-hidden="true" />
-        <Skeleton className="h-3 w-1/3 max-w-xs my-1" />
+        <div className="h-[26px] flex items-center">
+          <Skeleton className="h-3 w-48 max-w-full" />
+        </div>
       </div>
     );
   }
   return (
     <div className="px-2 md:px-4 mt-3 pt-0.5 flex gap-2 md:gap-3">
       <Skeleton className="h-8 w-8 md:h-10 md:w-10 flex-none rounded-pill" />
-      <div className="flex-1 min-w-0 flex flex-col gap-2 pt-0.5">
-        <Skeleton className="h-3 w-24" />
-        <Skeleton className="h-3 w-2/3 max-w-sm" />
+      <div className="flex-1 min-w-0 flex flex-col">
+        <div className="h-6 flex items-center">
+          <Skeleton className="h-3 w-24" />
+        </div>
+        <div className="h-[26px] flex items-center">
+          <Skeleton className="h-3 w-2/3 max-w-sm" />
+        </div>
       </div>
     </div>
   );

@@ -15,7 +15,7 @@ import { MembersPanel } from "@/components/servers/MembersPanel";
 import { SearchBox, SearchResultsPanel } from "@/components/servers/MessageSearchPanel";
 import { useMessageSearch } from "@/components/servers/useMessageSearch";
 import { useDrawer } from "@/components/providers/DrawerProvider";
-import { pushOverlay, popOverlay, isTopOverlay } from "@/components/ui/overlayStack";
+import { pushOverlay, popOverlay, isTopOverlay, claimEscape } from "@/components/ui/overlayStack";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PushPin, Users, List, WarningCircle, Hash } from "@phosphor-icons/react";
@@ -135,6 +135,12 @@ function MembersOverlay({ onClose, children }: { onClose: () => void; children: 
   // clicked it, so there's no need for a dedicated ref just to restore focus to it on close.
   const [previouslyFocused] = useState<HTMLElement | null>(() => document.activeElement as HTMLElement | null);
 
+  // Latest onClose, so caller closure identity never re-runs the overlay effect (see Modal.tsx).
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  });
+
   useEffect(() => {
     const token = pushOverlay();
     const panel = panelRef.current;
@@ -145,7 +151,7 @@ function MembersOverlay({ onClose, children }: { onClose: () => void; children: 
 
     function onKeyDown(e: KeyboardEvent) {
       if (e.key === "Escape") {
-        if (isTopOverlay(token)) onClose();
+        if (isTopOverlay(token) && claimEscape(e)) onCloseRef.current();
         return;
       }
       if (e.key !== "Tab" || !panel) return;
@@ -181,7 +187,7 @@ function MembersOverlay({ onClose, children }: { onClose: () => void; children: 
       document.body.style.overflow = prevOverflow;
       previouslyFocused?.focus();
     };
-  }, [onClose, previouslyFocused]);
+  }, [previouslyFocused]);
 
   return (
     <div ref={panelRef} role="dialog" aria-modal="true" aria-label="Members" tabIndex={-1} className="h-full">

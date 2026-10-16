@@ -6,6 +6,7 @@ import { SearchSuggestions } from "@/components/servers/SearchSuggestions";
 import { Pagination } from "@/components/servers/Pagination";
 import { Avatar } from "@/components/user/Avatar";
 import { MagnifyingGlass, Hash } from "@phosphor-icons/react";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 /** Always-visible search input for the channel header (right of the Members button). */
 export function SearchBox({ search }: { search: MessageSearch }) {
@@ -51,7 +52,13 @@ export function SearchResultsPanel({ search }: { search: MessageSearch }) {
       </div>
       <div ref={scrollRef} className="flex-1 overflow-y-auto p-2 flex flex-col gap-1">
         {error && <p className="text-danger text-xs p-2">{error}</p>}
-        {!busy && !error && results.length === 0 && <p className="text-muted text-xs p-2">No results.</p>}
+        {!busy && !error && results.length === 0 && (
+          <EmptyState
+            icon={<MagnifyingGlass size={28} weight="bold" aria-hidden="true" />}
+            title="No results"
+            description="Nothing matched that search. Try different words or filters."
+          />
+        )}
         {results.map((r) => (
           <button
             key={r.id}

@@ -23,6 +23,8 @@ export default function InvitePage({ params }: { params: Promise<{ code: string 
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // A failed JOIN is separate from a bad code: the card stays so the button doubles as retry.
+  const [joinError, setJoinError] = useState<string | null>(null);
 
   useEffect(() => {
     if (authLoading) return;
@@ -52,7 +54,7 @@ export default function InvitePage({ params }: { params: Promise<{ code: string 
 
   async function join() {
     setBusy(true);
-    setError(null);
+    setJoinError(null);
     if (isMember && preview) {
       router.replace(`/channels/first?server=${preview.id}`);
       return;
@@ -60,7 +62,7 @@ export default function InvitePage({ params }: { params: Promise<{ code: string 
     const { data, error: err } = await supabase.rpc("join_via_invite", { code });
     if (err || !data) {
       setBusy(false);
-      return setError("Couldn't join — the invite may be invalid.");
+      return setJoinError("Couldn't join — check your connection and try again.");
     }
     router.replace(`/channels/first?server=${data}`);
   }
@@ -69,14 +71,14 @@ export default function InvitePage({ params }: { params: Promise<{ code: string 
     <div className="min-h-screen flex items-center justify-center p-4">
       <div className="w-full max-w-sm bg-surface border border-line p-6 rounded-2xl text-center">
         {loading ? (
-          <>
+          <div aria-busy="true">
             <div className="flex justify-center mb-3">
               <Skeleton className="h-14 w-14 rounded-card" />
             </div>
             <Skeleton className="h-5 w-40 mx-auto mb-2" />
             <Skeleton className="h-3 w-24 mx-auto mb-4" />
             <Skeleton className="h-9 w-full rounded-control" />
-          </>
+          </div>
         ) : error ? (
           <EmptyState
             icon={<LinkBreak size={32} weight="bold" aria-hidden="true" />}
@@ -100,6 +102,7 @@ export default function InvitePage({ params }: { params: Promise<{ code: string 
             <p className="text-sm text-muted mb-4">
               {preview.member_count} {preview.member_count === 1 ? "member" : "members"}
             </p>
+            {joinError && <p role="alert" className="text-danger text-body mb-3">{joinError}</p>}
             <button onClick={join} disabled={busy}
               className="w-full bg-accent hover:bg-accent-strong text-white font-medium rounded-xl p-2 disabled:opacity-50">
               {busy ? "…" : isMember ? "Open" : "Join Server"}

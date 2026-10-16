@@ -7,7 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import type { Channel, Message } from "@/types/db";
 import { useMessages } from "@/hooks/useMessages";
 import { useUnread } from "@/hooks/useUnread";
-import { MessageList } from "@/components/messages/MessageList";
+import { MessageList, MessageRowSkeleton } from "@/components/messages/MessageList";
 import { MessageInput } from "@/components/messages/MessageInput";
 import { MessageDropZone } from "@/components/messages/MessageDropZone";
 import { PinnedPanel } from "@/components/messages/PinnedPanel";
@@ -32,17 +32,10 @@ function ChannelSkeleton() {
           <Skeleton className="h-4 w-40" />
         </div>
       </header>
-      {/* Same padding/gaps as MessageList + a header-style MessageItem row, so avatars land in place */}
-      <div className="flex-1 min-h-0 overflow-y-auto py-3">
-        {Array.from({ length: 2 }).map((_, i) => (
-          <div key={i} className="px-2 md:px-4 mt-3 pt-0.5 flex gap-2 md:gap-3">
-            <Skeleton className="h-8 w-8 md:h-10 md:w-10 flex-none rounded-pill" />
-            <div className="flex-1 min-w-0 flex flex-col gap-2 pt-0.5">
-              <Skeleton className="h-3 w-24" />
-              <Skeleton className="h-3 w-2/3 max-w-sm" />
-            </div>
-          </div>
-        ))}
+      {/* Same component the message list itself shows next, so the two loading stages share one geometry */}
+      <div className="flex-1 min-h-0 overflow-y-auto py-3" aria-busy="true">
+        <MessageRowSkeleton withHeader />
+        <MessageRowSkeleton withHeader />
       </div>
     </>
   );

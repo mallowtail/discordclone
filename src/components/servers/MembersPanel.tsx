@@ -132,7 +132,7 @@ export function MembersPanel({ serverId }: { serverId: string }) {
       <div className="p-3 text-title font-semibold text-ink tracking-tight border-b border-line">
         Members
       </div>
-      <div className="flex-1 overflow-y-auto p-2 flex flex-col gap-1">
+      <div className="flex-1 overflow-y-auto p-2 flex flex-col gap-1" aria-busy={!loaded || undefined}>
         {!loaded ? (
           Array.from({ length: 6 }).map((_, i) => <MemberRowSkeleton key={i} />)
         ) : members.length === 0 ? (

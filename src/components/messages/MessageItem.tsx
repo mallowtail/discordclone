@@ -13,6 +13,7 @@ import { ReactionBar } from "@/components/messages/ReactionBar";
 import { ForwardDialog } from "@/components/messages/ForwardDialog";
 import { ForwardedBlock } from "@/components/messages/ForwardedBlock";
 import { Avatar } from "@/components/user/Avatar";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useProfilePopover } from "@/components/providers/ProfilePopoverProvider";
 import type { ReactionPill } from "@/lib/reactions";
@@ -29,6 +30,7 @@ function snippet(m: Message): string {
 export function MessageItem({
   msg,
   authorName,
+  authorPending = false,
   authorAvatar,
   showHeader,
   pills,
@@ -41,6 +43,8 @@ export function MessageItem({
 }: {
   msg: Message;
   authorName: string;
+  /** Profile still loading: show a name-width skeleton instead of the name. */
+  authorPending?: boolean;
   authorAvatar: string | null;
   showHeader: boolean;
   pills: ReactionPill[];
@@ -134,7 +138,7 @@ export function MessageItem({
       <div className="flex gap-2 md:gap-3">
         <div className="w-8 md:w-10 flex-none">
           {showHeader && (
-            <button onClick={openProfile} className="hover:opacity-80" aria-label={`View ${authorName}'s profile`}>
+            <button onClick={openProfile} className="hover:opacity-80" aria-label={`View ${authorName || "user"}'s profile`}>
               <Avatar url={authorAvatar} name={authorName} size="md" />
             </button>
           )}
@@ -169,7 +173,7 @@ export function MessageItem({
 
           {showHeader && (
             <div>
-              <button onClick={openProfile} className="font-semibold text-ink hover:underline" style={{ color: authorColor ?? undefined }}>{authorName}</button>
+              <button onClick={openProfile} className="font-semibold text-ink hover:underline" style={{ color: authorColor ?? undefined }}>{authorPending ? <Skeleton className="inline-block h-3 w-24 align-middle" /> : authorName}</button>
               <span className="text-xs text-muted ml-2">{formatTime(msg.created_at)}</span>
               {msg.pinned && (
                 <span className="text-muted ml-2 inline-flex align-middle" title="Pinned" aria-label="Pinned">

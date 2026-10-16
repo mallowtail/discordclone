@@ -142,12 +142,12 @@ export function ServerSidebar({ serverId }: { serverId: string }) {
       </div>
       <nav className="flex-1 overflow-y-auto p-2 text-muted">
         {!loaded ? (
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-1" aria-busy="true">
             {Array.from({ length: 6 }).map((_, i) => (
               <ChannelLinkSkeleton key={i} />
             ))}
           </div>
-        ) : channels.length === 0 ? (
+        ) : channels.length === 0 && categories.length === 0 ? (
           <EmptyState
             icon={<Hash size={28} weight="bold" aria-hidden="true" />}
             title="No channels yet"
@@ -155,16 +155,6 @@ export function ServerSidebar({ serverId }: { serverId: string }) {
               canManageChannels
                 ? "Create the first channel to get this server going."
                 : "Ask an admin to create one."
-            }
-            action={
-              canManageChannels ? (
-                <button
-                  onClick={() => setCreating(true)}
-                  className="rounded-control bg-accent hover:bg-accent-strong text-white text-body font-medium px-3 py-1.5"
-                >
-                  Create channel
-                </button>
-              ) : undefined
             }
           />
         ) : (
@@ -189,6 +179,9 @@ export function ServerSidebar({ serverId }: { serverId: string }) {
                   channelsIn(cat.id).map((c) => renderChannelLink(c, true))}
               </div>
             ))}
+            {channels.length === 0 && (
+              <p className="px-2 pt-3 text-meta text-muted">No channels yet.</p>
+            )}
           </>
         )}
         {loaded && canManageChannels && (

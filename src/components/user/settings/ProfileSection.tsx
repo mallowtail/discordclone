@@ -67,64 +67,64 @@ export function ProfileSection() {
 
   return (
     <div className="max-w-xl">
-      <h2 className="text-[15px] font-semibold text-ink tracking-tight mb-4">Profile</h2>
+      <h2 className="text-title font-semibold text-ink tracking-tight mb-4">Profile</h2>
 
       <div className="flex items-center gap-4 mb-5">
         <Avatar url={profile?.avatar_url ?? null} name={profile?.display_name} size="lg" />
         <button
           onClick={() => fileRef.current?.click()}
           disabled={busy}
-          className="text-sm bg-accent hover:bg-accent-strong text-white rounded-xl px-3 py-1.5 disabled:opacity-50"
+          className="text-body bg-accent hover:bg-accent-strong text-white rounded-control px-3 py-1.5 disabled:opacity-50"
         >
           {busy ? "Working…" : "Upload image"}
         </button>
         <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onPickAvatar} />
       </div>
 
-      {error && <p className="text-danger text-sm mb-3">{error}</p>}
-      {saved && <p className="text-online text-sm mb-3">Saved</p>}
+      {error && <p className="text-danger text-body mb-3">{error}</p>}
+      {saved && <p className="text-online text-body mb-3">Saved</p>}
 
       <div className="space-y-4">
         <div>
-          <label className="text-[11px] font-semibold uppercase tracking-wider text-muted">Display name</label>
+          <label className="text-micro font-semibold uppercase tracking-wider text-muted">Display name</label>
           <input
             value={name}
             onChange={(e) => { setName(e.target.value); setSaved(false); }}
             maxLength={DISPLAY_MAX}
-            className="w-full p-2 rounded-xl bg-surface-2 text-ink text-sm mt-1"
+            className="w-full p-2 rounded-control bg-surface-2 text-ink text-body mt-1"
           />
         </div>
 
         <div>
-          <label className="text-[11px] font-semibold uppercase tracking-wider text-muted">Username</label>
+          <label className="text-micro font-semibold uppercase tracking-wider text-muted">Username</label>
           <input
             value={profile ? `@${profile.username}` : ""}
             readOnly
-            className="w-full p-2 rounded-xl bg-surface-2 text-muted text-sm mt-1 cursor-not-allowed"
+            className="w-full p-2 rounded-control bg-surface-2 text-muted text-body mt-1 cursor-not-allowed"
           />
-          <p className="text-muted text-xs mt-1">This is your @handle — people use it to mention you.</p>
+          <p className="text-muted text-meta mt-1">This is your @handle — people use it to mention you.</p>
         </div>
 
         <div>
-          <label className="text-[11px] font-semibold uppercase tracking-wider text-muted">Status</label>
+          <label className="text-micro font-semibold uppercase tracking-wider text-muted">Status</label>
           <input
             value={status}
             onChange={(e) => { setStatus(e.target.value); setSaved(false); }}
             maxLength={STATUS_MAX}
             placeholder="What's happening?"
-            className="w-full p-2 rounded-xl bg-surface-2 text-ink text-sm mt-1"
+            className="w-full p-2 rounded-control bg-surface-2 text-ink text-body mt-1"
           />
         </div>
 
         <div>
-          <label className="text-[11px] font-semibold uppercase tracking-wider text-muted">Bio</label>
+          <label className="text-micro font-semibold uppercase tracking-wider text-muted">Bio</label>
           <textarea
             value={bio}
             onChange={(e) => { setBio(e.target.value); setSaved(false); }}
             maxLength={BIO_MAX}
             rows={3}
             placeholder="Tell people about yourself"
-            className="w-full p-2 rounded-xl bg-surface-2 text-ink text-sm mt-1 resize-none"
+            className="w-full p-2 rounded-control bg-surface-2 text-ink text-body mt-1 resize-none"
           />
           <div className="text-muted text-[10px] text-right">{bio.length}/{BIO_MAX}</div>
         </div>
@@ -132,7 +132,7 @@ export function ProfileSection() {
         <button
           onClick={save}
           disabled={busy}
-          className="bg-accent hover:bg-accent-strong text-white font-medium rounded-xl px-5 py-2 disabled:opacity-50"
+          className="bg-accent hover:bg-accent-strong text-white font-medium rounded-control px-5 py-2 disabled:opacity-50"
         >
           {busy ? "Saving…" : "Save"}
         </button>

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { serverInitials, colorFromName } from "@/lib/server-icon";
 
-const SIZES = { md: "w-11 h-11 text-sm rounded-2xl", lg: "w-14 h-14 text-lg rounded-2xl" } as const;
+const SIZES = { md: "w-11 h-11 text-body rounded-card", lg: "w-14 h-14 text-lg rounded-card" } as const;
 
 export function ServerIcon({
   iconUrl,

@@ -25,19 +25,19 @@ export function ForwardedBlock({ snapshot }: { snapshot: ForwardSnapshot }) {
 
   return (
     <div className="mt-1">
-      <div className="flex items-center gap-1 text-[11px] text-muted mb-1">
+      <div className="flex items-center gap-1 text-micro text-muted mb-1">
         <ArrowBendUpRight size={13} weight="bold" /> Forwarded
       </div>
       <div className="border-l-2 border-line pl-3">
         <div className="flex items-center gap-2 mb-1">
           <Avatar url={author?.avatar_url ?? null} name={author?.display_name} size="sm" />
-          <span className="text-ink text-sm font-medium">{author?.display_name ?? "Someone"}</span>
-          <span className="text-muted text-xs">from {snapshot.source}</span>
+          <span className="text-ink text-body font-medium">{author?.display_name ?? "Someone"}</span>
+          <span className="text-muted text-meta">from {snapshot.source}</span>
         </div>
-        {snapshot.content && <div className="text-ink text-sm break-words leading-relaxed">{snapshot.content}</div>}
-        {img && <img src={img} alt="" className="mt-1 max-h-60 rounded-lg" />}
+        {snapshot.content && <div className="text-ink text-body break-words leading-relaxed">{snapshot.content}</div>}
+        {img && <img src={img} alt="" className="mt-1 max-h-60 rounded-row" />}
         {file && (
-          <a href={withDownloadName(file, snapshot.file_name)} download={snapshot.file_name ?? undefined} target="_blank" rel="noreferrer" className="mt-1 inline-block text-accent text-sm hover:underline">
+          <a href={withDownloadName(file, snapshot.file_name)} download={snapshot.file_name ?? undefined} target="_blank" rel="noreferrer" className="mt-1 inline-block text-accent text-body hover:underline">
             {snapshot.file_name ?? "Attachment"}
           </a>
         )}

@@ -117,7 +117,7 @@ export function SearchSuggestions({
   if (suggestions.length === 0) return null;
 
   return (
-    <ul className="absolute left-0 right-0 top-full mt-1 z-20 bg-surface border border-line rounded shadow max-h-60 overflow-y-auto">
+    <ul className="absolute left-0 right-0 top-full mt-1 z-20 bg-surface border border-line rounded-row shadow max-h-60 overflow-y-auto">
       {suggestions.map((s, i) => (
         <li key={i}>
           <button
@@ -127,7 +127,7 @@ export function SearchSuggestions({
               if (s.selectable !== false) onPick(s.value);
             }}
             onMouseEnter={() => onHover(i)}
-            className={`w-full text-left px-2 py-1.5 text-sm ${i === active ? "bg-surface-2" : ""} ${
+            className={`w-full text-left px-2 py-1.5 text-body ${i === active ? "bg-surface-2" : ""} ${
               s.selectable === false ? "cursor-default" : "hover:bg-surface-2"
             }`}
           >

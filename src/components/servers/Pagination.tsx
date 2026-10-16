@@ -33,12 +33,12 @@ export function Pagination({
   const items = pageItems(page, totalPages);
 
   return (
-    <nav className="flex items-center justify-center gap-1 py-2 text-xs" aria-label="Search result pages">
+    <nav className="flex items-center justify-center gap-1 py-2 text-meta" aria-label="Search result pages">
       <button
         onClick={() => onChange(page - 1)}
         disabled={page <= 1}
         aria-label="Previous page"
-        className="flex h-6 w-6 items-center justify-center rounded text-muted hover:text-ink hover:bg-surface disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-muted"
+        className="flex h-6 w-6 items-center justify-center rounded-row text-muted hover:text-ink hover:bg-surface disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-muted"
       >
         <CaretLeft size={13} weight="bold" />
       </button>
@@ -50,7 +50,7 @@ export function Pagination({
             key={it}
             onClick={() => onChange(it)}
             aria-current={it === page ? "page" : undefined}
-            className={`h-6 min-w-6 px-1.5 rounded-full ${
+            className={`h-6 min-w-6 px-1.5 rounded-pill ${
               it === page ? "bg-accent text-white font-semibold" : "text-muted hover:text-ink hover:bg-surface"
             }`}
           >
@@ -62,7 +62,7 @@ export function Pagination({
         onClick={() => onChange(page + 1)}
         disabled={page >= totalPages}
         aria-label="Next page"
-        className="flex h-6 w-6 items-center justify-center rounded text-muted hover:text-ink hover:bg-surface disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-muted"
+        className="flex h-6 w-6 items-center justify-center rounded-row text-muted hover:text-ink hover:bg-surface disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-muted"
       >
         <CaretRight size={13} weight="bold" />
       </button>

@@ -52,20 +52,20 @@ export function RoleEditor({
   }
 
   return (
-    <div className="bg-surface border border-line rounded-2xl p-4">
-      <h3 className="text-ink font-semibold mb-3">{role ? "Edit role" : "Create role"}</h3>
-      {error && <p className="text-danger text-sm mb-2">{error}</p>}
+    <div className="bg-surface border border-line rounded-card p-4">
+      <h3 className="text-ink text-title font-semibold mb-3">{role ? "Edit role" : "Create role"}</h3>
+      {error && <p className="text-danger text-body mb-2">{error}</p>}
 
-      <label className="block text-sm text-muted mb-1">Name</label>
+      <label className="block text-body text-muted mb-1">Name</label>
       <input
         autoFocus
         value={name}
         onChange={(e) => setName(e.target.value)}
         placeholder="Role name"
-        className="w-full p-2 rounded-xl bg-surface-2 text-ink mb-3"
+        className="w-full p-2 rounded-control bg-surface-2 text-ink mb-3"
       />
 
-      <label className="block text-sm text-muted mb-1">Color</label>
+      <label className="block text-body text-muted mb-1">Color</label>
       <div className="flex flex-wrap gap-2 mb-2">
         {ROLE_COLORS.map((c) => (
           <button
@@ -73,7 +73,7 @@ export function RoleEditor({
             type="button"
             onClick={() => setColor(c)}
             title={c}
-            className={`w-6 h-6 rounded ${color.toLowerCase() === c.toLowerCase() ? "ring-2 ring-accent" : ""}`}
+            className={`w-6 h-6 rounded-row ${color.toLowerCase() === c.toLowerCase() ? "ring-2 ring-accent" : ""}`}
             style={{ backgroundColor: c }}
           />
         ))}
@@ -82,17 +82,17 @@ export function RoleEditor({
         value={color}
         onChange={(e) => setColor(e.target.value)}
         placeholder="#7c9cff"
-        className="w-full p-2 rounded-xl bg-surface-2 text-ink mb-3"
+        className="w-full p-2 rounded-control bg-surface-2 text-ink mb-3"
       />
 
-      <label className="block text-sm text-muted mb-1">Permissions</label>
+      <label className="block text-body text-muted mb-1">Permissions</label>
       <div className="flex flex-col gap-1 mb-4">
         {PERMISSIONS.map((p) => {
           const disabled = !canTogglePermClient(p, myPerms, isOwner);
           return (
             <label
               key={p}
-              className={`flex items-center gap-2 text-sm ${disabled ? "text-muted" : "text-ink"}`}
+              className={`flex items-center gap-2 text-body ${disabled ? "text-muted" : "text-ink"}`}
             >
               <input
                 type="checkbox"
@@ -110,14 +110,14 @@ export function RoleEditor({
         <button
           onClick={save}
           disabled={busy}
-          className="flex-1 bg-accent hover:bg-accent-strong text-white font-medium rounded-xl p-2 disabled:opacity-50"
+          className="flex-1 bg-accent hover:bg-accent-strong text-white font-medium rounded-control p-2 disabled:opacity-50"
         >
           {busy ? "Saving…" : "Save"}
         </button>
         <button
           onClick={onCancel}
           disabled={busy}
-          className="flex-1 bg-surface-2 hover:bg-surface text-ink font-medium rounded-xl p-2 border border-line disabled:opacity-50"
+          className="flex-1 bg-surface-2 hover:bg-surface text-ink font-medium rounded-control p-2 border border-line disabled:opacity-50"
         >
           Cancel
         </button>

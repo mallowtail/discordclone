@@ -41,15 +41,15 @@ export function Dropdown({
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center justify-between p-2 rounded-xl bg-surface-2 text-ink text-left"
+        className="w-full flex items-center justify-between p-2 rounded-control bg-surface-2 text-ink text-left"
       >
         <span className={selected ? "" : "text-muted"}>{selected?.label ?? placeholder}</span>
-        <span className="text-muted text-xs ml-2">
+        <span className="text-muted text-meta ml-2">
           <CaretDown size={14} weight="bold" />
         </span>
       </button>
       {open && (
-        <div className="absolute left-0 right-0 top-full mt-1 z-20 rounded-xl border border-line bg-surface shadow-lg py-1 max-h-60 overflow-y-auto">
+        <div className="absolute left-0 right-0 top-full mt-1 z-20 rounded-control border border-line bg-surface shadow-lg py-1 max-h-60 overflow-y-auto">
           {options.map((o) => (
             <button
               key={o.value}
@@ -58,7 +58,7 @@ export function Dropdown({
                 onChange(o.value);
                 setOpen(false);
               }}
-              className={`w-full text-left px-3 py-1.5 text-sm hover:bg-surface-2 ${
+              className={`w-full text-left px-3 py-1.5 text-body hover:bg-surface-2 ${
                 o.value === value ? "text-accent" : "text-ink"
               }`}
             >

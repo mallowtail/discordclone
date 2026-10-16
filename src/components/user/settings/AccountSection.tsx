@@ -44,54 +44,54 @@ export function AccountSection() {
 
   return (
     <div className="max-w-xl">
-      <h2 className="text-[15px] font-semibold text-ink tracking-tight mb-4">Account</h2>
+      <h2 className="text-title font-semibold text-ink tracking-tight mb-4">Account</h2>
 
       <div className="mb-6">
-        <label className="text-[11px] font-semibold uppercase tracking-wider text-muted">Email</label>
+        <label className="text-micro font-semibold uppercase tracking-wider text-muted">Email</label>
         <input
           value={user?.email ?? ""}
           readOnly
-          className="w-full p-2 rounded-xl bg-surface-2 text-muted text-sm mt-1 cursor-not-allowed"
+          className="w-full p-2 rounded-control bg-surface-2 text-muted text-body mt-1 cursor-not-allowed"
         />
-        <p className="text-muted text-xs mt-1">Email can't be changed here.</p>
+        <p className="text-muted text-meta mt-1">Email can't be changed here.</p>
       </div>
 
-      <h3 className="text-[13px] font-semibold text-ink mb-3">Change password</h3>
-      {error && <p className="text-danger text-sm mb-3">{error}</p>}
-      {done && <p className="text-online text-sm mb-3">Password updated</p>}
+      <h3 className="text-body font-semibold text-ink mb-3">Change password</h3>
+      {error && <p className="text-danger text-body mb-3">{error}</p>}
+      {done && <p className="text-online text-body mb-3">Password updated</p>}
 
       <div className="space-y-4">
         <div>
-          <label className="text-[11px] font-semibold uppercase tracking-wider text-muted">Current password</label>
+          <label className="text-micro font-semibold uppercase tracking-wider text-muted">Current password</label>
           <input
             type="password"
             value={current}
             onChange={(e) => { setCurrent(e.target.value); setDone(false); }}
-            className="w-full p-2 rounded-xl bg-surface-2 text-ink text-sm mt-1"
+            className="w-full p-2 rounded-control bg-surface-2 text-ink text-body mt-1"
           />
         </div>
         <div>
-          <label className="text-[11px] font-semibold uppercase tracking-wider text-muted">New password</label>
+          <label className="text-micro font-semibold uppercase tracking-wider text-muted">New password</label>
           <input
             type="password"
             value={next}
             onChange={(e) => { setNext(e.target.value); setDone(false); }}
-            className="w-full p-2 rounded-xl bg-surface-2 text-ink text-sm mt-1"
+            className="w-full p-2 rounded-control bg-surface-2 text-ink text-body mt-1"
           />
         </div>
         <div>
-          <label className="text-[11px] font-semibold uppercase tracking-wider text-muted">Confirm new password</label>
+          <label className="text-micro font-semibold uppercase tracking-wider text-muted">Confirm new password</label>
           <input
             type="password"
             value={confirm}
             onChange={(e) => { setConfirm(e.target.value); setDone(false); }}
-            className="w-full p-2 rounded-xl bg-surface-2 text-ink text-sm mt-1"
+            className="w-full p-2 rounded-control bg-surface-2 text-ink text-body mt-1"
           />
         </div>
         <button
           onClick={changePassword}
           disabled={busy}
-          className="bg-accent hover:bg-accent-strong text-white font-medium rounded-xl px-5 py-2 disabled:opacity-50"
+          className="bg-accent hover:bg-accent-strong text-white font-medium rounded-control px-5 py-2 disabled:opacity-50"
         >
           {busy ? "Updating…" : "Update password"}
         </button>

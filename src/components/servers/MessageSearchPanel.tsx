@@ -23,7 +23,7 @@ export function SearchBox({ search }: { search: MessageSearch }) {
         onClick={search.onClick}
         onBlur={search.onBlur}
         placeholder="Search"
-        className="w-full pl-7 pr-2 py-1 rounded bg-surface-2 text-xs font-normal text-ink placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-accent"
+        className="w-full pl-7 pr-2 py-1 rounded-row bg-surface-2 text-meta font-normal text-ink placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-accent"
       />
       {search.dropdownVisible && (
         <SearchSuggestions
@@ -46,12 +46,12 @@ export function SearchResultsPanel({ search }: { search: MessageSearch }) {
 
   return (
     <aside className="w-80 bg-sidebar border-l border-line flex flex-col">
-      <div className="p-3 text-sm font-semibold text-ink tracking-tight border-b border-line flex items-baseline justify-between">
+      <div className="p-3 text-title font-semibold text-ink tracking-tight border-b border-line flex items-baseline justify-between">
         <span>Search results</span>
-        {total > 0 && <span className="text-xs font-normal text-muted">{total} found</span>}
+        {total > 0 && <span className="text-meta font-normal text-muted">{total} found</span>}
       </div>
       <div ref={scrollRef} className="flex-1 overflow-y-auto p-2 flex flex-col gap-1">
-        {error && <p className="text-danger text-xs p-2">{error}</p>}
+        {error && <p className="text-danger text-meta p-2">{error}</p>}
         {!busy && !error && results.length === 0 && (
           <EmptyState
             icon={<MagnifyingGlass size={28} weight="bold" aria-hidden="true" />}
@@ -63,15 +63,15 @@ export function SearchResultsPanel({ search }: { search: MessageSearch }) {
           <button
             key={r.id}
             onClick={() => jumpTo(r)}
-            className="text-left p-2 rounded hover:bg-surface flex flex-col gap-1"
+            className="text-left p-2 rounded-row hover:bg-surface flex flex-col gap-1"
           >
-            <span className="flex items-center gap-1.5 text-xs text-muted">
+            <span className="flex items-center gap-1.5 text-meta text-muted">
               <Avatar url={r.author_avatar_url} name={r.author_display_name} size="sm" />
               <span className="text-ink font-medium">{r.author_display_name}</span>
               <Hash size={11} />{r.channel_name}
               <span className="ml-auto">{new Date(r.created_at).toLocaleDateString()}</span>
             </span>
-            <span className="text-sm text-ink line-clamp-3">
+            <span className="text-body text-ink line-clamp-3">
               {r.content || (r.image_url ? "🖼️ image" : r.file_name ? `📎 ${r.file_name}` : "")}
             </span>
           </button>

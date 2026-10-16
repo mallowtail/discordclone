@@ -58,7 +58,7 @@ export function MessageDropZone({
       }}
     >
       {dragging && (
-        <div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center rounded-xl border-2 border-dashed border-accent bg-app/80 text-accent">
+        <div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center rounded-control border-2 border-dashed border-accent bg-app/80 text-accent">
           Drop to upload
         </div>
       )}

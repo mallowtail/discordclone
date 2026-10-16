@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { Role } from "@/types/db";
 import { topRoleColor } from "@/lib/roleColor";
@@ -11,6 +11,10 @@ export function useMemberRoleColors(serverId: string | null | undefined): {
   loading: boolean;
 } {
   const supabase = useMemo(() => createClient(), []);
+  // Unique per hook instance so two consumers of the same serverId (e.g. the message list and an
+  // open ProfileCard) don't collide on one Supabase channel topic — Supabase reuses a channel by
+  // topic, and calling .on() on an already-subscribed shared channel throws. Mirrors useServers.ts.
+  const instanceId = useId();
   const [byUser, setByUser] = useState<Map<string, Role[]>>(new Map());
   const [loading, setLoading] = useState(true);
 
@@ -49,7 +53,7 @@ export function useMemberRoleColors(serverId: string | null | undefined): {
     // Keep colours/pills live: reload when role assignments change (member_roles) or a role's
     // colour/name/position changes (roles). Both tables are in the realtime publication (0012).
     const channel = supabase
-      .channel(`role-colors:${serverId}`)
+      .channel(`role-colors:${serverId}:${instanceId}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "member_roles", filter: `server_id=eq.${serverId}` },
@@ -66,7 +70,7 @@ export function useMemberRoleColors(serverId: string | null | undefined): {
       active = false;
       supabase.removeChannel(channel);
     };
-  }, [supabase, serverId]);
+  }, [supabase, serverId, instanceId]);
 
   const rolesFor = useCallback((userId: string) => byUser.get(userId) ?? [], [byUser]);
   const colorFor = useCallback((userId: string) => topRoleColor(byUser.get(userId) ?? []), [byUser]);

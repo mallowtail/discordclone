@@ -55,13 +55,13 @@ export function MessageContent({ msg }: { msg: Message }) {
           download={msg.file_name ?? undefined}
           target="_blank"
           rel="noopener noreferrer"
-          className="mt-1 flex items-center gap-2 rounded-xl border border-line bg-surface px-3 py-2 max-w-sm hover:bg-surface-2"
+          className="mt-1 flex items-center gap-2 rounded-control border border-line bg-surface px-3 py-2 max-w-sm hover:bg-surface-2"
         >
           <File size={18} aria-hidden="true" />
-          <span className="text-ink text-sm truncate">{msg.file_name ?? "file"}</span>
+          <span className="text-ink text-body leading-5 truncate">{msg.file_name ?? "file"}</span>
         </a>
       )}
-      {msg.updated_at && <span className="text-xs text-muted ml-1">(edited)</span>}
+      {msg.updated_at && <span className="text-meta text-muted ml-1">(edited)</span>}
     </div>
   );
 }

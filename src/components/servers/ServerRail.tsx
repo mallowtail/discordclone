@@ -56,7 +56,7 @@ function RailItem({
         createPortal(
           <span
             style={{ position: "fixed", top: pos.top, left: pos.left, transform: "translateY(-50%)" }}
-            className="pointer-events-none z-50 whitespace-nowrap rounded-lg bg-app px-2 py-1 text-sm text-ink shadow-lg"
+            className="pointer-events-none z-50 whitespace-nowrap rounded-row bg-app px-2 py-1 text-body leading-5 text-ink shadow-lg"
           >
             {label}
           </span>,

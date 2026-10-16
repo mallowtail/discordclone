@@ -110,8 +110,8 @@ function HeaderButton({
         {children}
       </button>
       <span
-        className="pointer-events-none absolute left-1/2 top-full z-40 mt-1.5 -translate-x-1/2 whitespace-nowrap rounded-lg
-          border border-line bg-surface-2 px-2 py-1 text-xs font-normal text-ink opacity-0 shadow-lg transition-opacity
+        className="pointer-events-none absolute left-1/2 top-full z-40 mt-1.5 -translate-x-1/2 whitespace-nowrap rounded-row
+          border border-line bg-surface-2 px-2 py-1 text-meta leading-4 font-normal text-ink opacity-0 shadow-lg transition-opacity
           group-hover:opacity-100"
       >
         {label}
@@ -290,7 +290,7 @@ function ChannelView({ channel }: { channel: Channel }) {
           {anchored && (
             <button
               onClick={jumpToPresent}
-              className="absolute bottom-20 right-6 z-10 rounded-full bg-accent text-white text-xs px-3 py-1.5 shadow hover:opacity-90"
+              className="absolute bottom-20 right-6 z-10 rounded-pill bg-accent text-white text-meta leading-4 px-3 py-1.5 shadow hover:opacity-90"
             >
               Jump to present ↓
             </button>

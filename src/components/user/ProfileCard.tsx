@@ -114,7 +114,7 @@ export function ProfileCard({
         width: CARD_WIDTH,
         visibility: pos ? "visible" : "hidden",
       }}
-      className="z-50 bg-surface border border-line rounded-2xl shadow-xl overflow-hidden"
+      className="z-50 bg-surface border border-line rounded-card shadow-xl overflow-hidden"
     >
       <div className="p-4">
         <div className="flex items-center gap-2">
@@ -138,7 +138,7 @@ export function ProfileCard({
         <div className="mt-2 flex items-center gap-2">
           <span className="text-ink font-semibold truncate" style={{ color: colorFor(userId) ?? undefined }}>{profile?.display_name ?? "…"}</span>
         </div>
-        {profile?.username && <div className="text-muted text-sm">@{profile.username}</div>}
+        {profile?.username && <div className="text-muted text-body">@{profile.username}</div>}
         {rolesFor(userId).length > 0 && (
           <div className="flex flex-wrap gap-1 mt-2">
             {rolesFor(userId).map((r) => <RolePill key={r.id} role={r} />)}
@@ -146,15 +146,15 @@ export function ProfileCard({
         )}
         {profile?.bio && (
           <div className="mt-2">
-            <p ref={bioRef} className={`text-muted text-sm whitespace-pre-wrap ${expandBio ? "" : "line-clamp-3"}`}>
+            <p ref={bioRef} className={`text-muted text-body whitespace-pre-wrap ${expandBio ? "" : "line-clamp-3"}`}>
               {profile.bio}
             </p>
             {bioOverflows && !expandBio && (
-              <button onClick={() => setExpandBio(true)} className="text-accent text-xs mt-0.5">View full bio</button>
+              <button onClick={() => setExpandBio(true)} className="text-accent text-meta mt-0.5">View full bio</button>
             )}
           </div>
         )}
-        <div className="text-muted text-xs mt-3">Member since {memberSince}</div>
+        <div className="text-muted text-meta mt-3">Member since {memberSince}</div>
       </div>
       {!isSelf && (
         <div className="border-t border-line p-2">
@@ -166,7 +166,7 @@ export function ProfileCard({
             }}
             disabled={sending}
             placeholder={`Message @${profile?.username ?? "user"}`}
-            className="w-full p-2 rounded-xl bg-surface-2 text-ink text-sm outline-none disabled:opacity-50"
+            className="w-full p-2 rounded-xl bg-surface-2 text-ink text-body leading-5 outline-none disabled:opacity-50"
           />
         </div>
       )}

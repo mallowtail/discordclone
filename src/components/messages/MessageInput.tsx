@@ -247,7 +247,7 @@ export function MessageInput({
         </div>
       )}
       <div className="relative">
-        <div className={`flex ${multiline ? "items-start" : "items-center"} gap-2 rounded-2xl border border-line bg-surface px-3 py-2`}>
+        <div className={`flex ${multiline ? "items-start" : "items-center"} gap-2 rounded-card border border-line bg-surface px-3 py-2`}>
           <div className="relative" ref={menuRef}>
             <button
               type="button"

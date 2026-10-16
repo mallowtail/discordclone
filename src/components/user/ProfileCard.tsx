@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useTopmostEscape } from "@/components/ui/overlayStack";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -73,17 +74,14 @@ export function ProfileCard({
   }, [anchorRect, profile, expandBio, rolesFor]);
 
   useEffect(() => {
-    function onKey(e: KeyboardEvent) { if (e.key === "Escape") onClose(); }
     function onDown(e: MouseEvent) {
       if (cardRef.current && !cardRef.current.contains(e.target as Node)) onClose();
     }
-    document.addEventListener("keydown", onKey);
     document.addEventListener("mousedown", onDown);
-    return () => {
-      document.removeEventListener("keydown", onKey);
-      document.removeEventListener("mousedown", onDown);
-    };
+    return () => document.removeEventListener("mousedown", onDown);
   }, [onClose]);
+
+  useTopmostEscape(true, onClose);
 
   async function send() {
     if (sending) return;

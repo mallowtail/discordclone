@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useTopmostEscape } from "@/components/ui/overlayStack";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { ProfileSection } from "@/components/user/settings/ProfileSection";
@@ -14,13 +15,7 @@ export function UserSettings({ onClose }: { onClose: () => void }) {
   const { signOut } = useAuth();
   const [section, setSection] = useState<Section>("profile");
 
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
-    }
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  useTopmostEscape(true, onClose);
 
   async function logOut() {
     await signOut();

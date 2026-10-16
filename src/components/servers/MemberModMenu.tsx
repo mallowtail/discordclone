@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useTopmostEscape } from "@/components/ui/overlayStack";
 import { createClient } from "@/lib/supabase/client";
 import { TIMEOUT_PRESETS } from "@/lib/moderation";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
@@ -29,11 +30,11 @@ export function MemberModMenu({
   useEffect(() => {
     if (!open) return;
     function onDown(e: MouseEvent) { if (ref.current && !ref.current.contains(e.target as Node)) { setOpen(false); setBanning(false); } }
-    function onKey(e: KeyboardEvent) { if (e.key === "Escape") { setOpen(false); setBanning(false); } }
     document.addEventListener("mousedown", onDown);
-    document.addEventListener("keydown", onKey);
-    return () => { document.removeEventListener("mousedown", onDown); document.removeEventListener("keydown", onKey); };
+    return () => document.removeEventListener("mousedown", onDown);
   }, [open]);
+
+  useTopmostEscape(open, () => { setOpen(false); setBanning(false); });
 
   async function run(fn: () => PromiseLike<{ error: unknown }>) {
     setBusy(true);

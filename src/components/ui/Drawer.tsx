@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { pushOverlay, popOverlay, isTopOverlay } from "@/components/ui/overlayStack";
+import { pushOverlay, popOverlay, isTopOverlay, claimEscape } from "@/components/ui/overlayStack";
 
 const FOCUSABLE_SELECTOR =
   'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
@@ -57,6 +57,13 @@ function DrawerPanel({
   // on a child can move focus — correctly captures the trigger element every time.
   const [previouslyFocused] = useState<HTMLElement | null>(() => document.activeElement as HTMLElement | null);
 
+  // Latest onClose, so callers passing an inline closure don't re-run the overlay effect (which
+  // would reset focus and re-push this overlay to the top of the stack on every parent render).
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  });
+
   useEffect(() => {
     const token = pushOverlay();
     const panel = panelRef.current;
@@ -70,7 +77,7 @@ function DrawerPanel({
       if (e.key === "Escape") {
         // Only the topmost overlay closes — otherwise a Drawer open under a Modal (or vice
         // versa) would close both on one Escape press.
-        if (isTopOverlay(token)) onClose();
+        if (isTopOverlay(token) && claimEscape(e)) onCloseRef.current();
         return;
       }
       if (e.key !== "Tab" || !panel) return;
@@ -103,7 +110,7 @@ function DrawerPanel({
       document.body.style.overflow = prevOverflow;
       previouslyFocused?.focus();
     };
-  }, [onClose, previouslyFocused]);
+  }, [previouslyFocused]);
 
   return createPortal(
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm animate-overlay-in" onMouseDown={onClose}>

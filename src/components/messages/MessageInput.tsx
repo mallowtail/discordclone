@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useTopmostEscape } from "@/components/ui/overlayStack";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { validateMessage } from "@/lib/validation";
@@ -79,16 +80,11 @@ export function MessageInput({
     function onDown(e: MouseEvent) {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false);
     }
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setMenuOpen(false);
-    }
     document.addEventListener("mousedown", onDown);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("mousedown", onDown);
-      document.removeEventListener("keydown", onKey);
-    };
+    return () => document.removeEventListener("mousedown", onDown);
   }, [menuOpen]);
+
+  useTopmostEscape(menuOpen, () => setMenuOpen(false));
 
   // Close the emoji picker on outside-click / Escape.
   useEffect(() => {
@@ -96,16 +92,11 @@ export function MessageInput({
     function onDown(e: MouseEvent) {
       if (emojiRef.current && !emojiRef.current.contains(e.target as Node)) setEmojiOpen(false);
     }
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setEmojiOpen(false);
-    }
     document.addEventListener("mousedown", onDown);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("mousedown", onDown);
-      document.removeEventListener("keydown", onKey);
-    };
+    return () => document.removeEventListener("mousedown", onDown);
   }, [emojiOpen]);
+
+  useTopmostEscape(emojiOpen, () => setEmojiOpen(false));
 
   function replyFields() {
     return replyTo ? { reply_to_id: replyTo.id, mention_author: pingAuthor } : {};

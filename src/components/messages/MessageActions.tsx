@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useTopmostEscape } from "@/components/ui/overlayStack";
 import EmojiPicker, { Theme } from "emoji-picker-react";
 import { useDrawer } from "@/components/providers/DrawerProvider";
 import {
@@ -68,32 +69,22 @@ export function MessageActions({
     function onDown(e: MouseEvent) {
       if (pickerRef.current && !pickerRef.current.contains(e.target as Node)) setPickerOpen(false);
     }
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setPickerOpen(false);
-    }
     document.addEventListener("mousedown", onDown);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("mousedown", onDown);
-      document.removeEventListener("keydown", onKey);
-    };
+    return () => document.removeEventListener("mousedown", onDown);
   }, [pickerOpen]);
+
+  useTopmostEscape(pickerOpen, () => setPickerOpen(false));
 
   useEffect(() => {
     if (!menuOpen) return;
     function onDown(e: MouseEvent) {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false);
     }
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setMenuOpen(false);
-    }
     document.addEventListener("mousedown", onDown);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("mousedown", onDown);
-      document.removeEventListener("keydown", onKey);
-    };
+    return () => document.removeEventListener("mousedown", onDown);
   }, [menuOpen]);
+
+  useTopmostEscape(menuOpen, () => setMenuOpen(false));
 
   // The persistent mobile trigger's own outside-click/Escape dismissal — scoped to
   // `mobileRef`, which wraps the trigger button *and* the toolbar it reveals, so tapping
@@ -103,16 +94,11 @@ export function MessageActions({
     function onDown(e: MouseEvent) {
       if (mobileRef.current && !mobileRef.current.contains(e.target as Node)) setMobileOpen(false);
     }
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setMobileOpen(false);
-    }
     document.addEventListener("mousedown", onDown);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("mousedown", onDown);
-      document.removeEventListener("keydown", onKey);
-    };
+    return () => document.removeEventListener("mousedown", onDown);
   }, [mobileOpen]);
+
+  useTopmostEscape(mobileOpen, () => setMobileOpen(false));
 
   return (
     <div ref={mobileRef} className="absolute right-2 top-0 flex items-center">

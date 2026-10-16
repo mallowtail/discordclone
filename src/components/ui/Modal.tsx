@@ -3,7 +3,7 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { X } from "@phosphor-icons/react";
-import { pushOverlay, popOverlay, isTopOverlay } from "@/components/ui/overlayStack";
+import { pushOverlay, popOverlay, isTopOverlay, claimEscape } from "@/components/ui/overlayStack";
 
 const SIZE_CLASSES = {
   sm: "w-[min(92vw,24rem)]",
@@ -55,6 +55,13 @@ export function Modal({
   // trigger element and not a descendant of this panel that's about to unmount.
   const [previouslyFocused] = useState<HTMLElement | null>(() => document.activeElement as HTMLElement | null);
 
+  // Latest onClose, so callers passing an inline closure don't re-run the overlay effect (which
+  // would reset focus and re-push this overlay to the top of the stack on every parent render).
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  });
+
   useEffect(() => {
     const token = pushOverlay();
     const panel = panelRef.current;
@@ -70,7 +77,7 @@ export function Modal({
       if (e.key === "Escape") {
         // Only the topmost overlay closes — otherwise a ConfirmDialog opened on top of an
         // already-open Modal would close both on one Escape press.
-        if (isTopOverlay(token)) onClose();
+        if (isTopOverlay(token) && claimEscape(e)) onCloseRef.current();
         return;
       }
       if (e.key !== "Tab" || !panel) return;
@@ -103,7 +110,7 @@ export function Modal({
       document.body.style.overflow = prevOverflow;
       previouslyFocused?.focus();
     };
-  }, [onClose, previouslyFocused]);
+  }, [previouslyFocused]);
 
   return createPortal(
     <div

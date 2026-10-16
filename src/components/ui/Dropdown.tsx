@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useTopmostEscape } from "@/components/ui/overlayStack";
 import { CaretDown } from "@phosphor-icons/react";
 
 export function Dropdown({
@@ -25,16 +26,11 @@ export function Dropdown({
     function onDown(e: MouseEvent) {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
     }
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setOpen(false);
-    }
     document.addEventListener("mousedown", onDown);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("mousedown", onDown);
-      document.removeEventListener("keydown", onKey);
-    };
+    return () => document.removeEventListener("mousedown", onDown);
   }, [open]);
+
+  useTopmostEscape(open, () => setOpen(false));
 
   return (
     <div ref={ref} className={`relative ${className ?? ""}`}>

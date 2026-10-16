@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useTopmostEscape } from "@/components/ui/overlayStack";
 import { createClient } from "@/lib/supabase/client";
 import type { Message, Profile } from "@/types/db";
 import { PushPin, X } from "@phosphor-icons/react";
@@ -26,14 +27,11 @@ export function PinnedPanel({ pinned, onClose }: { pinned: Message[]; onClose: (
       if (el?.closest?.('[data-trigger="pins"]')) return;
       onClose();
     }
-    function onKey(e: KeyboardEvent) { if (e.key === "Escape") onClose(); }
     document.addEventListener("mousedown", onDown);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("mousedown", onDown);
-      document.removeEventListener("keydown", onKey);
-    };
+    return () => document.removeEventListener("mousedown", onDown);
   }, [onClose]);
+
+  useTopmostEscape(true, onClose);
 
   useEffect(() => {
     const ids = [...new Set(pinned.map((m) => m.author_id))];

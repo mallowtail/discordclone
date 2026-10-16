@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/components/providers/AuthProvider";
 import type { Permission } from "@/lib/permissions";
@@ -19,8 +19,12 @@ export function useServerPermissions(serverId: string | null): {
   const [isOwner, setIsOwner] = useState(false);
   const [rank, setRank] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
+  // Monotonic request id: ignore any response that a newer load() has superseded, so switching
+  // servers quickly can't let a stale in-flight fetch overwrite the current server's permissions.
+  const reqId = useRef(0);
 
   const load = useCallback(async () => {
+    const my = ++reqId.current;
     if (!serverId || !user) {
       setPerms([]);
       setIsOwner(false);
@@ -34,6 +38,7 @@ export function useServerPermissions(serverId: string | null): {
       supabase.rpc("my_permissions", { srv: serverId }),
       supabase.rpc("my_role_rank", { srv: serverId }),
     ]);
+    if (my !== reqId.current) return; // a newer load has started; drop this stale result
     setIsOwner((s?.owner_id ?? null) === user.id);
     setPerms((p as string[] | null) ?? []);
     setRank((r as number | null) ?? null);

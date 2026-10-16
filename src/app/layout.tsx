@@ -6,6 +6,7 @@ import { AuthProvider } from "@/components/providers/AuthProvider";
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "https://mallowchat.vercel.app"),
   title: {
     default: "Mallowchat",
     template: "%s · Mallowchat",

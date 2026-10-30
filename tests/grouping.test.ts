@@ -3,7 +3,11 @@ import { startsNewGroup } from "@/lib/grouping";
 import type { Message } from "@/types/db";
 
 function msg(author_id: string, created_at: string): Message {
-  return { id: "x", author_id, channel_id: "c", conversation_id: null, content: "hi", created_at };
+  return {
+    id: "x", author_id, channel_id: "c", conversation_id: null, content: "hi", created_at,
+    image_url: null, file_url: null, file_name: null, updated_at: null, reply_to_id: null,
+    mention_author: false, pinned: false, pinned_at: null, forward_snapshot: null,
+  };
 }
 
 describe("startsNewGroup", () => {

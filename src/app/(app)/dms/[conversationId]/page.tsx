@@ -1,12 +1,13 @@
 "use client";
 
-import { Suspense, use, useEffect, useState } from "react";
+import { Suspense, use, useCallback, useEffect, useState } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/components/providers/AuthProvider";
 import type { Profile, Message } from "@/types/db";
 import { useMessages } from "@/hooks/useMessages";
+import { usePinnedMessages } from "@/hooks/usePinnedMessages";
 import { MessageList, MessageRowSkeleton } from "@/components/messages/MessageList";
 import { MessageInput } from "@/components/messages/MessageInput";
 import { MessageDropZone } from "@/components/messages/MessageDropZone";
@@ -58,7 +59,8 @@ function DmView({ conversationId }: { conversationId: string }) {
   const [showPins, setShowPins] = useState(false);
   const { messages, addPending, removePending, anchored, loadOlder, loadingOlder, olderFailed, hasMore } =
     useMessages({ conversationId, anchorId });
-  const pinned = messages.filter((m) => m.pinned);
+  const pinsState = usePinnedMessages({ conversationId }, showPins);
+  const closePins = useCallback(() => setShowPins(false), []);
   const { open: drawerOpen, toggleDrawer } = useDrawer();
 
   useEffect(() => {
@@ -126,9 +128,17 @@ function DmView({ conversationId }: { conversationId: string }) {
           onClick={() => setShowPins((s) => !s)}
           className="min-h-11 flex-none text-xs font-normal text-muted hover:text-ink flex items-center gap-1"
         >
-          <PushPin size={15} /> Pinned ({pinned.length})
+          <PushPin size={15} /> Pinned ({pinsState.count})
         </button>
-        {showPins && <PinnedPanel pinned={pinned} onClose={() => setShowPins(false)} />}
+        {showPins && (
+          <PinnedPanel
+            pins={pinsState.pins}
+            loading={pinsState.loading}
+            hasMore={pinsState.hasMore}
+            onLoadMore={pinsState.loadMore}
+            onClose={closePins}
+          />
+        )}
       </header>
       <MessageDropZone
         target={{ conversation_id: conversationId }}

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import type { Channel, Message } from "@/types/db";
 import { useMessages } from "@/hooks/useMessages";
+import { usePinnedMessages } from "@/hooks/usePinnedMessages";
 import { useUnread } from "@/hooks/useUnread";
 import { MessageList, MessageRowSkeleton } from "@/components/messages/MessageList";
 import { MessageInput } from "@/components/messages/MessageInput";
@@ -213,8 +214,9 @@ function ChannelView({ channel }: { channel: Channel }) {
   // each time, tearing the overlay's focus trap/overlayStack registration down and back up on
   // every message while it's open.
   const closeMembers = useCallback(() => setShowMembers(false), []);
+  const closePins = useCallback(() => setShowPins(false), []);
   const search = useMessageSearch(channel.server_id);
-  const pinned = messages.filter((m) => m.pinned);
+  const pinsState = usePinnedMessages({ channelId: channel.id }, showPins);
   const { markRead } = useUnread(channel.server_id);
   const { open: drawerOpen, toggleDrawer } = useDrawer();
   const lastMessageId = messages[messages.length - 1]?.id;
@@ -264,7 +266,7 @@ function ChannelView({ channel }: { channel: Channel }) {
           </span>
         </span>
         <span className="flex items-center flex-none">
-          <HeaderButton label={`Pinned (${pinned.length})`} triggerId="pins" onClick={() => setShowPins((s) => !s)}>
+          <HeaderButton label={`Pinned (${pinsState.count})`} triggerId="pins" onClick={() => setShowPins((s) => !s)}>
             <PushPin size={17} />
           </HeaderButton>
           <HeaderButton label="Show Member List" onClick={() => setShowMembers((s) => !s)}>
@@ -272,7 +274,15 @@ function ChannelView({ channel }: { channel: Channel }) {
           </HeaderButton>
           <SearchBox search={search} />
         </span>
-        {showPins && <PinnedPanel pinned={pinned} onClose={() => setShowPins(false)} />}
+        {showPins && (
+          <PinnedPanel
+            pins={pinsState.pins}
+            loading={pinsState.loading}
+            hasMore={pinsState.hasMore}
+            onLoadMore={pinsState.loadMore}
+            onClose={closePins}
+          />
+        )}
       </header>
       <div className="flex flex-1 min-h-0 relative">
         <MessageDropZone

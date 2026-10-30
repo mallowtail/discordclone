@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { mergeMessages, hasMoreAfter, MESSAGE_PAGE } from "@/lib/messagePaging";
+import { mergeMessages, hasMoreAfter, nextHasMore, MESSAGE_PAGE } from "@/lib/messagePaging";
 import type { Message } from "@/types/db";
 
 function msg(id: string, created_at: string, extra: Partial<Message> = {}): Message {
@@ -74,5 +74,24 @@ describe("hasMoreAfter", () => {
 
   it("uses a page size of 50", () => {
     expect(MESSAGE_PAGE).toBe(50);
+  });
+});
+
+describe("nextHasMore", () => {
+  const full = Array.from({ length: MESSAGE_PAGE }, (_, i) => i);
+  it("keeps the previous value when the fetch errored", () => {
+    expect(nextHasMore(true, { data: null, error: new Error("network") }, MESSAGE_PAGE)).toBe(true);
+    expect(nextHasMore(false, { data: null, error: new Error("network") }, MESSAGE_PAGE)).toBe(false);
+  });
+  it("keeps the previous value when data is missing without an error", () => {
+    expect(nextHasMore(true, { data: null, error: null }, MESSAGE_PAGE)).toBe(true);
+  });
+  it("ignores partial data that came with an error", () => {
+    expect(nextHasMore(true, { data: [], error: { message: "boom" } }, MESSAGE_PAGE)).toBe(true);
+  });
+  it("derives from page length on success", () => {
+    expect(nextHasMore(true, { data: [], error: null }, MESSAGE_PAGE)).toBe(false);
+    expect(nextHasMore(true, { data: [1, 2], error: null }, MESSAGE_PAGE)).toBe(false);
+    expect(nextHasMore(false, { data: full, error: null }, MESSAGE_PAGE)).toBe(true);
   });
 });

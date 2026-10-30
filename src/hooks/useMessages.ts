@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { MESSAGE_PAGE, hasMoreAfter, mergeMessages } from "@/lib/messagePaging";
+import { MESSAGE_PAGE, mergeMessages, nextHasMore } from "@/lib/messagePaging";
 import type { Message } from "@/types/db";
 
 type Target =
@@ -93,31 +93,35 @@ export function useMessages(target: Target) {
           if (!active) return;
           const beforeRows = ((before.data ?? []) as Message[]).reverse();
           const afterRows = (after.data ?? []) as Message[];
+          // A failed "before" fetch says nothing about older history: keep hasMore and leave
+          // `loaded` unset so the next successful load (e.g. realtime re-SUBSCRIBED) decides it.
+          const beforeOk = !before.error && !!before.data;
           update(key, (s) => ({
             ...s,
             messages: mergeMessages(s.messages, [...beforeRows, ...afterRows]),
-            hasMore: s.loaded ? s.hasMore : hasMoreAfter(beforeRows.length, MESSAGE_PAGE),
+            hasMore: s.loaded ? s.hasMore : nextHasMore(s.hasMore, before, MESSAGE_PAGE),
             anchorFound: true,
-            loaded: true,
+            loaded: s.loaded || beforeOk,
           }));
           return;
         }
         // anchor not readable → fall through to recent load
       }
-      const { data } = await supabase
+      const recent = await supabase
         .from("messages")
         .select("*")
         .eq(column, value)
         .order("created_at", { ascending: false })
         .limit(MESSAGE_PAGE);
       if (!active) return;
-      const page = ((data ?? []) as Message[]).reverse();
+      const page = ((recent.data ?? []) as Message[]).reverse();
+      const ok = !recent.error && !!recent.data;
       update(key, (s) => ({
         ...s,
         messages: mergeMessages(s.messages, page),
-        hasMore: s.loaded ? s.hasMore : hasMoreAfter(page.length, MESSAGE_PAGE),
+        hasMore: s.loaded ? s.hasMore : nextHasMore(s.hasMore, recent, MESSAGE_PAGE),
         anchorFound: false,
-        loaded: true,
+        loaded: s.loaded || ok,
       }));
     }
     load();
@@ -171,7 +175,7 @@ export function useMessages(target: Target) {
     olderInFlight.current = callKey;
     update(callKey, (s) => ({ ...s, loadingOlder: true }));
     try {
-      const { data } = await supabase
+      const result = await supabase
         .from("messages")
         .select("*")
         .eq(column, value)
@@ -180,11 +184,12 @@ export function useMessages(target: Target) {
         .limit(MESSAGE_PAGE);
       // Stale guard: the user switched chats while this page was in flight → drop it.
       if (keyRef.current !== callKey) return;
-      const page = ((data ?? []) as Message[]).reverse();
+      const page = ((result.data ?? []) as Message[]).reverse();
+      // On error hasMore stays as-is (only loadingOlder clears below), so a later scroll retries.
       update(callKey, (s) => ({
         ...s,
         messages: mergeMessages(s.messages, page),
-        hasMore: hasMoreAfter(page.length, MESSAGE_PAGE),
+        hasMore: nextHasMore(s.hasMore, result, MESSAGE_PAGE),
       }));
     } finally {
       if (olderInFlight.current === callKey) olderInFlight.current = null;

@@ -32,3 +32,16 @@ function compareCreatedAt(a: Message, b: Message): number {
 export function hasMoreAfter(pageLength: number, pageSize: number): boolean {
   return pageLength >= pageSize;
 }
+
+/**
+ * `hasMore` after a page fetch. A failed fetch (error, or no data) says nothing about history,
+ * so it keeps the previous value — a later scroll retries instead of falsely hitting "the start".
+ */
+export function nextHasMore(
+  prevHasMore: boolean,
+  result: { data: unknown[] | null; error: unknown },
+  pageSize: number
+): boolean {
+  if (result.error || !result.data) return prevHasMore;
+  return hasMoreAfter(result.data.length, pageSize);
+}

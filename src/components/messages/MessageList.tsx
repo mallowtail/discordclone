@@ -129,7 +129,11 @@ export function MessageList({
       atBottomRef.current = true;                              // loading / empty → next content is a first load
     } else if (!(anchorId && anchored)) {
       const firstLoad = prev.first === null;
-      const ownAppend = last !== prev.last && messages[messages.length - 1].author_id === user?.id;
+      // A genuinely NEW last row (not one that became last because the newest was deleted).
+      const ownAppend =
+        last !== prev.last &&
+        !prev.messages?.some((m) => m.id === last) &&
+        messages[messages.length - 1].author_id === user?.id;
       if (firstLoad) {
         el.scrollTop = el.scrollHeight;
         toBottom = true;

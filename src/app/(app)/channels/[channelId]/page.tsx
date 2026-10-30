@@ -218,6 +218,11 @@ function ChannelView({ channel }: { channel: Channel }) {
   // every message while it's open.
   const closeMembers = useCallback(() => setShowMembers(false), []);
   const closePins = useCallback(() => setShowPins(false), []);
+  // Stable so the memoized MessageList skips re-renders driven only by typing-indicator updates.
+  const handleReply = useCallback((m: Message, name: string) => {
+    setReplyTo(m);
+    setReplyToName(name);
+  }, []);
   const search = useMessageSearch(channel.server_id);
   const pinsState = usePinnedMessages({ channelId: channel.id }, showPins);
   const { markRead } = useUnread(channel.server_id);
@@ -296,7 +301,7 @@ function ChannelView({ channel }: { channel: Channel }) {
         >
           <MessageList
             messages={messages}
-            onReply={(m, name) => { setReplyTo(m); setReplyToName(name); }}
+            onReply={handleReply}
             serverId={channel.server_id}
             anchorId={anchorId}
             anchored={anchored}
@@ -309,7 +314,7 @@ function ChannelView({ channel }: { channel: Channel }) {
           {anchored && (
             <button
               onClick={jumpToPresent}
-              className="absolute bottom-20 right-6 z-10 rounded-pill bg-accent text-white text-meta leading-4 px-3 py-1.5 shadow hover:opacity-90"
+              className="absolute bottom-25 right-6 z-10 rounded-pill bg-accent text-white text-meta leading-4 px-3 py-1.5 shadow hover:opacity-90"
             >
               Jump to present ↓
             </button>

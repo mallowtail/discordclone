@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { memo, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { Message, Profile } from "@/types/db";
 import { MessageItem } from "@/components/messages/MessageItem";
@@ -45,7 +45,10 @@ export function MessageRowSkeleton({ withHeader }: { withHeader: boolean }) {
   );
 }
 
-export function MessageList({
+// Memoized: the chat pages re-render on every typing-indicator change, which would otherwise
+// re-render (and re-group) the whole list. Callers pass stable callbacks (useCallback) so the
+// shallow prop compare holds while nothing list-related changed.
+export const MessageList = memo(function MessageList({
   messages,
   onReply,
   serverId,
@@ -256,4 +259,4 @@ export function MessageList({
       )}
     </div>
   );
-}
+});

@@ -90,7 +90,9 @@ export function PinnedPanel({
 
   function jump(id: string) {
     const el = document.getElementById(`msg-${id}`);
-    if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+    // Instant, like MessageList's anchor jump: a smooth scroll near the top crosses the load-older
+    // threshold mid-flight and the prepend scroll compensation cuts it short.
+    if (el) el.scrollIntoView({ behavior: "instant", block: "center" });
     else router.replace(`${pathname}?msg=${id}`);
     onClose();
   }

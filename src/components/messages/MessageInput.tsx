@@ -68,11 +68,14 @@ export function MessageInput({
     setPingAuthor(true);
   }
 
+  // Primitive dep: pages pass `target` as an inline object, so depending on it would re-run these
+  // two queries on every parent re-render (e.g. each typing-indicator update).
+  const timeoutChannelId = "channel_id" in target ? target.channel_id : null;
   useEffect(() => {
-    if (!user || !("channel_id" in target)) return;
+    if (!user || !timeoutChannelId) return;
     let active = true;
     (async () => {
-      const { data: ch } = await supabase.from("channels").select("server_id").eq("id", target.channel_id).single();
+      const { data: ch } = await supabase.from("channels").select("server_id").eq("id", timeoutChannelId).single();
       const serverId = (ch as { server_id: string } | null)?.server_id;
       if (!serverId) return;
       const { data: mem } = await supabase.from("server_members").select("timeout_until").eq("server_id", serverId).eq("user_id", user.id).single();
@@ -80,7 +83,7 @@ export function MessageInput({
       if (active) setTimedOutUntil(until && new Date(until) > new Date() ? until : null);
     })();
     return () => { active = false; };
-  }, [supabase, user, target]);
+  }, [supabase, user, timeoutChannelId]);
 
   // Close the + menu on outside-click / Escape.
   useEffect(() => {

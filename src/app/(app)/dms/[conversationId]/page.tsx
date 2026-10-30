@@ -64,6 +64,11 @@ function DmView({ conversationId }: { conversationId: string }) {
   const typing = useTyping(`typing-dm:${conversationId}`);
   const pinsState = usePinnedMessages({ conversationId }, showPins);
   const closePins = useCallback(() => setShowPins(false), []);
+  // Stable so the memoized MessageList skips re-renders driven only by typing-indicator updates.
+  const handleReply = useCallback((m: Message, name: string) => {
+    setReplyTo(m);
+    setReplyToName(name);
+  }, []);
   const { open: drawerOpen, toggleDrawer } = useDrawer();
 
   useEffect(() => {
@@ -152,10 +157,7 @@ function DmView({ conversationId }: { conversationId: string }) {
       >
         <MessageList
           messages={messages}
-          onReply={(m, name) => {
-            setReplyTo(m);
-            setReplyToName(name);
-          }}
+          onReply={handleReply}
           anchorId={anchorId}
           anchored={anchored}
           onLoadOlder={loadOlder}
@@ -167,7 +169,7 @@ function DmView({ conversationId }: { conversationId: string }) {
         {anchored && (
           <button
             onClick={() => router.replace(pathname)}
-            className="absolute bottom-20 right-6 z-10 rounded-pill bg-accent text-white text-meta leading-4 px-3 py-1.5 shadow hover:opacity-90"
+            className="absolute bottom-25 right-6 z-10 rounded-pill bg-accent text-white text-meta leading-4 px-3 py-1.5 shadow hover:opacity-90"
           >
             Jump to present ↓
           </button>

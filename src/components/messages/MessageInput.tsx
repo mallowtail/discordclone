@@ -58,9 +58,18 @@ export function MessageInput({
   const mentionQuery = mentionQueryAt(text, caret);
   const acOpen = mentionQuery !== null && mentionMatches.length > 0;
   const [timedOutUntil, setTimedOutUntil] = useState<string | null>(null);
+  // No user / not a channel (DMs): never timed out. Adjusted during render instead of in the effect.
+  const noTimeoutTarget = !user || !("channel_id" in target);
+  if (noTimeoutTarget && timedOutUntil !== null) setTimedOutUntil(null);
+  // A new reply target re-enables "ping author" (adjusted during render when replyTo changes).
+  const [prevReplyId, setPrevReplyId] = useState(replyTo?.id);
+  if (replyTo?.id !== prevReplyId) {
+    setPrevReplyId(replyTo?.id);
+    setPingAuthor(true);
+  }
 
   useEffect(() => {
-    if (!user || !("channel_id" in target)) { setTimedOutUntil(null); return; }
+    if (!user || !("channel_id" in target)) return;
     let active = true;
     (async () => {
       const { data: ch } = await supabase.from("channels").select("server_id").eq("id", target.channel_id).single();
@@ -72,10 +81,6 @@ export function MessageInput({
     })();
     return () => { active = false; };
   }, [supabase, user, target]);
-
-  useEffect(() => {
-    setPingAuthor(true);
-  }, [replyTo?.id]);
 
   // Close the + menu on outside-click / Escape.
   useEffect(() => {

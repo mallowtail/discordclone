@@ -17,10 +17,16 @@ export function MentionAutocomplete({
 }) {
   const supabase = createClient();
   const [results, setResults] = useState<Profile[]>([]);
+  // Closing the mention (query -> null) clears our results; adjusted during render when the
+  // query changes rather than in the effect. The parent is still told from the effect below.
+  const [prevQuery, setPrevQuery] = useState(query);
+  if (query !== prevQuery) {
+    setPrevQuery(query);
+    if (query === null) setResults([]);
+  }
 
   useEffect(() => {
     if (query === null) {
-      setResults([]);
       onResults?.([]);
       return;
     }

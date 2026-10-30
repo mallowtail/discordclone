@@ -20,7 +20,17 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const supabase = useMemo(() => createClient(), []);
   // The active server is DERIVED from the open channel's route (URL = source of truth),
   // so refresh/deep-link/leave/create all keep the rail + sidebar in sync. null = DM home.
-  const [activeServer, setActiveServer] = useState<string | null>(null);
+  const [resolvedServer, setResolvedServer] = useState<string | null>(null);
+  // Leaving the channel routes (DMs / home) clears the active server. Adjusted during render
+  // when the pathname changes (React's "store the previous prop" pattern) instead of in an effect.
+  const onChannelRoute = /^\/channels\/[^/]+$/.test(pathname);
+  const [prevPathname, setPrevPathname] = useState(pathname);
+  if (pathname !== prevPathname) {
+    setPrevPathname(pathname);
+    if (!onChannelRoute) setResolvedServer(null);
+  }
+  // Off the channel routes it's always null, even if a late channel lookup lands mid-navigation.
+  const activeServer = onChannelRoute ? resolvedServer : null;
 
   useEffect(() => {
     if (!loading && !user) router.replace("/login");
@@ -28,14 +38,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const m = pathname.match(/^\/channels\/([^/]+)$/);
-    if (!m || m[1] === "first") {
-      // DMs / home, or the transient /channels/first landing (leave as-is until it resolves)
-      if (!m) setActiveServer(null);
-      return;
-    }
+    // DMs / home (cleared during render above), or the transient /channels/first landing
+    // (leave as-is until it resolves)
+    if (!m || m[1] === "first") return;
     let active = true;
     supabase.from("channels").select("server_id").eq("id", m[1]).single().then(({ data }) => {
-      if (active && data) setActiveServer(data.server_id as string);
+      if (active && data) setResolvedServer(data.server_id as string);
     });
     return () => {
       active = false;

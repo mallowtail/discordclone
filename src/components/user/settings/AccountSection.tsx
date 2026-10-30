@@ -53,7 +53,7 @@ export function AccountSection() {
           readOnly
           className="w-full p-2 rounded-control bg-surface-2 text-muted text-body mt-1 cursor-not-allowed"
         />
-        <p className="text-muted text-meta mt-1">Email can't be changed here.</p>
+        <p className="text-muted text-meta mt-1">Email can&apos;t be changed here.</p>
       </div>
 
       <h3 className="text-body font-semibold text-ink mb-3">Change password</h3>

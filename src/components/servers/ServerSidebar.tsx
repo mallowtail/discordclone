@@ -51,6 +51,14 @@ export function ServerSidebar({ serverId }: { serverId: string }) {
   const pathSegments = pathname.split("/");
   const activeChannelId = pathSegments[1] === "channels" ? pathSegments[2] : null;
 
+  // Switching servers: show the skeleton rather than flash the old server's channels. Adjusted during
+  // render when serverId changes (React's "store the previous prop" pattern), not in the effect.
+  const [prevServerId, setPrevServerId] = useState(serverId);
+  if (serverId !== prevServerId) {
+    setPrevServerId(serverId);
+    setLoaded(false);
+  }
+
   const load = useCallback(async () => {
     const [{ data: s }, { data: cats }, { data: chs }] = await Promise.all([
       supabase.from("servers").select("*").eq("id", serverId).single(),
@@ -64,7 +72,7 @@ export function ServerSidebar({ serverId }: { serverId: string }) {
   }, [supabase, serverId]);
 
   useEffect(() => {
-    setLoaded(false); // switching servers: show the skeleton rather than flash the old server's channels
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- load() only sets state after its await (async fetch-on-mount)
     load();
     const channel = supabase
       .channel(`server-sidebar:${serverId}`)

@@ -172,6 +172,7 @@ export function MessageList({
         // instant, not smooth: a smooth scroll starting at the top would trip load-older mid-animation
         el.scrollIntoView({ behavior: "instant", block: "center" });
         if (scrollRef.current) prevRef.current.top = scrollRef.current.scrollTop;
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- flash only once the anchor row is mounted + scrolled to (DOM-dependent)
         setFlashId(anchorId);
         flashedRef.current = anchorId;
       }

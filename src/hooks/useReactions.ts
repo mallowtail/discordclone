@@ -18,12 +18,15 @@ export function useReactions(messageIds: string[], currentUserId: string): Recor
   const supabase = useMemo(() => createClient(), []);
   const [rows, setRows] = useState<Reaction[]>([]);
   const key = messageIds.join(",");
+  // No messages → no reactions. Adjusted during render when the id set changes, not in the effect.
+  const [prevKey, setPrevKey] = useState(key);
+  if (key !== prevKey) {
+    setPrevKey(key);
+    if (messageIds.length === 0) setRows([]);
+  }
 
   useEffect(() => {
-    if (messageIds.length === 0) {
-      setRows([]);
-      return;
-    }
+    if (messageIds.length === 0) return;
     let active = true;
 
     async function load() {

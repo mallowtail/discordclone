@@ -33,6 +33,7 @@ export function MemberRolesDialog({
   }, [supabase, serverId, userId]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reload() only sets state after its await (async fetch-on-mount)
     reload();
   }, [reload]);
 

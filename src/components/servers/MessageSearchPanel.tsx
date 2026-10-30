@@ -10,27 +10,33 @@ import { EmptyState } from "@/components/ui/EmptyState";
 
 /** Always-visible search input for the channel header (right of the Members button). */
 export function SearchBox({ search }: { search: MessageSearch }) {
+  // Destructure up front: the hook result carries `inputRef`, and reading other fields off the
+  // same object during render trips the React Compiler's refs rule.
+  const {
+    inputRef, raw, onChange, onKeyDown, onKeyUp, onClick, onBlur,
+    dropdownVisible, suggestions, activeIdx, setActiveIdx, acceptSuggestion,
+  } = search;
   return (
     <div className="relative ml-3 w-48">
       <MagnifyingGlass size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
       <input
-        ref={search.inputRef}
-        value={search.raw}
+        ref={inputRef}
+        value={raw}
         aria-label="Search messages"
-        onChange={search.onChange}
-        onKeyDown={search.onKeyDown}
-        onKeyUp={search.onKeyUp}
-        onClick={search.onClick}
-        onBlur={search.onBlur}
+        onChange={onChange}
+        onKeyDown={onKeyDown}
+        onKeyUp={onKeyUp}
+        onClick={onClick}
+        onBlur={onBlur}
         placeholder="Search"
         className="w-full pl-7 pr-2 py-1 rounded-row bg-surface-2 text-meta font-normal text-ink placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-accent"
       />
-      {search.dropdownVisible && (
+      {dropdownVisible && (
         <SearchSuggestions
-          suggestions={search.suggestions}
-          active={search.activeIdx}
-          onHover={search.setActiveIdx}
-          onPick={search.acceptSuggestion}
+          suggestions={suggestions}
+          active={activeIdx}
+          onHover={setActiveIdx}
+          onPick={acceptSuggestion}
         />
       )}
     </div>

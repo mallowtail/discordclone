@@ -35,6 +35,7 @@ export function ForwardedBlock({ snapshot }: { snapshot: ForwardSnapshot }) {
           <span className="text-muted text-meta">from {snapshot.source}</span>
         </div>
         {snapshot.content && <div className="text-ink text-body break-words leading-relaxed">{snapshot.content}</div>}
+        {/* eslint-disable-next-line @next/next/no-img-element -- user-uploaded Supabase storage content, not a static asset */}
         {img && <img src={img} alt="" className="mt-1 max-h-60 rounded-row" />}
         {file && (
           <a href={withDownloadName(file, snapshot.file_name)} download={snapshot.file_name ?? undefined} target="_blank" rel="noreferrer" className="mt-1 inline-block text-accent text-body hover:underline">

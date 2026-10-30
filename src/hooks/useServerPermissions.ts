@@ -46,6 +46,7 @@ export function useServerPermissions(serverId: string | null): {
   }, [supabase, serverId, user]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- load() is also the public refresh(); its sync branch resets perms/loading per server
     load();
   }, [load]);
 

@@ -60,10 +60,18 @@ export function useMessageSearch(serverId: string) {
   if (token !== prevToken) { setPrevToken(token); setActiveIdx(0); }
   const dropdownVisible = acOpen && suggestions.length > 0;
 
+  // Clearing the committed query empties the results. Adjusted during render when the query
+  // changes (React's "store the previous prop" pattern) instead of in the fetch effect.
+  const [prevQuery, setPrevQuery] = useState(query);
+  if (query !== prevQuery) {
+    setPrevQuery(query);
+    if (!query.trim()) { setResults([]); setError(null); setTotal(0); }
+  }
+
   // Fetch the current page of the COMMITTED query (set on Enter) — never on every keystroke.
   useEffect(() => {
     const q = query.trim();
-    if (!q) { setResults([]); setError(null); setTotal(0); return; }
+    if (!q) return;
     let active = true;
     (async () => {
       setBusy(true); setError(null);

@@ -40,6 +40,14 @@ export function MembersPanel({ serverId }: { serverId: string }) {
   const [loaded, setLoaded] = useState(false);
   const [managingUser, setManagingUser] = useState<string | null>(null);
 
+  // Switching servers: show the skeleton rather than flash the old roster. Adjusted during
+  // render when serverId changes (React's "store the previous prop" pattern), not in the effect.
+  const [prevServerId, setPrevServerId] = useState(serverId);
+  if (serverId !== prevServerId) {
+    setPrevServerId(serverId);
+    setLoaded(false);
+  }
+
   const load = useCallback(async () => {
     const { data: rows } = await supabase.from("server_members").select("user_id, timeout_until, profiles(*)").eq("server_id", serverId);
     setMembers(
@@ -55,7 +63,7 @@ export function MembersPanel({ serverId }: { serverId: string }) {
   }, [supabase, serverId]);
 
   useEffect(() => {
-    setLoaded(false); // switching servers: show the skeleton rather than flash the old roster
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- load() only sets state after its await (async fetch-on-mount)
     load();
     const channel = supabase
       .channel(`members:${serverId}`)

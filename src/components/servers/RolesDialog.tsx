@@ -29,6 +29,7 @@ export function RolesDialog({ serverId, onClose }: { serverId: string; onClose: 
   }, [supabase, serverId]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reload() only sets state after its await (async fetch-on-mount)
     reload();
   }, [reload]);
 

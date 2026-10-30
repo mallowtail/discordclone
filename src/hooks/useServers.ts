@@ -27,6 +27,7 @@ export function useServers(): { servers: Server[]; reload: () => void } {
   }, [supabase, user]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reload() is also the public reload; its sync branch clears servers on sign-out
     reload();
     if (!user) return;
     const channel = supabase

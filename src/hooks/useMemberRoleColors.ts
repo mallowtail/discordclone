@@ -20,6 +20,7 @@ export function useMemberRoleColors(serverId: string | null | undefined): {
 
   useEffect(() => {
     if (!serverId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- resets roles/loading per serverId at the start of the fetch effect; keeps realtime topics untouched
       setByUser(new Map());
       setLoading(false);
       return;

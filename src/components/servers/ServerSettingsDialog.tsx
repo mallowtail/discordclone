@@ -47,7 +47,10 @@ export function ServerSettingsDialog({
     setBans((data ?? []).map((b: any) => ({ user_id: b.user_id, reason: b.reason, profile: b.profiles })));
   }, [supabase, server.id, canBan]);
 
-  useEffect(() => { loadBans(); }, [loadBans]);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- loadBans() only sets state after its await (async fetch-on-mount)
+    loadBans();
+  }, [loadBans]);
 
   async function unban(userId: string) {
     await supabase.rpc("unban_member", { srv: server.id, target: userId });

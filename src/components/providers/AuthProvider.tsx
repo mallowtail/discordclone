@@ -47,6 +47,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [supabase, user]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- shared public refetch; its null-user branch clears the old profile on sign-out
     refreshProfile();
   }, [refreshProfile]);
 

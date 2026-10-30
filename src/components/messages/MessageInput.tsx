@@ -120,6 +120,7 @@ export function MessageInput({
     const draft = v.value;
     setText("");
     resetHeight();
+    onTyping?.(false); // stop right away, not after the insert round-trip
     const id = crypto.randomUUID();
     const optimistic: Message = {
       id,
@@ -149,7 +150,6 @@ export function MessageInput({
       setError("Failed to send — try again");
       return;
     }
-    onTyping?.(false);
     onClearReply?.();
   }
 
@@ -162,6 +162,7 @@ export function MessageInput({
     if (uploading) return;
     setError(null);
     setUploading(true);
+    onTyping?.(false); // the send starts now; don't keep "typing" through the upload
     const content = text.trim();
     const res = await uploadAndPostFile({
       supabase,
@@ -177,7 +178,6 @@ export function MessageInput({
     if (res.error) return setError(res.error);
     setText("");
     resetHeight();
-    onTyping?.(false);
     onClearReply?.();
   }
 

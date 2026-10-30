@@ -66,6 +66,7 @@ export function useTyping(topic: string | null) {
       const ch = supabase.channel(topic, { config: { private: true, broadcast: { self: false } } });
       ch.on("broadcast", { event: "typing" }, (msg) => {
         if (cancelled) return;
+        // user_id/name are sender-supplied (members-only via RLS; entries expire after 5 s anyway).
         const p = msg.payload as Partial<TypingPayload> | undefined;
         if (!p || typeof p.user_id !== "string" || p.user_id === userId) return;
         const id = p.user_id;
@@ -108,6 +109,8 @@ export function useTyping(topic: string | null) {
       if (channelRef.current === channel) channelRef.current = null;
       joinedRef.current = false;
       lastSentRef.current = 0;
+      // Forget this topic's typists so returning to it (A→B→A) never shows stale entries.
+      setState({ topic: null, typists: NONE });
     };
   }, [supabase, topic, userId]);
 

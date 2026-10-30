@@ -15,6 +15,9 @@ type State = {
   messages: Message[];
   hasMore: boolean;
   loadingOlder: boolean;
+  /** The last older-page fetch failed; MessageList stops AUTO-retrying (fill-viewport) until a
+   * user scroll retries successfully or the target changes. */
+  olderFailed: boolean;
   anchorFound: boolean;
   /** A server page has landed; later (reconnect) loads keep the paged `hasMore` instead. */
   loaded: boolean;
@@ -25,7 +28,7 @@ type State = {
 const EMPTY: Message[] = [];
 
 function fresh(key: string): State {
-  return { key, messages: EMPTY, hasMore: true, loadingOlder: false, anchorFound: false, loaded: false };
+  return { key, messages: EMPTY, hasMore: true, loadingOlder: false, olderFailed: false, anchorFound: false, loaded: false };
 }
 
 export function useMessages(target: Target) {
@@ -102,6 +105,8 @@ export function useMessages(target: Target) {
             hasMore: s.loaded ? s.hasMore : nextHasMore(s.hasMore, before, MESSAGE_PAGE),
             anchorFound: true,
             loaded: s.loaded || beforeOk,
+            // a successful (re)load — e.g. realtime reconnect — re-enables auto fill-viewport
+            olderFailed: beforeOk ? false : s.olderFailed,
           }));
           return;
         }
@@ -122,6 +127,7 @@ export function useMessages(target: Target) {
         hasMore: s.loaded ? s.hasMore : nextHasMore(s.hasMore, recent, MESSAGE_PAGE),
         anchorFound: false,
         loaded: s.loaded || ok,
+        olderFailed: ok ? false : s.olderFailed,
       }));
     }
     load();
@@ -174,6 +180,8 @@ export function useMessages(target: Target) {
 
     olderInFlight.current = callKey;
     update(callKey, (s) => ({ ...s, loadingOlder: true }));
+    // Assume failure until a response is applied; a thrown error (network) also counts.
+    let failed = true;
     try {
       const result = await supabase
         .from("messages")
@@ -184,17 +192,24 @@ export function useMessages(target: Target) {
         .limit(MESSAGE_PAGE);
       // Stale guard: the user switched chats while this page was in flight → drop it.
       if (keyRef.current !== callKey) return;
-      const page = ((result.data ?? []) as Message[]).reverse();
-      // On error hasMore stays as-is (only loadingOlder clears below), so a later scroll retries.
+      // On error leave messages/hasMore untouched (only the flags change below), so a later
+      // user scroll can retry; `olderFailed` stops the automatic fill-viewport retry.
+      if (result.error || !result.data) return;
+      failed = false;
+      const page = (result.data as Message[]).reverse();
       update(callKey, (s) => ({
         ...s,
         messages: mergeMessages(s.messages, page),
         hasMore: nextHasMore(s.hasMore, result, MESSAGE_PAGE),
       }));
+    } catch {
+      // network/client throw → treated as a failed page (failed stays true)
     } finally {
       if (olderInFlight.current === callKey) olderInFlight.current = null;
       // Clear the flag on whatever state still belongs to this target (never seed a fresh one).
-      setState((prev) => (prev.key === callKey ? { ...prev, loadingOlder: false } : prev));
+      setState((prev) =>
+        prev.key === callKey ? { ...prev, loadingOlder: false, olderFailed: failed } : prev
+      );
     }
   }, [key, current.loadingOlder, current.hasMore, current.messages, supabase, column, value, update]);
 
@@ -205,6 +220,7 @@ export function useMessages(target: Target) {
     anchored: !!anchorId && current.anchorFound,
     loadOlder,
     loadingOlder: current.loadingOlder,
+    olderFailed: current.olderFailed,
     hasMore: current.hasMore,
   };
 }

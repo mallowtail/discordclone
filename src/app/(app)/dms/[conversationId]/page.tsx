@@ -56,7 +56,7 @@ function DmView({ conversationId }: { conversationId: string }) {
   const [replyTo, setReplyTo] = useState<Message | null>(null);
   const [replyToName, setReplyToName] = useState("");
   const [showPins, setShowPins] = useState(false);
-  const { messages, addPending, removePending, anchored, loadOlder, loadingOlder, hasMore } =
+  const { messages, addPending, removePending, anchored, loadOlder, loadingOlder, olderFailed, hasMore } =
     useMessages({ conversationId, anchorId });
   const pinned = messages.filter((m) => m.pinned);
   const { open: drawerOpen, toggleDrawer } = useDrawer();
@@ -146,6 +146,7 @@ function DmView({ conversationId }: { conversationId: string }) {
           anchored={anchored}
           onLoadOlder={loadOlder}
           loadingOlder={loadingOlder}
+          olderFailed={olderFailed}
           hasMore={hasMore}
           startLabel="This is the start of your conversation"
         />

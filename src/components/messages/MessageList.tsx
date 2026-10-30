@@ -53,6 +53,7 @@ export function MessageList({
   anchored,
   onLoadOlder,
   loadingOlder = false,
+  olderFailed = false,
   hasMore = false,
   startLabel,
 }: {
@@ -64,6 +65,8 @@ export function MessageList({
   /** Fetch the next older page; called near the top of the scroll area and to fill a short viewport. */
   onLoadOlder?: () => void;
   loadingOlder?: boolean;
+  /** Last older-page fetch failed: suppress the automatic fill-viewport retry (scroll still retries). */
+  olderFailed?: boolean;
   hasMore?: boolean;
   /** Shown above the first message once there's no older history left. */
   startLabel?: string;
@@ -178,12 +181,12 @@ export function MessageList({
   }, [messages, anchorId, anchored]);
 
   // Fill the viewport: if a settled page doesn't overflow, keep pulling older pages until it
-  // does or history runs out.
+  // does or history runs out. Never auto-retries after a failure (no request storm while offline).
   useEffect(() => {
     const el = scrollRef.current;
-    if (!el || stillLoading || messages.length === 0) return;
+    if (!el || stillLoading || messages.length === 0 || olderFailed) return;
     if (el.scrollHeight <= el.clientHeight && hasMore && !loadingOlder) onLoadOlder?.();
-  }, [messages, hasMore, loadingOlder, stillLoading, onLoadOlder]);
+  }, [messages, hasMore, loadingOlder, olderFailed, stillLoading, onLoadOlder]);
 
   function onScroll() {
     const el = scrollRef.current;

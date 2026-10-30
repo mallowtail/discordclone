@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { MESSAGE_PAGE, mergeMessages, nextHasMore } from "@/lib/messagePaging";
+import { MESSAGE_PAGE, mergeMessages, nextHasMore, reconcileNewestPage } from "@/lib/messagePaging";
 import type { Message } from "@/types/db";
 
 type Target =
@@ -121,14 +121,22 @@ export function useMessages(target: Target) {
       if (!active) return;
       const page = ((recent.data ?? []) as Message[]).reverse();
       const ok = !recent.error && !!recent.data;
-      update(key, (s) => ({
-        ...s,
-        messages: mergeMessages(s.messages, page),
-        hasMore: s.loaded ? s.hasMore : nextHasMore(s.hasMore, recent, MESSAGE_PAGE),
-        anchorFound: false,
-        loaded: s.loaded || ok,
-        olderFailed: ok ? false : s.olderFailed,
-      }));
+      update(key, (s) => {
+        // Reconnect after a long outage: a full newest page disjoint from what we hold means a
+        // hole loadOlder could never fill → reconcileNewestPage replaces the list and we reset
+        // hasMore so scrolling up pages back through the missed messages.
+        const r = s.loaded && ok
+          ? reconcileNewestPage(s.messages, page, MESSAGE_PAGE)
+          : { messages: mergeMessages(s.messages, page), replaced: false };
+        return {
+          ...s,
+          messages: r.messages,
+          hasMore: r.replaced ? true : s.loaded ? s.hasMore : nextHasMore(s.hasMore, recent, MESSAGE_PAGE),
+          anchorFound: false,
+          loaded: s.loaded || ok,
+          olderFailed: ok ? false : s.olderFailed,
+        };
+      });
     }
     load();
 
@@ -197,11 +205,17 @@ export function useMessages(target: Target) {
       if (result.error || !result.data) return;
       failed = false;
       const page = (result.data as Message[]).reverse();
-      update(callKey, (s) => ({
-        ...s,
-        messages: mergeMessages(s.messages, page),
-        hasMore: nextHasMore(s.hasMore, result, MESSAGE_PAGE),
-      }));
+      update(callKey, (s) =>
+        // The list was replaced meanwhile (reconnect gap reset) — this page belongs below rows we
+        // no longer hold and would re-open the gap; drop it (a later scroll pages from the new oldest).
+        !s.messages.some((m) => m.id === oldest.id)
+          ? s
+          : {
+              ...s,
+              messages: mergeMessages(s.messages, page),
+              hasMore: nextHasMore(s.hasMore, result, MESSAGE_PAGE),
+            }
+      );
     } catch {
       // network/client throw → treated as a failed page (failed stays true)
     } finally {

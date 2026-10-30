@@ -45,3 +45,28 @@ export function nextHasMore(
   if (result.error || !result.data) return prevHasMore;
   return hasMoreAfter(result.data.length, pageSize);
 }
+
+/**
+ * Fold a freshly fetched newest page into an ALREADY-LOADED list (e.g. on realtime reconnect).
+ *
+ * Normally the page overlaps what we have, so it's merged. But if more than a page arrived while
+ * offline, a full page sharing no id with the confirmed (non-pending) rows means there's a hole
+ * between it and our history that loadOlder (which pages from the oldest loaded row) would never
+ * fill. Then the page REPLACES the list — pending (optimistic) rows are kept — and `replaced`
+ * tells the caller to reset `hasMore` to true so scrolling up pages back through the gap.
+ * A short page is the whole tail of the chat, so it can't leave a gap → merge.
+ */
+export function reconcileNewestPage(
+  prev: Message[],
+  page: Message[],
+  pageSize: number
+): { messages: Message[]; replaced: boolean } {
+  const confirmed = prev.filter((m) => !m.pending);
+  if (page.length >= pageSize && confirmed.length > 0) {
+    const pageIds = new Set(page.map((m) => m.id));
+    if (!confirmed.some((m) => pageIds.has(m.id))) {
+      return { messages: mergeMessages(page, prev.filter((m) => m.pending)), replaced: true };
+    }
+  }
+  return { messages: mergeMessages(prev, page), replaced: false };
+}

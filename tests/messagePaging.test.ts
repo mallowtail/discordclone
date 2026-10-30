@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { mergeMessages, hasMoreAfter, nextHasMore, MESSAGE_PAGE } from "@/lib/messagePaging";
+import { mergeMessages, hasMoreAfter, nextHasMore, reconcileNewestPage, MESSAGE_PAGE } from "@/lib/messagePaging";
 import type { Message } from "@/types/db";
 
 function msg(id: string, created_at: string, extra: Partial<Message> = {}): Message {
@@ -93,5 +93,68 @@ describe("nextHasMore", () => {
     expect(nextHasMore(true, { data: [], error: null }, MESSAGE_PAGE)).toBe(false);
     expect(nextHasMore(true, { data: [1, 2], error: null }, MESSAGE_PAGE)).toBe(false);
     expect(nextHasMore(false, { data: full, error: null }, MESSAGE_PAGE)).toBe(true);
+  });
+});
+
+describe("reconcileNewestPage", () => {
+  // minute-spaced rows; index → timestamp so later ids are newer
+  const at = (i: number) => new Date(Date.UTC(2026, 9, 30, 10, 0, 0) + i * 60_000).toISOString();
+  const range = (from: number, n: number) => Array.from({ length: n }, (_, k) => msg(`r${from + k}`, at(from + k)));
+
+  it("overlapping full page → merge (history kept, nothing replaced)", () => {
+    const prev = range(0, 80); // r0..r79
+    const page = range(60, 4); // r60..r63, size 4 = full for pageSize 4
+    const { messages, replaced } = reconcileNewestPage(prev, page, 4);
+    expect(replaced).toBe(false);
+    expect(messages.map((m) => m.id)).toEqual(prev.map((m) => m.id));
+  });
+
+  it("overlapping full page that extends the tail → merged in order", () => {
+    const prev = range(0, 10);
+    const page = range(8, 5); // r8..r12
+    const { messages, replaced } = reconcileNewestPage(prev, page, 5);
+    expect(replaced).toBe(false);
+    expect(messages.map((m) => m.id)).toEqual(range(0, 13).map((m) => m.id));
+  });
+
+  it("full page with no overlap → replaces confirmed rows, keeps pending", () => {
+    const prev = [...range(0, 10), msg("p1", at(200), { pending: true })];
+    const page = range(100, 5); // r100..r104 — a gap after r9
+    const { messages, replaced } = reconcileNewestPage(prev, page, 5);
+    expect(replaced).toBe(true);
+    expect(messages.map((m) => m.id)).toEqual(["r100", "r101", "r102", "r103", "r104", "p1"]);
+  });
+
+  it("pending rows don't count as overlap", () => {
+    const pendingDup = msg("r100", at(100), { pending: true });
+    const prev = [...range(0, 3), pendingDup];
+    const page = range(100, 3);
+    const { messages, replaced } = reconcileNewestPage(prev, page, 3);
+    expect(replaced).toBe(true);
+    // the confirmed server row wins over the pending copy
+    expect(messages.map((m) => m.id)).toEqual(["r100", "r101", "r102"]);
+    expect(messages[0].pending).toBeFalsy();
+  });
+
+  it("short page with no overlap → merge (it is the whole tail, no gap possible)", () => {
+    const prev = range(0, 5);
+    const page = range(100, 2);
+    const { messages, replaced } = reconcileNewestPage(prev, page, 5);
+    expect(replaced).toBe(false);
+    expect(messages.map((m) => m.id)).toEqual([...range(0, 5), ...range(100, 2)].map((m) => m.id));
+  });
+
+  it("nothing confirmed loaded yet → merge", () => {
+    const prev = [msg("p1", at(200), { pending: true })];
+    const page = range(100, 3);
+    const { messages, replaced } = reconcileNewestPage(prev, page, 3);
+    expect(replaced).toBe(false);
+    expect(messages.map((m) => m.id)).toEqual(["r100", "r101", "r102", "p1"]);
+  });
+
+  it("works with the real page size", () => {
+    const prev = range(0, MESSAGE_PAGE);
+    const page = range(1000, MESSAGE_PAGE);
+    expect(reconcileNewestPage(prev, page, MESSAGE_PAGE).replaced).toBe(true);
   });
 });

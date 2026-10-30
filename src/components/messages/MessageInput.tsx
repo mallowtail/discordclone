@@ -259,6 +259,8 @@ export function MessageInput({
               onClick={() => setMenuOpen((o) => !o)}
               title="Add"
               aria-label="Add attachment"
+              aria-haspopup="menu"
+              aria-expanded={menuOpen}
               disabled={uploading || !!timedOutUntil}
               className="w-11 h-11 md:w-8 md:h-8 flex items-center justify-center rounded-full bg-surface-2 text-muted hover:text-ink text-lg leading-none disabled:opacity-50"
             >
@@ -315,7 +317,8 @@ export function MessageInput({
               type="button"
               onClick={() => setEmojiOpen((o) => !o)}
               title="Emoji"
-              aria-label="Emoji"
+              aria-label="Add emoji"
+              aria-expanded={emojiOpen}
               disabled={!!timedOutUntil}
               className="w-11 h-11 md:w-8 md:h-8 flex items-center justify-center rounded-full text-muted hover:text-ink text-lg leading-none"
             >

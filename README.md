@@ -1,36 +1,51 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Friends Chat
 
-## Getting Started
+A Discord-style chat app built for a group of about 30 school friends. It has servers with channels, direct messages, roles and permissions, moderation tools, message search, reactions, pinned messages, invite links, online presence, and typing indicators.
 
-First, run the development server:
+## Tech stack
+
+- **Next.js 16** (React) for the website
+- **Supabase** for the database (Postgres), sign-in (Auth), live updates (Realtime), and file uploads (Storage)
+- **Vercel** for hosting
+
+## Running it on your computer
+
+1. Install the packages:
+   ```bash
+   npm install
+   ```
+2. Copy `.env.example` to `.env.local`:
+   ```bash
+   cp .env.example .env.local
+   ```
+3. Open `.env.local` and fill in the two values from your Supabase dashboard (Settings, then API):
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+4. Start the dev server:
+   ```bash
+   npm run dev
+   ```
+5. Open http://localhost:3000 in your browser.
+
+## Useful commands
+
+| Command | What it does |
+| --- | --- |
+| `npm test` | Runs the automated tests |
+| `npm run lint` | Checks the code for common mistakes and style problems |
+| `npx tsc --noEmit` | Checks the TypeScript types |
+| `npm run build` | Makes a production build, like Vercel does |
+
+## Database changes (migrations)
+
+The database setup lives as numbered SQL files in `supabase/migrations/`. To apply new ones to your Supabase project, run:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npx supabase db push
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+This changes the real database, so read the new SQL file before you run it.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Where the plans live
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Design specs and implementation plans are in `docs/superpowers/` (`specs/` for what we decided to build, `plans/` for the step-by-step tasks).

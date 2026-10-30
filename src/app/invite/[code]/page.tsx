@@ -29,7 +29,7 @@ export default function InvitePage({ params }: { params: Promise<{ code: string 
   useEffect(() => {
     if (authLoading) return;
     if (!user) {
-      router.replace(`/login?next=/invite/${code}`);
+      router.replace(`/login?next=/invite/${encodeURIComponent(code)}`);
       return;
     }
     (async () => {

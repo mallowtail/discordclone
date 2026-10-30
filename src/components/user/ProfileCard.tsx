@@ -43,6 +43,7 @@ export function ProfileCard({
   const [bioOverflows, setBioOverflows] = useState(false);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
 
   const { colorFor, rolesFor } = useMemberRoleColors(serverId);
   const { isOnline } = usePresence();
@@ -86,11 +87,14 @@ export function ProfileCard({
   async function send() {
     if (sending) return;
     const v = validateMessage(draft);
-    if (!v.ok || !user) return;
+    if (!v.ok) { setSendError(v.error ?? "Message can't be sent"); return; }
+    if (!user) return;
+    setSendError(null);
     setSending(true);
     const convId = await openDmWith(supabase, user.id, userId);
-    if (!convId) { setSending(false); return; }
-    await supabase.from("messages").insert({ conversation_id: convId, author_id: user.id, content: v.value });
+    if (!convId) { setSending(false); setSendError("Couldn't open the conversation — try again"); return; }
+    const { error } = await supabase.from("messages").insert({ conversation_id: convId, author_id: user.id, content: v.value });
+    if (error) { setSending(false); setSendError("Couldn't send — try again"); return; }
     router.push(`/dms/${convId}`);
     onClose();
   }
@@ -107,6 +111,8 @@ export function ProfileCard({
   return createPortal(
     <div
       ref={cardRef}
+      role="dialog"
+      aria-label={`${profile?.display_name ?? "User"}'s profile`}
       style={{
         position: "fixed",
         top: pos?.top ?? -9999,
@@ -160,7 +166,7 @@ export function ProfileCard({
         <div className="border-t border-line p-2">
           <input
             value={draft}
-            onChange={(e) => setDraft(e.target.value)}
+            onChange={(e) => { setDraft(e.target.value); setSendError(null); }}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
             }}
@@ -168,6 +174,7 @@ export function ProfileCard({
             placeholder={`Message @${profile?.username ?? "user"}`}
             className="w-full p-2 rounded-xl bg-surface-2 text-ink text-body leading-5 outline-none disabled:opacity-50"
           />
+          {sendError && <p className="text-danger text-meta mt-1">{sendError}</p>}
         </div>
       )}
     </div>,

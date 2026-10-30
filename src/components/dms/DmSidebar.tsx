@@ -104,7 +104,16 @@ export function DmSidebar() {
                   />
                 )}
                 <span
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`View ${d.other?.display_name ?? "user"}'s profile`}
                   onClick={(e) => { e.preventDefault(); e.stopPropagation(); if (!d.other) return; open(d.other.id, e.currentTarget.getBoundingClientRect()); }}
+                  onKeyDown={(e) => {
+                    if (e.key !== "Enter" && e.key !== " ") return;
+                    e.preventDefault(); e.stopPropagation();
+                    if (!d.other) return;
+                    open(d.other.id, e.currentTarget.getBoundingClientRect());
+                  }}
                   className="flex-none cursor-pointer"
                 >
                   <Avatar

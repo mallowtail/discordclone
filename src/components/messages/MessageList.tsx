@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { Message, Profile } from "@/types/db";
 import { MessageItem } from "@/components/messages/MessageItem";
@@ -51,17 +51,36 @@ export function MessageList({
   serverId,
   anchorId,
   anchored,
+  onLoadOlder,
+  loadingOlder = false,
+  hasMore = false,
+  startLabel,
 }: {
   messages: Message[];
   onReply?: (m: Message, authorName: string) => void;
   serverId?: string;
   anchorId?: string | null;
   anchored?: boolean;
+  /** Fetch the next older page; called near the top of the scroll area and to fill a short viewport. */
+  onLoadOlder?: () => void;
+  loadingOlder?: boolean;
+  hasMore?: boolean;
+  /** Shown above the first message once there's no older history left. */
+  startLabel?: string;
 }) {
   const supabase = createClient();
   const [profiles, setProfiles] = useState<Record<string, Profile>>({});
   const [flashId, setFlashId] = useState<string | null>(null);
-  const bottom = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  // Whether the view sits at (near) the bottom — updated on scroll; decides whether a new
+  // message should pull the view down.
+  const atBottomRef = useRef(true);
+  // What the previous commit rendered: the array instance, its first/last ids, and the first
+  // message row's offsetTop + the container's scrollTop at that time. Used to keep the view
+  // still when content is inserted above it (older page, top skeleton rows, start label).
+  const prevRef = useRef<{ messages: Message[] | null; first: string | null; last: string | null; offset: number; top: number }>(
+    { messages: null, first: null, last: null, offset: 0, top: 0 }
+  );
   const flashedRef = useRef<string | null>(null);
   const { user, profile: myProfile } = useAuth();
   const [attempted, setAttempted] = useState<Record<string, true>>({});
@@ -90,21 +109,85 @@ export function MessageList({
     });
   }, [messages, profiles, attempted, supabase]);
 
-  // scroll to / flash the anchor once per anchorId; otherwise go to present
+  // Runs after every commit, before paint. Decides where the view goes:
+  //  - first content (initial load, chat switch, Jump to present) → bottom, instantly;
+  //  - messages changed (not a prepend) while at the bottom, or my own new message → bottom;
+  //  - otherwise, if content above the first row changed (older page prepended, top skeleton
+  //    rows / start label shown or hidden), shift scrollTop by the same amount so nothing moves.
+  // Anchored (`?msg=`) views never auto-scroll to the bottom; the anchor effect below positions them.
+  useLayoutEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const prev = prevRef.current;
+    const first = messages[0]?.id ?? null;
+    const last = messages[messages.length - 1]?.id ?? null;
+    const changed = messages !== prev.messages;
+    const isPrepend = prev.first !== null && first !== prev.first && last === prev.last;
+    let toBottom = false;
+
+    if (first === null) {
+      atBottomRef.current = true;                              // loading / empty → next content is a first load
+    } else if (!(anchorId && anchored)) {
+      const firstLoad = prev.first === null;
+      const ownAppend = last !== prev.last && messages[messages.length - 1].author_id === user?.id;
+      if (firstLoad) {
+        el.scrollTop = el.scrollHeight;
+        toBottom = true;
+      } else if (changed && !isPrepend && (atBottomRef.current || ownAppend)) {
+        el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+        toBottom = true;
+      }
+    }
+
+    if (toBottom) {
+      atBottomRef.current = true;
+    } else if (first !== null && prev.first !== null) {
+      const row = document.getElementById(`msg-${prev.first}`);
+      // Only touch scrollTop/atBottom when the top actually shifted, so an unrelated commit
+      // (profile names landing) mid-smooth-scroll can't misread "not at bottom".
+      const delta = row ? row.offsetTop - prev.offset : 0;
+      if (delta !== 0 || (!row && isPrepend)) {
+        el.scrollTop = prev.top + delta;                       // !row: old top row gone; best effort
+        atBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 150;
+      }
+    }
+
+    const firstRow = first ? document.getElementById(`msg-${first}`) : null;
+    prevRef.current = { messages, first, last, offset: firstRow?.offsetTop ?? 0, top: el.scrollTop };
+  });
+
+  // scroll to / flash the anchor once per anchorId
   useEffect(() => {
     if (anchorId && anchored) {
       if (flashedRef.current === anchorId) return;           // already scrolled+flashed this anchor
       const el = document.getElementById(`msg-${anchorId}`);
       if (el) {
-        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        // instant, not smooth: a smooth scroll starting at the top would trip load-older mid-animation
+        el.scrollIntoView({ behavior: "instant", block: "center" });
+        if (scrollRef.current) prevRef.current.top = scrollRef.current.scrollTop;
         setFlashId(anchorId);
         flashedRef.current = anchorId;
       }
       return;                                                // not mounted yet; a later messages update retries
     }
     flashedRef.current = null;                               // reset so returning to an anchor later re-flashes
-    bottom.current?.scrollIntoView({ behavior: "smooth" });  // normal / garbage-id path → go to present
   }, [messages, anchorId, anchored]);
+
+  // Fill the viewport: if a settled page doesn't overflow, keep pulling older pages until it
+  // does or history runs out.
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el || stillLoading || messages.length === 0) return;
+    if (el.scrollHeight <= el.clientHeight && hasMore && !loadingOlder) onLoadOlder?.();
+  }, [messages, hasMore, loadingOlder, stillLoading, onLoadOlder]);
+
+  function onScroll() {
+    const el = scrollRef.current;
+    if (!el) return;
+    prevRef.current.top = el.scrollTop;
+    atBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 150;
+    if (el.scrollTop < 200 && hasMore && !loadingOlder && !stillLoading) onLoadOlder?.();
+  }
 
   // flash auto-clears after 2s; keyed on flashId so message updates can't cancel it
   useEffect(() => {
@@ -114,7 +197,16 @@ export function MessageList({
   }, [flashId]);
 
   return (
-    <div className="flex-1 overflow-y-auto py-3" aria-busy={stillLoading || undefined}>
+    <div ref={scrollRef} onScroll={onScroll} className="relative flex-1 overflow-y-auto py-3" aria-busy={stillLoading || undefined}>
+      {!stillLoading && loadingOlder && (
+        <>
+          <MessageRowSkeleton withHeader />
+          <MessageRowSkeleton withHeader={false} />
+        </>
+      )}
+      {!stillLoading && !hasMore && messages.length > 0 && startLabel && (
+        <p className="text-meta text-muted px-4 py-2">{startLabel}</p>
+      )}
       {stillLoading ? (
         // Real content hasn't arrived yet — approximate shape only (we don't know the real
         // message count/length yet), alternating a header-style row in with continuations so it
@@ -154,7 +246,6 @@ export function MessageList({
           );
         })
       )}
-      <div ref={bottom} />
     </div>
   );
 }

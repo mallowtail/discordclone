@@ -201,7 +201,8 @@ function ChannelView({ channel }: { channel: Channel }) {
   const router = useRouter();
   const pathname = usePathname();
   const anchorId = searchParams.get("msg");
-  const { messages, addPending, removePending, anchored } = useMessages({ channelId: channel.id, anchorId });
+  const { messages, addPending, removePending, anchored, loadOlder, loadingOlder, hasMore } =
+    useMessages({ channelId: channel.id, anchorId });
   const [replyTo, setReplyTo] = useState<Message | null>(null);
   const [replyToName, setReplyToName] = useState("");
   const [showPins, setShowPins] = useState(false);
@@ -286,6 +287,10 @@ function ChannelView({ channel }: { channel: Channel }) {
             serverId={channel.server_id}
             anchorId={anchorId}
             anchored={anchored}
+            onLoadOlder={loadOlder}
+            loadingOlder={loadingOlder}
+            hasMore={hasMore}
+            startLabel={`This is the start of #${channel.name}`}
           />
           {anchored && (
             <button

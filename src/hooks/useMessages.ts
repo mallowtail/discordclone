@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { MESSAGE_PAGE, hasMoreAfter, mergeMessages } from "@/lib/messagePaging";
 import type { Message } from "@/types/db";
@@ -44,6 +44,12 @@ export function useMessages(target: Target) {
   const keyRef = useRef(key);
   // Guards concurrent loadOlder calls before `loadingOlder` state has re-rendered.
   const olderInFlight = useRef<string | null>(null);
+  // Realtime topic must be unique per hook instance AND per effect run: supabase-js hands back an
+  // existing channel for a reused topic, and `removeChannel` is async, so an effect re-run (anchor
+  // change, StrictMode) could get the still-closing old channel and `.on()` after subscribe()
+  // throws. Same fix as useMemberRoleColors.ts / useServers.ts, plus a run counter.
+  const instanceId = useId();
+  const runRef = useRef(0);
 
   /** Apply `fn` to the state for target `k`, starting from fresh if the stored state is another target's. */
   const update = useCallback((k: string, fn: (s: State) => State) => {
@@ -68,6 +74,7 @@ export function useMessages(target: Target) {
   useEffect(() => {
     keyRef.current = key;
     let active = true;
+    const run = ++runRef.current;
 
     // Fetches the newest page (or the anchored window) and MERGES it into existing state, so a
     // realtime reconnect (SUBSCRIBED fires again) never wipes history paged in via loadOlder.
@@ -116,7 +123,7 @@ export function useMessages(target: Target) {
     load();
 
     const channel = supabase
-      .channel(`messages:${column}:${value}`)
+      .channel(`messages:${column}:${value}:${instanceId}:${run}`)
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "messages", filter: `${column}=eq.${value}` },
@@ -153,7 +160,7 @@ export function useMessages(target: Target) {
       active = false;
       supabase.removeChannel(channel);
     };
-  }, [supabase, column, value, anchorId, key, update]);
+  }, [supabase, column, value, anchorId, key, update, instanceId]);
 
   const loadOlder = useCallback(async () => {
     const callKey = key;

@@ -10,6 +10,8 @@ import { usePinnedMessages } from "@/hooks/usePinnedMessages";
 import { useUnread } from "@/hooks/useUnread";
 import { MessageList, MessageRowSkeleton } from "@/components/messages/MessageList";
 import { MessageInput } from "@/components/messages/MessageInput";
+import { TypingIndicator } from "@/components/messages/TypingIndicator";
+import { useTyping } from "@/hooks/useTyping";
 import { MessageDropZone } from "@/components/messages/MessageDropZone";
 import { PinnedPanel } from "@/components/messages/PinnedPanel";
 import { MembersPanel } from "@/components/servers/MembersPanel";
@@ -204,6 +206,7 @@ function ChannelView({ channel }: { channel: Channel }) {
   const anchorId = searchParams.get("msg");
   const { messages, addPending, removePending, anchored, loadOlder, loadingOlder, olderFailed, hasMore } =
     useMessages({ channelId: channel.id, anchorId });
+  const typing = useTyping(`typing-channel:${channel.id}`);
   const [replyTo, setReplyTo] = useState<Message | null>(null);
   const [replyToName, setReplyToName] = useState("");
   const [showPins, setShowPins] = useState(false);
@@ -311,6 +314,7 @@ function ChannelView({ channel }: { channel: Channel }) {
               Jump to present ↓
             </button>
           )}
+          <TypingIndicator names={typing.names} />
           <MessageInput
             target={{ channel_id: channel.id }}
             placeholder={`Message #${channel.name}`}
@@ -319,6 +323,7 @@ function ChannelView({ channel }: { channel: Channel }) {
             onClearReply={() => setReplyTo(null)}
             addPending={addPending}
             removePending={removePending}
+            onTyping={(t) => (t ? typing.notifyTyping() : typing.notifyStopped())}
           />
         </MessageDropZone>
         {search.query.trim() ? (

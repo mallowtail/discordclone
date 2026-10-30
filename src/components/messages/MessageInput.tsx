@@ -28,6 +28,7 @@ export function MessageInput({
   onClearReply,
   addPending,
   removePending,
+  onTyping,
 }: {
   target: Target;
   placeholder: string;
@@ -36,6 +37,8 @@ export function MessageInput({
   onClearReply?: () => void;
   addPending: (m: Message) => void;
   removePending: (id: string) => void;
+  /** Composer went non-empty (true) or empty / was sent (false); drives the typing indicator. */
+  onTyping?: (typing: boolean) => void;
 }) {
   const supabase = createClient();
   const { user } = useAuth();
@@ -146,6 +149,7 @@ export function MessageInput({
       setError("Failed to send — try again");
       return;
     }
+    onTyping?.(false);
     onClearReply?.();
   }
 
@@ -173,6 +177,7 @@ export function MessageInput({
     if (res.error) return setError(res.error);
     setText("");
     resetHeight();
+    onTyping?.(false);
     onClearReply?.();
   }
 
@@ -277,6 +282,7 @@ export function MessageInput({
             value={text}
             onChange={(e) => {
               setText(e.target.value);
+              onTyping?.(e.target.value !== "");
               setCaret(e.target.selectionStart ?? e.target.value.length);
               autoGrow(e.target);
             }}

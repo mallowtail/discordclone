@@ -10,6 +10,8 @@ import { useMessages } from "@/hooks/useMessages";
 import { usePinnedMessages } from "@/hooks/usePinnedMessages";
 import { MessageList, MessageRowSkeleton } from "@/components/messages/MessageList";
 import { MessageInput } from "@/components/messages/MessageInput";
+import { TypingIndicator } from "@/components/messages/TypingIndicator";
+import { useTyping } from "@/hooks/useTyping";
 import { MessageDropZone } from "@/components/messages/MessageDropZone";
 import { PinnedPanel } from "@/components/messages/PinnedPanel";
 import { useDrawer } from "@/components/providers/DrawerProvider";
@@ -59,6 +61,7 @@ function DmView({ conversationId }: { conversationId: string }) {
   const [showPins, setShowPins] = useState(false);
   const { messages, addPending, removePending, anchored, loadOlder, loadingOlder, olderFailed, hasMore } =
     useMessages({ conversationId, anchorId });
+  const typing = useTyping(`typing-dm:${conversationId}`);
   const pinsState = usePinnedMessages({ conversationId }, showPins);
   const closePins = useCallback(() => setShowPins(false), []);
   const { open: drawerOpen, toggleDrawer } = useDrawer();
@@ -169,6 +172,7 @@ function DmView({ conversationId }: { conversationId: string }) {
             Jump to present ↓
           </button>
         )}
+        <TypingIndicator names={typing.names} />
         <MessageInput
           target={{ conversation_id: conversationId }}
           placeholder={`Message ${other?.display_name ?? ""}`}
@@ -177,6 +181,7 @@ function DmView({ conversationId }: { conversationId: string }) {
           onClearReply={() => setReplyTo(null)}
           addPending={addPending}
           removePending={removePending}
+          onTyping={(t) => (t ? typing.notifyTyping() : typing.notifyStopped())}
         />
       </MessageDropZone>
     </>

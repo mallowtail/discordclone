@@ -71,6 +71,17 @@ export function PinnedPanel({
     });
   }, [supabase, pins]);
 
+  // Fill the viewport: if a freshly landed page doesn't overflow the list, nothing can be scrolled
+  // to trigger the next one. Runs once per NEW pins array (i.e. after a successful page or a
+  // realtime change), never after a failed fetch (which leaves the array untouched) → no loop.
+  const lastFillCheck = useRef<Message[] | null>(null);
+  useEffect(() => {
+    const el = listRef.current;
+    if (!el || loading || !hasMore || pins.length === 0 || lastFillCheck.current === pins) return;
+    lastFillCheck.current = pins;
+    if (el.scrollHeight <= el.clientHeight) onLoadMore();
+  }, [pins, loading, hasMore, onLoadMore]);
+
   function onScroll() {
     const el = listRef.current;
     if (!el || !hasMore || loading) return;

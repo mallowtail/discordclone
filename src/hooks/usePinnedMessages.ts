@@ -8,8 +8,12 @@ import type { Message } from "@/types/db";
 type Target = { channelId: string } | { conversationId: string };
 
 type ListState = {
-  /** `column:value` this list belongs to; a mismatch means "target changed → empty". */
+  /** Target `column:value` this list belongs to. */
   key: string;
+  /** `key:session`: changes on every reset (panel close or target change). Async page results
+   * tagged with an older session are dropped, so a stale load-more can never land in a fresh
+   * list. */
+  sk: string;
   pins: Message[];
   hasMore: boolean;
   loading: boolean;
@@ -19,8 +23,8 @@ type ListState = {
 
 const EMPTY: Message[] = [];
 
-function fresh(key: string): ListState {
-  return { key, pins: EMPTY, hasMore: true, loading: false, loaded: false };
+function fresh(key: string, sk: string): ListState {
+  return { key, sk, pins: EMPTY, hasMore: true, loading: false, loaded: false };
 }
 
 /**
@@ -35,33 +39,45 @@ export function usePinnedMessages(target: Target, open: boolean) {
   const key = `${column}:${value}`;
 
   const [count, setCount] = useState<{ key: string; n: number }>({ key, n: 0 });
-  const [list, setList] = useState<ListState>(() => fresh(key));
+  // Bumped on every close, so each open is its own session (see ListState.sk).
+  const [session, setSession] = useState(0);
+  const sk = `${key}:${session}`;
+  const [list, setList] = useState<ListState>(() => fresh(key, sk));
 
   // Reset the list whenever the panel closes (React's "adjust state while rendering" pattern, so
   // reopening never flashes the previous session's pins and no setState-in-effect is needed).
   const [prevOpen, setPrevOpen] = useState(open);
   if (prevOpen !== open) {
     setPrevOpen(open);
-    if (!open) setList(fresh(key));
+    if (!open) {
+      setSession(session + 1);
+      setList(fresh(key, `${key}:${session + 1}`));
+    }
   }
-  const current = list.key === key ? list : fresh(key);
+  const current = list.sk === sk ? list : fresh(key, sk);
 
-  // Latest target key / open flag, for discarding async results that resolve after a switch.
-  const keyRef = useRef(key);
-  const openRef = useRef(open);
+  // Latest session key, for discarding async results that resolve after a close / switch.
+  const skRef = useRef(sk);
   const inFlight = useRef<string | null>(null);
+  // Ids unpinned/deleted via realtime while a page is in flight: the page may have been read
+  // before the unpin, so these rows must not be resurrected when it lands.
+  const removedDuringFetch = useRef<Set<string>>(new Set());
   // Unique realtime topic per hook instance AND per effect run (see useMessages.ts).
   const instanceId = useId();
   const runRef = useRef(0);
 
-  const update = useCallback((k: string, fn: (s: ListState) => ListState) => {
-    setList((prev) => fn(prev.key === k ? prev : fresh(k)));
+  /** Apply `fn` to the list of session `k`. Seeds a fresh list only for the live session;
+   * otherwise a stale session's result is ignored. */
+  const updateSession = useCallback((k: string, targetKey: string, fn: (s: ListState) => ListState) => {
+    setList((prev) => {
+      if (prev.sk === k) return fn(prev);
+      return k === skRef.current ? fn(fresh(targetKey, k)) : prev;
+    });
   }, []);
 
   useEffect(() => {
-    keyRef.current = key;
-    openRef.current = open;
-  }, [key, open]);
+    skRef.current = sk;
+  }, [sk]);
 
   // Live count + realtime list maintenance (runs regardless of `open`).
   useEffect(() => {
@@ -87,8 +103,10 @@ export function usePinnedMessages(target: Target, open: boolean) {
         (payload) => {
           if (!active) return;
           const row = payload.new as Message;
-          update(key, (s) => {
-            if (!s.loaded) return s;
+          if (row.pinned) removedDuringFetch.current.delete(row.id);
+          else removedDuringFetch.current.add(row.id);
+          setList((s) => {
+            if (s.key !== key || !s.loaded) return s;
             const last = s.pins[s.pins.length - 1];
             // A pin older than the loaded tail belongs to an unloaded page: adding it now would
             // move the paging cursor past the pins in between. It arrives when paged in.
@@ -108,8 +126,11 @@ export function usePinnedMessages(target: Target, open: boolean) {
         (payload) => {
           if (!active) return;
           const id = (payload.old as { id: string }).id;
-          update(key, (s) =>
-            s.pins.some((m) => m.id === id) ? { ...s, pins: s.pins.filter((m) => m.id !== id) } : s
+          removedDuringFetch.current.add(id);
+          setList((s) =>
+            s.key === key && s.pins.some((m) => m.id === id)
+              ? { ...s, pins: s.pins.filter((m) => m.id !== id) }
+              : s
           );
           refreshCount();
         }
@@ -122,14 +143,15 @@ export function usePinnedMessages(target: Target, open: boolean) {
       active = false;
       supabase.removeChannel(channel);
     };
-  }, [supabase, column, value, key, update, instanceId]);
+  }, [supabase, column, value, key, instanceId]);
 
   /** Fetch the next page (or the first, when nothing is loaded) and append it. */
   const fetchPage = useCallback(
     async (callKey: string, cursor: string | null) => {
       if (inFlight.current === callKey) return;
       inFlight.current = callKey;
-      update(callKey, (s) => ({ ...s, loading: true }));
+      removedDuringFetch.current = new Set();
+      updateSession(callKey, key, (s) => ({ ...s, loading: true }));
       let ok = false;
       let rows: Message[] = [];
       try {
@@ -151,33 +173,34 @@ export function usePinnedMessages(target: Target, open: boolean) {
       } finally {
         if (inFlight.current === callKey) inFlight.current = null;
       }
-      // Stale guard: chat switched or panel closed while in flight → drop it.
-      if (keyRef.current !== callKey || !openRef.current) return;
-      update(callKey, (s) => ({
+      // Stale guard: chat switched or panel closed (even if reopened) while in flight → drop it.
+      if (skRef.current !== callKey) return;
+      const removed = removedDuringFetch.current;
+      const fresher = rows.filter((r) => !removed.has(r.id));
+      updateSession(callKey, key, (s) => ({
         ...s,
-        pins: ok ? rows.reduce(applyPinUpdate, s.pins) : s.pins,
+        pins: ok ? fresher.reduce(applyPinUpdate, s.pins) : s.pins,
         hasMore: ok ? rows.length >= PIN_PAGE : s.hasMore,
         loading: false,
         loaded: true,
       }));
     },
-    [supabase, column, value, update]
+    [supabase, column, value, key, updateSession]
   );
 
   // First page whenever the panel opens (or the target changes while open).
   useEffect(() => {
     if (!open) return;
-    openRef.current = true;
-    keyRef.current = key;
-    fetchPage(key, null);
-  }, [open, key, fetchPage]);
+    skRef.current = sk;
+    fetchPage(sk, null);
+  }, [open, sk, fetchPage]);
 
   const loadMore = useCallback(async () => {
     if (!open || current.loading || !current.hasMore || !current.loaded) return;
     const last = current.pins[current.pins.length - 1];
     if (!last?.pinned_at) return;
-    await fetchPage(key, last.pinned_at);
-  }, [open, current.loading, current.hasMore, current.loaded, current.pins, fetchPage, key]);
+    await fetchPage(sk, last.pinned_at);
+  }, [open, current.loading, current.hasMore, current.loaded, current.pins, fetchPage, sk]);
 
   return {
     pins: open ? current.pins : EMPTY,

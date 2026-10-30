@@ -126,6 +126,7 @@ function DmView({ conversationId }: { conversationId: string }) {
         </span>
         <button
           onClick={() => setShowPins((s) => !s)}
+          data-trigger="pins"
           className="min-h-11 flex-none text-xs font-normal text-muted hover:text-ink flex items-center gap-1"
         >
           <PushPin size={15} /> Pinned ({pinsState.count})

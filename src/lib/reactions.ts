@@ -29,3 +29,15 @@ export function aggregateReactions(rows: Reaction[], currentUserId: string): Rea
   }
   return [...byEmoji.values()];
 }
+
+/** Max message ids per reactions query: `.in()` goes into the GET URL (~39 chars per id), and
+ *  gateways reject URLs past a few KB, so a long infinite-scrolled history is fetched in chunks. */
+export const REACTION_ID_CHUNK = 100;
+
+/** Split `items` into consecutive chunks of at most `size` (order kept; empty in → empty out). */
+export function chunkIds<T>(items: T[], size: number = REACTION_ID_CHUNK): T[][] {
+  if (size < 1) throw new RangeError("chunk size must be >= 1");
+  const out: T[][] = [];
+  for (let i = 0; i < items.length; i += size) out.push(items.slice(i, i + size));
+  return out;
+}

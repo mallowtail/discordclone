@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { GearSix, Plus, CaretDown, CaretRight, Hash } from "@phosphor-icons/react";
@@ -71,18 +71,24 @@ export function ServerSidebar({ serverId }: { serverId: string }) {
     setLoaded(true);
   }, [supabase, serverId]);
 
+  // Realtime topic unique per instance AND effect run: a quick A→B→A server switch would otherwise
+  // reuse the still-closing channel and `.on()` after subscribe() throws (see useMessages.ts).
+  const instanceId = useId();
+  const runRef = useRef(0);
+
   useEffect(() => {
+    const run = ++runRef.current;
     // eslint-disable-next-line react-hooks/set-state-in-effect -- load() only sets state after its await (async fetch-on-mount)
     load();
     const channel = supabase
-      .channel(`server-sidebar:${serverId}`)
+      .channel(`server-sidebar:${serverId}:${instanceId}:${run}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "channels", filter: `server_id=eq.${serverId}` }, () => load())
       .on("postgres_changes", { event: "*", schema: "public", table: "categories", filter: `server_id=eq.${serverId}` }, () => load())
       .subscribe();
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [supabase, serverId, load]);
+  }, [supabase, serverId, load, instanceId]);
 
 
   function channelsIn(categoryId: string | null) {

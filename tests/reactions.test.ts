@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { aggregateReactions, upsertReaction, removeReaction } from "@/lib/reactions";
+import { aggregateReactions, upsertReaction, removeReaction, chunkIds, REACTION_ID_CHUNK } from "@/lib/reactions";
 import type { Reaction } from "@/types/db";
 
 function r(user_id: string, emoji: string): Reaction {
@@ -44,5 +44,30 @@ describe("removeReaction", () => {
   });
   it("is a no-op when nothing matches", () => {
     expect(removeReaction([r("a", "👍")], r("z", "👍"))).toEqual([r("a", "👍")]);
+  });
+});
+
+describe("chunkIds", () => {
+  it("returns no chunks for no ids", () => {
+    expect(chunkIds([], 100)).toEqual([]);
+  });
+  it("keeps a short list as one chunk", () => {
+    expect(chunkIds(["a", "b"], 100)).toEqual([["a", "b"]]);
+  });
+  it("splits into chunks of at most `size`, preserving order", () => {
+    const ids = Array.from({ length: 250 }, (_, i) => `id${i}`);
+    const chunks = chunkIds(ids, 100);
+    expect(chunks.map((c) => c.length)).toEqual([100, 100, 50]);
+    expect(chunks.flat()).toEqual(ids);
+  });
+  it("an exact multiple makes no empty trailing chunk", () => {
+    expect(chunkIds(["a", "b", "c", "d"], 2)).toEqual([["a", "b"], ["c", "d"]]);
+  });
+  it("defaults to REACTION_ID_CHUNK", () => {
+    const ids = Array.from({ length: REACTION_ID_CHUNK + 1 }, (_, i) => String(i));
+    expect(chunkIds(ids).map((c) => c.length)).toEqual([REACTION_ID_CHUNK, 1]);
+  });
+  it("rejects a non-positive size", () => {
+    expect(() => chunkIds(["a"], 0)).toThrow(RangeError);
   });
 });

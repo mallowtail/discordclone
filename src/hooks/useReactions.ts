@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { Reaction } from "@/types/db";
-import { aggregateReactions, upsertReaction, removeReaction, type ReactionPill } from "@/lib/reactions";
+import { aggregateReactions, upsertReaction, removeReaction, chunkIds, type ReactionPill } from "@/lib/reactions";
 
 // Short, stable hash so the realtime channel name stays small even when `key`
 // is hundreds of joined UUIDs (channel names must not balloon to thousands of chars).
@@ -18,6 +18,11 @@ export function useReactions(messageIds: string[], currentUserId: string): Recor
   const supabase = useMemo(() => createClient(), []);
   const [rows, setRows] = useState<Reaction[]>([]);
   const key = messageIds.join(",");
+  // Topic unique per hook instance AND effect run: the id set can go A→B→A (e.g. removePending
+  // restoring a prior set), and supabase-js hands back the still-closing channel for a reused
+  // topic → `.on()` after subscribe() throws. Same pattern as useMessages.ts.
+  const instanceId = useId();
+  const runRef = useRef(0);
   // No messages → no reactions. Adjusted during render when the id set changes, not in the effect.
   const [prevKey, setPrevKey] = useState(key);
   if (key !== prevKey) {
@@ -28,15 +33,22 @@ export function useReactions(messageIds: string[], currentUserId: string): Recor
   useEffect(() => {
     if (messageIds.length === 0) return;
     let active = true;
+    const run = ++runRef.current;
 
+    // Chunked so the `.in()` list never outgrows the GET URL as infinite scroll loads more history.
+    // Any failed chunk → keep the rows we already have rather than blanking every pill in view.
     async function load() {
-      const { data } = await supabase.from("reactions").select("*").in("message_id", messageIds);
-      if (active) setRows(data ?? []);
+      const results = await Promise.all(
+        chunkIds(messageIds).map((ids) => supabase.from("reactions").select("*").in("message_id", ids))
+      );
+      if (!active) return;
+      if (results.some((r) => r.error || !r.data)) return;
+      setRows(results.flatMap((r) => (r.data ?? []) as Reaction[]));
     }
     load();
 
     const channel = supabase
-      .channel(`reactions:${shortHash(key)}`)
+      .channel(`reactions:${shortHash(key)}:${instanceId}:${run}`)
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "reactions" },
@@ -63,7 +75,7 @@ export function useReactions(messageIds: string[], currentUserId: string): Recor
       active = false;
       supabase.removeChannel(channel);
     };
-  }, [supabase, key]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [supabase, key, instanceId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const grouped: Record<string, Reaction[]> = {};
   for (const r of rows) (grouped[r.message_id] ??= []).push(r);

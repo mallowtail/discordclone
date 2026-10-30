@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { Profile } from "@/types/db";
 import { Avatar } from "@/components/user/Avatar";
@@ -62,17 +62,23 @@ export function MembersPanel({ serverId }: { serverId: string }) {
       .then(({ data }) => setOwnerId((data as { owner_id: string | null } | null)?.owner_id ?? null));
   }, [supabase, serverId]);
 
+  // Realtime topic unique per instance AND effect run: a quick A→B→A server switch would otherwise
+  // reuse the still-closing channel and `.on()` after subscribe() throws (see useMessages.ts).
+  const instanceId = useId();
+  const runRef = useRef(0);
+
   useEffect(() => {
+    const run = ++runRef.current;
     // eslint-disable-next-line react-hooks/set-state-in-effect -- load() only sets state after its await (async fetch-on-mount)
     load();
     const channel = supabase
-      .channel(`members:${serverId}`)
+      .channel(`members:${serverId}:${instanceId}:${run}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "server_members", filter: `server_id=eq.${serverId}` }, () => load())
       .subscribe();
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [supabase, serverId, load]);
+  }, [supabase, serverId, load, instanceId]);
 
   const { online, offline } = useMemo(() => {
     const online: Member[] = [];

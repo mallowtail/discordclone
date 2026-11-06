@@ -53,3 +53,75 @@ describe("parseInviteCode", () => {
     expect(parseInviteCode("   ")).toBeNull();
   });
 });
+
+import {
+  validateVanityCode,
+  inviteStatus,
+  formatTimeLeft,
+  EXPIRY_OPTIONS,
+  MAX_USES_OPTIONS,
+  DEFAULT_EXPIRY_SECONDS,
+} from "@/lib/invite";
+
+describe("validateVanityCode", () => {
+  it("accepts letters (any case), numbers and hyphens, 2–32 long", () => {
+    expect(validateVanityCode("Mallow-Gang")).toEqual({ ok: true, value: "Mallow-Gang" });
+    expect(validateVanityCode("ab")).toEqual({ ok: true, value: "ab" });
+    expect(validateVanityCode("x".repeat(32)).ok).toBe(true);
+  });
+  it("trims surrounding spaces", () => {
+    expect(validateVanityCode("  cool-club  ")).toEqual({ ok: true, value: "cool-club" });
+  });
+  it("rejects too short, too long, and other characters", () => {
+    for (const bad of ["a", "", "x".repeat(33), "no spaces", "under_score", "emoji🙂", "slash/es"]) {
+      expect(validateVanityCode(bad).ok).toBe(false);
+    }
+  });
+});
+
+describe("inviteStatus", () => {
+  const now = new Date("2026-11-06T12:00:00Z");
+  it("is ok with no expiry and no limit", () => {
+    expect(inviteStatus({ expires_at: null, max_uses: null, uses: 999 }, now)).toBe("ok");
+  });
+  it("is expired at or after the expiry moment", () => {
+    expect(inviteStatus({ expires_at: "2026-11-06T12:00:00Z", max_uses: null, uses: 0 }, now)).toBe("expired");
+    expect(inviteStatus({ expires_at: "2026-11-06T11:59:00Z", max_uses: null, uses: 0 }, now)).toBe("expired");
+    expect(inviteStatus({ expires_at: "2026-11-06T12:01:00Z", max_uses: null, uses: 0 }, now)).toBe("ok");
+  });
+  it("is used_up once uses reach the limit (a one-time link after one join)", () => {
+    expect(inviteStatus({ expires_at: null, max_uses: 1, uses: 0 }, now)).toBe("ok");
+    expect(inviteStatus({ expires_at: null, max_uses: 1, uses: 1 }, now)).toBe("used_up");
+  });
+  it("reports expired before used_up when both apply", () => {
+    expect(inviteStatus({ expires_at: "2026-11-06T11:00:00Z", max_uses: 1, uses: 1 }, now)).toBe("expired");
+  });
+});
+
+describe("formatTimeLeft", () => {
+  const now = new Date("2026-11-06T12:00:00Z");
+  const at = (ms: number) => new Date(now.getTime() + ms).toISOString();
+  it("shows Never / Expired", () => {
+    expect(formatTimeLeft(null, now)).toBe("Never");
+    expect(formatTimeLeft(at(-1000), now)).toBe("Expired");
+  });
+  it("rounds minutes up so it never says 0m", () => {
+    expect(formatTimeLeft(at(10_000), now)).toBe("1m");
+    expect(formatTimeLeft(at(45 * 60_000), now)).toBe("45m");
+  });
+  it("uses hours under a day and days beyond", () => {
+    expect(formatTimeLeft(at(90 * 60_000), now)).toBe("1h");
+    expect(formatTimeLeft(at(23 * 3_600_000), now)).toBe("23h");
+    expect(formatTimeLeft(at(7 * 86_400_000), now)).toBe("7d");
+  });
+});
+
+describe("invite option lists", () => {
+  it("offers Discord-style expiry choices, defaulting to 7 days, including Never", () => {
+    expect(EXPIRY_OPTIONS.map((o) => o.seconds)).toEqual([1800, 3600, 21600, 43200, 86400, 604800, null]);
+    expect(DEFAULT_EXPIRY_SECONDS).toBe(604800);
+  });
+  it("offers No limit, a one-time option, and larger caps", () => {
+    expect(MAX_USES_OPTIONS.map((o) => o.uses)).toEqual([null, 1, 5, 10, 25, 50, 100]);
+  });
+});

@@ -10,7 +10,15 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { LinkBreak } from "@phosphor-icons/react";
 
-type Preview = { id: string; name: string; icon_url: string | null; member_count: number };
+type Preview = { id: string; name: string; icon_url: string | null; member_count: number; status: "ok" | "expired" | "used_up" };
+
+/** What a failed join_via_invite means, from its exception text. */
+function joinErrorMessage(message: string): string {
+  if (message.includes("expired") || message.includes("used up")) return "This invite has expired or reached its limit.";
+  if (message.includes("banned")) return "You're banned from this server.";
+  if (message.includes("invalid invite")) return "This invite doesn't exist anymore.";
+  return "Couldn't join — check your connection and try again.";
+}
 
 export default function InvitePage({ params }: { params: Promise<{ code: string }> }) {
   const { code } = use(params);
@@ -22,7 +30,7 @@ export default function InvitePage({ params }: { params: Promise<{ code: string 
   const [isMember, setIsMember] = useState(false);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<{ title: string; description: string } | null>(null);
   // A failed JOIN is separate from a bad code: the card stays so the button doubles as retry.
   const [joinError, setJoinError] = useState<string | null>(null);
 
@@ -36,17 +44,23 @@ export default function InvitePage({ params }: { params: Promise<{ code: string 
       const { data, error: err } = await supabase.rpc("server_by_invite", { code });
       const row = (data as Preview[] | null)?.[0] ?? null;
       if (err || !row) {
-        setError("This invite is invalid or expired.");
+        setError({ title: "Invalid invite", description: "This invite doesn't exist." });
         setLoading(false);
         return;
       }
-      setPreview(row);
       const { data: mem } = await supabase
         .from("server_members")
         .select("server_id")
         .eq("server_id", row.id)
         .eq("user_id", user.id)
         .maybeSingle();
+      // Members can always get back in, even through a link that has since expired or run out.
+      if (!mem && row.status !== "ok") {
+        setError({ title: "Invite expired", description: "This invite has expired or reached its limit. Ask for a new one." });
+        setLoading(false);
+        return;
+      }
+      setPreview(row);
       setIsMember(!!mem);
       setLoading(false);
     })();
@@ -62,14 +76,14 @@ export default function InvitePage({ params }: { params: Promise<{ code: string 
     const { data, error: err } = await supabase.rpc("join_via_invite", { code });
     if (err || !data) {
       setBusy(false);
-      return setJoinError("Couldn't join — check your connection and try again.");
+      return setJoinError(joinErrorMessage(err?.message ?? ""));
     }
     router.replace(`/channels/first?server=${data}`);
   }
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
-      <div className="w-full max-w-sm bg-surface border border-line p-6 rounded-2xl text-center">
+      <div className="w-full max-w-sm bg-surface border border-line p-6 rounded-card text-center">
         {loading ? (
           <div aria-busy="true">
             <div className="flex justify-center mb-3">
@@ -82,8 +96,8 @@ export default function InvitePage({ params }: { params: Promise<{ code: string 
         ) : error ? (
           <EmptyState
             icon={<LinkBreak size={32} weight="bold" aria-hidden="true" />}
-            title="Invalid invite"
-            description={error}
+            title={error.title}
+            description={error.description}
             action={
               <Link
                 href="/"
@@ -98,13 +112,13 @@ export default function InvitePage({ params }: { params: Promise<{ code: string 
             <div className="flex justify-center mb-3">
               <ServerIcon iconUrl={preview.icon_url} name={preview.name} size="lg" />
             </div>
-            <h1 className="text-lg font-semibold text-ink tracking-tight">{preview.name}</h1>
-            <p className="text-sm text-muted mb-4">
+            <h1 className="text-title font-semibold text-ink tracking-tight">{preview.name}</h1>
+            <p className="text-body text-muted mb-4">
               {preview.member_count} {preview.member_count === 1 ? "member" : "members"}
             </p>
             {joinError && <p role="alert" className="text-danger text-body mb-3">{joinError}</p>}
             <button onClick={join} disabled={busy}
-              className="w-full bg-accent hover:bg-accent-strong text-white font-medium rounded-xl p-2 disabled:opacity-50">
+              className="w-full bg-accent hover:bg-accent-strong text-white font-medium rounded-control p-2 disabled:opacity-50">
               {busy ? "…" : isMember ? "Open" : "Join Server"}
             </button>
           </>

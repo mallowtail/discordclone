@@ -19,6 +19,17 @@ export type Server = {
   created_at: string;
 };
 
+export type Invite = {
+  code: string;
+  server_id: string;
+  created_by: string | null;
+  created_at: string;
+  expires_at: string | null;
+  max_uses: number | null;
+  uses: number;
+  is_vanity: boolean;
+};
+
 export type ServerMember = {
   server_id: string;
   user_id: string;

@@ -53,7 +53,14 @@ export function AddServerDialog({ onClose }: { onClose: () => void }) {
     setBusy(true);
     const { data, error: err } = await supabase.rpc("join_via_invite", { code });
     setBusy(false);
-    if (err || !data) return setError("Invalid invite link");
+    if (err || !data) {
+      const m = err?.message ?? "";
+      return setError(
+        m.includes("expired") || m.includes("used up") ? "That invite has expired or reached its limit"
+          : m.includes("banned") ? "You're banned from that server"
+          : "Invalid invite link"
+      );
+    }
     onClose();
     router.push(`/channels/first?server=${data}`);
   }

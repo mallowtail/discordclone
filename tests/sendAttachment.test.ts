@@ -8,7 +8,7 @@ vi.mock("@/lib/upload", () => ({
 }));
 
 import { uploadImage, uploadFile } from "@/lib/upload";
-import { uploadAndPostFile } from "@/lib/sendAttachment";
+import { uploadAndPostFile, uploadAndPostFiles } from "@/lib/sendAttachment";
 import { fakeSupabase } from "./_fakeSupabase";
 
 const img = new File(["x"], "pic.png", { type: "image/png" });
@@ -91,5 +91,40 @@ describe("uploadAndPostFile", () => {
     expect(res).toEqual({ error: "Failed to send — try again" });
     expect(added).toHaveLength(1);
     expect(removed).toEqual(added); // the pending row it added is the one it removed
+  });
+});
+
+describe("uploadAndPostFiles", () => {
+  const a = new File(["x"], "a.png", { type: "image/png" });
+  const b = new File(["x"], "b.png", { type: "image/png" });
+  const c = new File(["x"], "c.png", { type: "image/png" });
+
+  it("posts every file in order, with the caption and reply only on the first", async () => {
+    vi.mocked(uploadImage).mockImplementation(async (f: File) => ({ url: `https://cdn/${f.name}` }));
+    const { supabase, calls } = fakeSupabase(() => ({ error: null }));
+    const res = await uploadAndPostFiles({
+      supabase, userId: "me", target: { channel_id: "chan1" }, files: [a, b, c],
+      content: "look", replyFields: { reply_to_id: "m1" }, addPending: () => {}, removePending: () => {},
+    });
+    expect(res).toEqual({ posted: 3, errors: [] });
+    const inserts = calls.filter((x) => x.method === "insert").map((x) => x.payload as Record<string, unknown>);
+    expect(inserts.map((p) => p.image_url)).toEqual(["https://cdn/a.png", "https://cdn/b.png", "https://cdn/c.png"]);
+    expect(inserts[0]).toMatchObject({ content: "look", reply_to_id: "m1" });
+    expect(inserts[1].content).toBe("");
+    expect(inserts[1].reply_to_id).toBeUndefined();
+  });
+
+  it("keeps going after a failure, names the failed file, and moves the caption to the next success", async () => {
+    vi.mocked(uploadImage).mockImplementation(async (f: File) =>
+      f.name === "a.png" ? { error: "Image must be 5 MB or smaller" } : { url: `https://cdn/${f.name}` });
+    const { supabase, calls } = fakeSupabase(() => ({ error: null }));
+    const res = await uploadAndPostFiles({
+      supabase, userId: "me", target: { channel_id: "chan1" }, files: [a, b],
+      content: "look", addPending: () => {}, removePending: () => {},
+    });
+    expect(res).toEqual({ posted: 1, errors: ["a.png: Image must be 5 MB or smaller"] });
+    const inserts = calls.filter((x) => x.method === "insert").map((x) => x.payload as Record<string, unknown>);
+    expect(inserts).toHaveLength(1);
+    expect(inserts[0]).toMatchObject({ image_url: "https://cdn/b.png", content: "look" });
   });
 });

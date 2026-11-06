@@ -1,16 +1,16 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/components/providers/AuthProvider";
-import { uploadAndPostFile, type Target } from "@/lib/sendAttachment";
+import { uploadAndPostFiles, type Target } from "@/lib/sendAttachment";
 import type { Message } from "@/types/db";
 
 function hasFiles(e: React.DragEvent) {
   return Array.from(e.dataTransfer?.types ?? []).includes("Files");
 }
 
-/** Wraps a message view so dropping a file ANYWHERE inside uploads + posts it. */
+/** Wraps a message view so dropping files ANYWHERE inside uploads + posts them (in order). */
 export function MessageDropZone({
   target,
   addPending,
@@ -28,6 +28,13 @@ export function MessageDropZone({
   const { user } = useAuth();
   const [dragging, setDragging] = useState(false);
   const depth = useRef(0);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!error) return;
+    const t = setTimeout(() => setError(null), 6000);
+    return () => clearTimeout(t);
+  }, [error]);
 
   return (
     <div
@@ -53,14 +60,23 @@ export function MessageDropZone({
         e.preventDefault();
         depth.current = 0;
         setDragging(false);
-        const f = e.dataTransfer.files?.[0];
-        if (f && user) uploadAndPostFile({ supabase, userId: user.id, target, file: f, addPending, removePending });
+        const files = Array.from(e.dataTransfer.files ?? []);
+        if (!files.length || !user) return;
+        setError(null);
+        uploadAndPostFiles({ supabase, userId: user.id, target, files, addPending, removePending }).then((res) => {
+          if (res.errors.length) setError(res.errors.join(" · "));
+        });
       }}
     >
       {dragging && (
         <div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center rounded-control border-2 border-dashed border-accent bg-app/80 text-accent">
           Drop to upload
         </div>
+      )}
+      {error && (
+        <p role="alert" className="absolute left-4 right-4 bottom-24 z-30 rounded-control border border-line bg-surface px-3 py-2 text-meta text-danger shadow-lg">
+          {error}
+        </p>
       )}
       {children}
     </div>

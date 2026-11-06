@@ -56,3 +56,25 @@ export async function uploadAndPostFile(opts: {
   }
   return {};
 }
+
+/** Upload and post several files one after another, so they land in the order picked. The caption
+ *  and reply ride on the first file that posts; a failure doesn't stop the rest. Errors name the file. */
+export async function uploadAndPostFiles(
+  opts: Omit<Parameters<typeof uploadAndPostFile>[0], "file"> & { files: File[] }
+): Promise<{ posted: number; errors: string[] }> {
+  const { files, content, replyFields, ...rest } = opts;
+  let posted = 0;
+  const errors: string[] = [];
+  for (const file of files) {
+    const first = posted === 0;
+    const res = await uploadAndPostFile({
+      ...rest,
+      file,
+      content: first ? content : "",
+      replyFields: first ? replyFields : {},
+    });
+    if (res.error) errors.push(`${file.name}: ${res.error}`);
+    else posted += 1;
+  }
+  return { posted, errors };
+}

@@ -5,7 +5,7 @@ import { useTopmostEscape } from "@/components/ui/overlayStack";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { validateMessage } from "@/lib/validation";
-import { uploadAndPostFile } from "@/lib/sendAttachment";
+import { uploadAndPostFiles } from "@/lib/sendAttachment";
 import type { Message } from "@/types/db";
 import { MentionAutocomplete } from "@/components/messages/MentionAutocomplete";
 import EmojiPicker, { Theme } from "emoji-picker-react";
@@ -44,7 +44,11 @@ export function MessageInput({
   const { user } = useAuth();
   const [text, setText] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [uploading, setUploading] = useState(false);
+  // Files waiting or in flight. Picking more while one uploads queues them instead of dropping them.
+  const [queued, setQueued] = useState(0);
+  const uploading = queued > 0;
+  const queueRef = useRef<File[]>([]);
+  const drainingRef = useRef(false);
   const [pingAuthor, setPingAuthor] = useState(true);
   const [caret, setCaret] = useState(0);
   const [mentionMatches, setMentionMatches] = useState<string[]>([]);
@@ -166,33 +170,49 @@ export function MessageInput({
     submit();
   }
 
-  async function handleFile(file: File) {
-    if (uploading) return;
+  async function handleFiles(files: File[]) {
+    queueRef.current.push(...files);
+    setQueued((n) => n + files.length);
+    if (drainingRef.current) return; // the running loop below picks these up
+    drainingRef.current = true;
     setError(null);
-    setUploading(true);
     onTyping?.(false); // the send starts now; don't keep "typing" through the upload
-    const content = text.trim();
-    const res = await uploadAndPostFile({
-      supabase,
-      userId: user!.id,
-      target,
-      file,
-      content,
-      replyFields: replyFields(),
-      addPending,
-      removePending,
-    });
-    setUploading(false);
-    if (res.error) return setError(res.error);
-    setText("");
-    resetHeight();
-    onClearReply?.();
+    const caption = text.trim();
+    let captionUsed = false;
+    const errors: string[] = [];
+    while (queueRef.current.length) {
+      const file = queueRef.current.shift()!;
+      const res = await uploadAndPostFiles({
+        supabase,
+        userId: user!.id,
+        target,
+        files: [file],
+        content: captionUsed ? "" : caption,
+        replyFields: captionUsed ? {} : replyFields(),
+        addPending,
+        removePending,
+      });
+      setQueued((n) => n - 1);
+      errors.push(...res.errors);
+      if (res.posted && !captionUsed) {
+        captionUsed = true;
+        // Only clear the box if it still holds the caption that was sent with the file (the user may
+        // have started typing something new during the upload).
+        if ((taRef.current?.value ?? "").trim() === caption) {
+          setText("");
+          resetHeight();
+        }
+        onClearReply?.();
+      }
+    }
+    drainingRef.current = false;
+    if (errors.length) setError(errors.join(" · "));
   }
 
   function onPickFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
+    const files = Array.from(e.target.files ?? []);
     e.target.value = "";
-    if (file) handleFile(file);
+    if (files.length) handleFiles(files);
   }
 
   function pickMention(username: string) {
@@ -269,7 +289,7 @@ export function MessageInput({
               aria-label="Add attachment"
               aria-haspopup="menu"
               aria-expanded={menuOpen}
-              disabled={uploading || !!timedOutUntil}
+              disabled={!!timedOutUntil}
               className="w-11 h-11 md:w-8 md:h-8 flex items-center justify-center rounded-full bg-surface-2 text-muted hover:text-ink text-lg leading-none disabled:opacity-50"
             >
               <Plus size={18} weight="bold" />
@@ -286,7 +306,7 @@ export function MessageInput({
               </div>
             )}
           </div>
-          <input ref={fileRef} type="file" accept="*/*" className="hidden" onChange={onPickFile} />
+          <input ref={fileRef} type="file" accept="*/*" multiple className="hidden" onChange={onPickFile} />
           <textarea
             ref={taRef}
             value={text}
@@ -315,7 +335,7 @@ export function MessageInput({
               timedOutUntil
                 ? `You're timed out until ${new Date(timedOutUntil).toLocaleString()}`
                 : uploading
-                  ? "Uploading…"
+                  ? `Uploading ${queued} file${queued === 1 ? "" : "s"}…`
                   : placeholder
             }
             className="flex-1 bg-transparent text-ink outline-none resize-none min-h-[44px] max-h-48 py-2"

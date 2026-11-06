@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { safeNext } from "@/lib/invite";
+import { OAuthButtons, OrDivider } from "@/components/auth/OAuthButtons";
 
 function LoginPageContent() {
   const supabase = createClient();
@@ -13,7 +14,10 @@ function LoginPageContent() {
   const next = safeNext(params.get("next"));
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  // /auth/callback sends people back here with ?error=oauth if the provider round-trip failed.
+  const [error, setError] = useState<string | null>(() =>
+    params.get("error") === "oauth" ? "That sign-in didn't go through — try again" : null
+  );
   const [busy, setBusy] = useState(false);
 
   async function onSubmit(e: React.FormEvent) {
@@ -41,6 +45,8 @@ function LoginPageContent() {
         <form onSubmit={onSubmit} className="bg-surface border border-line p-8 rounded-modal space-y-4">
           <h1 className="text-title font-semibold text-ink tracking-tight">Welcome back</h1>
           {error && <p id="form-error" role="alert" className="text-danger text-meta">{error}</p>}
+          <OAuthButtons next={next} onError={setError} />
+          <OrDivider />
           <div>
             <label htmlFor="email" className="block text-meta font-medium text-muted mb-1">Email</label>
             <input id="email" className="w-full px-3 py-2 rounded-control bg-surface-2 text-ink text-body border border-line focus:outline-none focus:border-accent aria-[invalid=true]:border-danger" type="email" autoComplete="email"

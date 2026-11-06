@@ -6,6 +6,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { validateUsername } from "@/lib/validation";
 import { safeNext } from "@/lib/invite";
+import { OAuthButtons, OrDivider } from "@/components/auth/OAuthButtons";
 
 function RegisterPageContent() {
   const supabase = createClient();
@@ -57,6 +58,8 @@ function RegisterPageContent() {
         <form onSubmit={onSubmit} className="bg-surface border border-line p-8 rounded-modal space-y-4">
           <h1 className="text-title font-semibold text-ink tracking-tight">Create account</h1>
           {error && <p id="form-error" role="alert" className="text-danger text-meta">{error}</p>}
+          <OAuthButtons next={next} onError={setError} />
+          <OrDivider />
           <div>
             <label htmlFor="username" className="block text-meta font-medium text-muted mb-1">Username</label>
             <input id="username" className="w-full px-3 py-2 rounded-control bg-surface-2 text-ink text-body border border-line focus:outline-none focus:border-accent aria-[invalid=true]:border-danger" autoComplete="username"

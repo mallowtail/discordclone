@@ -14,7 +14,7 @@ import { DrawerProvider, useDrawer } from "@/components/providers/DrawerProvider
 import { Drawer } from "@/components/ui/Drawer";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
+  const { user, loading, profile, profileLoaded } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const supabase = useMemo(() => createClient(), []);
@@ -35,6 +35,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!loading && !user) router.replace("/login");
   }, [user, loading, router]);
+
+  // A first-time Google/GitHub/Discord sign-in has a session but no profile row until it picks a
+  // username on /welcome. If they skipped that step, send them back before the app renders half-empty.
+  useEffect(() => {
+    if (user && profileLoaded && !profile) router.replace(`/welcome?next=${encodeURIComponent(pathname)}`);
+  }, [user, profile, profileLoaded, pathname, router]);
 
   useEffect(() => {
     const m = pathname.match(/^\/channels\/([^/]+)$/);

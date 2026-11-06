@@ -14,7 +14,9 @@ import { usePresence } from "@/hooks/usePresence";
 import { useDrawer } from "@/components/providers/DrawerProvider";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { ChatCircleDots } from "@phosphor-icons/react";
+import { ChatCircleDots, Users } from "@phosphor-icons/react";
+import { useFriends } from "@/components/providers/FriendsProvider";
+import { RequestBadge } from "@/components/dms/RequestBadge";
 
 /** Placeholder for a single DM row: avatar (sm, matching `Avatar size="sm"`) + one name line. */
 function DmRowSkeleton() {
@@ -35,6 +37,8 @@ export function DmSidebar() {
   const { closeDrawer } = useDrawer();
   const [dms, setDms] = useState<{ id: string; other: Profile }[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const { incoming } = useFriends();
+  const onFriendsPage = pathname === "/dms";
 
   // Extract active conversation ID from pathname (e.g., /dms/abc123 -> abc123)
   // pathSegments[2] is the segment after /dms/, which matches a real id or nothing
@@ -71,6 +75,17 @@ export function DmSidebar() {
     <aside className="w-[clamp(12.5rem,18vw,16.25rem)] bg-sidebar flex flex-col">
       <div className="p-3 font-semibold text-ink tracking-tight border-b border-line">Direct Messages</div>
       <nav className="flex-1 overflow-y-auto p-2 text-muted" aria-busy={!loaded || undefined}>
+        <Link href="/dms" onClick={closeDrawer} aria-current={onFriendsPage ? "page" : undefined}
+          className={`relative flex items-center gap-2 px-2 py-1.5 min-h-11 md:min-h-0 rounded-row text-body ${
+            onFriendsPage ? "bg-surface text-ink font-medium" : "hover:bg-surface/60 text-muted hover:text-ink"
+          }`}>
+          {onFriendsPage && (
+            <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-4 bg-accent rounded-full" aria-hidden="true" />
+          )}
+          <Users size={20} weight="bold" aria-hidden="true" className="flex-none" />
+          <span className="flex-1">Friends</span>
+          <RequestBadge count={incoming.length} />
+        </Link>
         <div className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-wider text-muted mt-2 mb-1">
           Direct Messages <NewDmDialog />
         </div>

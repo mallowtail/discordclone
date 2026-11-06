@@ -15,6 +15,7 @@ import { validateMessage } from "@/lib/validation";
 import { useMemberRoleColors } from "@/hooks/useMemberRoleColors";
 import { usePresence } from "@/hooks/usePresence";
 import { RolePill } from "@/components/servers/RolePill";
+import { FriendButton } from "@/components/user/FriendButton";
 
 const CARD_WIDTH = 256; // w-64
 
@@ -160,7 +161,10 @@ export function ProfileCard({
             )}
           </div>
         )}
-        <div className="text-muted text-meta mt-3">Member since {memberSince}</div>
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+          <span className="text-muted text-meta">Member since {memberSince}</span>
+          {!isSelf && <FriendButton userId={userId} />}
+        </div>
       </div>
       {!isSelf && (
         <div className="border-t border-line p-2">

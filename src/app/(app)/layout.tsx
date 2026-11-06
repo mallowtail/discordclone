@@ -10,6 +10,7 @@ import { DmSidebar } from "@/components/dms/DmSidebar";
 import { ProfilePopoverProvider } from "@/components/providers/ProfilePopoverProvider";
 import { PresenceProvider } from "@/components/providers/PresenceProvider";
 import { UnreadProvider } from "@/components/providers/UnreadProvider";
+import { FriendsProvider } from "@/components/providers/FriendsProvider";
 import { DrawerProvider, useDrawer } from "@/components/providers/DrawerProvider";
 import { Drawer } from "@/components/ui/Drawer";
 
@@ -62,9 +63,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     <DrawerProvider>
       <PresenceProvider>
         <UnreadProvider>
-          <ProfilePopoverProvider>
-            <AppShell activeServer={activeServer}>{children}</AppShell>
-          </ProfilePopoverProvider>
+          <FriendsProvider>
+            <ProfilePopoverProvider>
+              <AppShell activeServer={activeServer}>{children}</AppShell>
+            </ProfilePopoverProvider>
+          </FriendsProvider>
         </UnreadProvider>
       </PresenceProvider>
     </DrawerProvider>

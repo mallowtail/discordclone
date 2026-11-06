@@ -6,6 +6,8 @@ import { ChatCircle, Plus } from "@phosphor-icons/react";
 import { useServers } from "@/hooks/useServers";
 import { useUnread } from "@/hooks/useUnread";
 import { ServerIcon } from "@/components/servers/ServerIcon";
+import { useFriends } from "@/components/providers/FriendsProvider";
+import { RequestBadge } from "@/components/dms/RequestBadge";
 import { AddServerDialog } from "@/components/servers/AddServerDialog";
 import type { Server } from "@/types/db";
 
@@ -115,6 +117,7 @@ export function ServerRail({
 }) {
   const { servers } = useServers();
   const [adding, setAdding] = useState(false);
+  const { incoming } = useFriends();
 
   return (
     <div className="w-[clamp(3.5rem,5vw,4.5rem)] bg-surface-2 flex flex-col items-center py-3 gap-2 overflow-y-auto">
@@ -125,11 +128,12 @@ export function ServerRail({
         suppressFlyouts={suppressFlyouts}
       >
         <div
-          className={`w-11 h-11 flex items-center justify-center text-lg rounded-2xl ${
+          className={`relative w-11 h-11 flex items-center justify-center text-lg rounded-2xl ${
             activeServerId === null ? "bg-accent" : "bg-surface"
           }`}
         >
           <ChatCircle size={22} weight="regular" />
+          <RequestBadge count={incoming.length} className="absolute -bottom-1 -right-1 ring-2 ring-surface-2" />
         </div>
       </RailItem>
       <div className="w-8 h-px bg-line my-1" />

@@ -2,18 +2,19 @@
 
 import { useState } from "react";
 import type { Provider } from "@supabase/supabase-js";
-import { DiscordLogo, GithubLogo, GoogleLogo } from "@phosphor-icons/react";
+import { DiscordLogo, GithubLogo } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
 
-const PROVIDERS: { id: Provider; label: string; Icon: typeof GoogleLogo }[] = [
-  { id: "google", label: "Google", Icon: GoogleLogo },
+const PROVIDERS: { id: Provider; label: string; Icon: typeof GithubLogo }[] = [
   { id: "github", label: "GitHub", Icon: GithubLogo },
   { id: "discord", label: "Discord", Icon: DiscordLogo },
 ];
 
 /**
- * "Continue with …" buttons. On success the browser leaves for the provider and comes back via
- * /auth/callback, which finishes the session and sends first-timers to /welcome to pick a username.
+ * "Continue with …" buttons for GitHub and Discord. (No Google: the friends using this only have
+ * school Google accounts, which can't sign in to outside apps.) On success the browser leaves for
+ * the provider and comes back via /auth/callback, which finishes the session and sends first-timers
+ * to /welcome to pick a username.
  * They sit inside the email/password <form>, so every button is type="button".
  */
 export function OAuthButtons({ next, onError }: { next: string; onError: (message: string) => void }) {

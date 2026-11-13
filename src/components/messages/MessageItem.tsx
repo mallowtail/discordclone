@@ -13,6 +13,7 @@ import { ReactionBar } from "@/components/messages/ReactionBar";
 import { ForwardDialog } from "@/components/messages/ForwardDialog";
 import { ForwardedBlock } from "@/components/messages/ForwardedBlock";
 import { PollCard } from "@/components/messages/PollCard";
+import { LinkPreviews } from "@/components/messages/LinkPreviews";
 import { Avatar } from "@/components/user/Avatar";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
@@ -228,7 +229,10 @@ export function MessageItem({
           ) : msg.poll ? (
             <PollCard msg={msg} />
           ) : (
-            <MessageContent msg={msg} />
+            <>
+              <MessageContent msg={msg} />
+              {msg.content && <LinkPreviews content={msg.content} />}
+            </>
           )}
           {!editing && msg.forward_snapshot && <ForwardedBlock snapshot={msg.forward_snapshot} />}
           {error && !editing && <p className="text-danger text-sm">{error}</p>}

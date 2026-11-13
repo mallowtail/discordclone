@@ -24,8 +24,23 @@ describe("isPrivateAddress", () => {
       expect(isPrivateAddress(ip), ip).toBe(true);
     }
   });
+  it("decodes disguised IPv6 forms that hide an IPv4 address", () => {
+    for (const u of [
+      "http://[::ffff:127.0.0.1]/", "http://[::ffff:7f00:1]/", "http://[::ffff:a9fe:a9fe]/", // mapped (URL parsing makes the hex form)
+      "http://[::127.0.0.1]/", "http://[::a00:1]/", // IPv4-compatible
+      "http://[64:ff9b::a9fe:a9fe]/", // NAT64
+      "http://[2002:7f00:1::]/", "http://[2002:a9fe:a9fe::1]/", // 6to4
+      "http://[2001::1]/", // Teredo (embeds an obfuscated IPv4)
+      "http://[0:0:0:0:0:0:0:1]/", "http://[fe80::1]/",
+    ]) {
+      const host = new URL(u).hostname.replace(/^\[|\]$/g, "");
+      expect(isPrivateAddress(host), u).toBe(true);
+    }
+  });
   it("allows public addresses", () => {
-    for (const ip of ["8.8.8.8", "172.32.0.1", "1.1.1.1", "2606:4700:4700::1111"]) expect(isPrivateAddress(ip), ip).toBe(false);
+    for (const ip of ["8.8.8.8", "172.32.0.1", "1.1.1.1", "2606:4700:4700::1111", "2a00:1450:4001:80b::200e", "::ffff:808:808", "2002:808:808::1"]) {
+      expect(isPrivateAddress(ip), ip).toBe(false);
+    }
   });
 });
 

@@ -58,8 +58,37 @@ const V4_BLOCKED: [string, number][] = [
   ["198.51.100.0", 24], ["203.0.113.0", 24], ["224.0.0.0", 4], ["240.0.0.0", 4],
 ];
 
+/** An IPv6 address as its 16 bytes (handles "::" and a trailing dotted IPv4), or null if malformed. */
+function ipv6Bytes(ip: string): number[] | null {
+  let text = ip.toLowerCase().split("%")[0]; // drop a zone id like %eth0
+  const tail = text.match(/(\d+\.\d+\.\d+\.\d+)$/);
+  if (tail) {
+    if (!net.isIPv4(tail[1])) return null;
+    const [p, q, r, t] = tail[1].split(".").map(Number);
+    text = text.slice(0, -tail[1].length) + `${((p << 8) | q).toString(16)}:${((r << 8) | t).toString(16)}`;
+  }
+  const halves = text.split("::");
+  if (halves.length > 2) return null;
+  const head = halves[0] ? halves[0].split(":") : [];
+  const rest = halves.length === 2 && halves[1] ? halves[1].split(":") : [];
+  const fill = 8 - head.length - rest.length;
+  if (halves.length === 1 ? head.length !== 8 : fill < 0) return null;
+  const groups = [...head, ...Array(halves.length === 2 ? fill : 0).fill("0"), ...rest];
+  const bytes: number[] = [];
+  for (const g of groups) {
+    if (!/^[0-9a-f]{1,4}$/.test(g)) return null;
+    const n = parseInt(g, 16);
+    bytes.push(n >> 8, n & 0xff);
+  }
+  return bytes.length === 16 ? bytes : null;
+}
+
+const v4 = (b: number[]) => b.join(".");
+
 /** True for any address the server must never fetch: loopback, private, link-local (incl. cloud
- *  metadata at 169.254.169.254), carrier NAT, multicast, reserved, and IPv6 equivalents. */
+ *  metadata at 169.254.169.254), carrier NAT, multicast, reserved, and IPv6 equivalents —
+ *  including the IPv6 forms that carry an IPv4 address inside (mapped, compatible, NAT64, 6to4,
+ *  Teredo), however they're written. Anything unparseable counts as blocked. */
 export function isPrivateAddress(ip: string): boolean {
   if (net.isIPv4(ip)) {
     const n = v4ToInt(ip);
@@ -68,15 +97,19 @@ export function isPrivateAddress(ip: string): boolean {
       return ((n & mask) >>> 0) === ((v4ToInt(base) & mask) >>> 0);
     });
   }
-  if (net.isIPv6(ip)) {
-    const lower = ip.toLowerCase();
-    const mapped = lower.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/);
-    if (mapped) return isPrivateAddress(mapped[1]);
-    if (lower === "::" || lower === "::1") return true;
-    const first = parseInt(lower.split(":")[0] || "0", 16);
-    return (first & 0xfe00) === 0xfc00 /* fc00::/7 */ || (first & 0xffc0) === 0xfe80 /* fe80::/10 */ || (first & 0xff00) === 0xff00 /* multicast */;
-  }
-  return true; // not an IP at all: refuse
+  const b = net.isIPv6(ip.split("%")[0]) ? ipv6Bytes(ip) : null;
+  if (!b) return true;
+  const zeros = (from: number, to: number) => b.slice(from, to).every((x) => x === 0);
+  if (zeros(0, 10) && b[10] === 0xff && b[11] === 0xff) return isPrivateAddress(v4(b.slice(12))); // ::ffff:a.b.c.d
+  if (zeros(0, 12)) return true; // ::/96 — ::, ::1 and the long-retired IPv4-compatible form
+  if (b[0] === 0x00 && b[1] === 0x64 && b[2] === 0xff && b[3] === 0x9b && zeros(4, 12)) return isPrivateAddress(v4(b.slice(12))); // 64:ff9b::/96
+  if (b[0] === 0x20 && b[1] === 0x02) return isPrivateAddress(v4(b.slice(2, 6))); // 2002::/16 (6to4)
+  if (b[0] === 0x20 && b[1] === 0x01 && b[2] === 0x00 && b[3] === 0x00) return true; // 2001::/32 (Teredo)
+  if (b[0] === 0x20 && b[1] === 0x01 && b[2] === 0x0d && b[3] === 0xb8) return true; // 2001:db8::/32 (documentation)
+  if ((b[0] & 0xfe) === 0xfc) return true; // fc00::/7 (unique local)
+  if (b[0] === 0xfe && (b[1] & 0xc0) === 0x80) return true; // fe80::/10 (link-local)
+  if (b[0] === 0xff) return true; // multicast
+  return false;
 }
 
 /**

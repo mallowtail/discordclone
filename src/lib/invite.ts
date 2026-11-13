@@ -77,7 +77,8 @@ export function formatTimeLeft(expiresAt: string | null, now: Date = new Date())
   const ms = new Date(expiresAt).getTime() - now.getTime();
   if (ms <= 0) return "Expired";
   const minutes = Math.ceil(ms / 60_000);
-  if (minutes < 60) return `${minutes}m`;
+  // <= so the last stretch before the hour mark (e.g. a fresh 1-hour invite) reads "60m", not "0h".
+  if (minutes <= 60) return `${minutes}m`;
   const hours = Math.floor(ms / 3_600_000);
   if (hours < 24) return `${hours}h`;
   return `${Math.floor(ms / 86_400_000)}d`;

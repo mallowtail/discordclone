@@ -23,6 +23,7 @@ export function MessageActions({
   onPin,
   pinned,
   canEdit,
+  editable = true,
   onEdit,
   onDelete,
 }: {
@@ -33,6 +34,8 @@ export function MessageActions({
   onPin: () => void;
   pinned: boolean;
   canEdit: boolean;
+  /** False for messages that can be deleted but not edited (polls). */
+  editable?: boolean;
   onEdit: () => void;
   onDelete: () => void;
 }) {
@@ -225,12 +228,14 @@ export function MessageActions({
               </button>
               {canEdit && (
                 <>
-                  <button
-                    onClick={() => { setMenuOpen(false); setMobileOpen(false); onEdit(); }}
-                    className="w-full min-h-11 md:min-h-0 flex items-center gap-2 px-3 py-1.5 text-sm text-ink hover:bg-surface-2 text-left"
-                  >
-                    <PencilSimple size={15} /> Edit
-                  </button>
+                  {editable && (
+                    <button
+                      onClick={() => { setMenuOpen(false); setMobileOpen(false); onEdit(); }}
+                      className="w-full min-h-11 md:min-h-0 flex items-center gap-2 px-3 py-1.5 text-sm text-ink hover:bg-surface-2 text-left"
+                    >
+                      <PencilSimple size={15} /> Edit
+                    </button>
+                  )}
                   <button
                     onClick={() => { setMenuOpen(false); setMobileOpen(false); onDelete(); }}
                     className="w-full min-h-11 md:min-h-0 flex items-center gap-2 px-3 py-1.5 text-sm text-danger hover:bg-surface-2 text-left"

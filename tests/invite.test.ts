@@ -114,6 +114,10 @@ describe("formatTimeLeft", () => {
     expect(formatTimeLeft(at(23 * 3_600_000), now)).toBe("23h");
     expect(formatTimeLeft(at(7 * 86_400_000), now)).toBe("7d");
   });
+  it("never says 0h: a fresh 1-hour invite reads 60m", () => {
+    expect(formatTimeLeft(at(3_600_000 - 500), now)).toBe("60m");
+    expect(formatTimeLeft(at(3_600_000), now)).toBe("60m");
+  });
 });
 
 describe("invite option lists", () => {

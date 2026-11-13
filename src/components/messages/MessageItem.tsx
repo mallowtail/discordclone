@@ -12,6 +12,7 @@ import { MessageActions } from "@/components/messages/MessageActions";
 import { ReactionBar } from "@/components/messages/ReactionBar";
 import { ForwardDialog } from "@/components/messages/ForwardDialog";
 import { ForwardedBlock } from "@/components/messages/ForwardedBlock";
+import { PollCard } from "@/components/messages/PollCard";
 import { Avatar } from "@/components/user/Avatar";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
@@ -21,6 +22,7 @@ import { ArrowBendUpLeft, PushPin } from "@phosphor-icons/react";
 import { toolbarRecents } from "@/lib/recentEmojis";
 
 function snippet(m: Message): string {
+  if (m.poll) return `📊 ${m.content}`;
   if (m.content) return m.content.length > 60 ? m.content.slice(0, 60) + "…" : m.content;
   if (m.image_url) return "Image";
   if (m.file_url) return "File";
@@ -223,6 +225,8 @@ export function MessageItem({
               {error && <p className="text-danger text-sm">{error}</p>}
               <p className="text-xs text-muted">Enter to save · Esc to cancel</p>
             </div>
+          ) : msg.poll ? (
+            <PollCard msg={msg} />
           ) : (
             <MessageContent msg={msg} />
           )}
@@ -241,6 +245,7 @@ export function MessageItem({
           onPin={togglePin}
           pinned={msg.pinned}
           canEdit={isMine}
+          editable={!msg.poll}
           onEdit={() => {
             setDraft(msg.content);
             setEditing(true);

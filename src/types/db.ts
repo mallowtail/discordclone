@@ -98,6 +98,8 @@ export type Message = {
   pinned: boolean;
   pinned_at: string | null;
   forward_snapshot: ForwardSnapshot | null;
+  /** A poll: `content` is the question; answers and votes live in polls / poll_options / poll_votes. */
+  poll?: boolean;
   pending?: boolean;
 };
 

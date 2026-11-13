@@ -6,10 +6,11 @@ import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { sendErrorMessage, validateMessage } from "@/lib/validation";
 import { uploadAndPostFiles } from "@/lib/sendAttachment";
+import { PollComposerDialog } from "@/components/messages/PollComposerDialog";
 import type { Message } from "@/types/db";
 import { MentionAutocomplete } from "@/components/messages/MentionAutocomplete";
 import EmojiPicker, { Theme } from "emoji-picker-react";
-import { Plus, Smiley, File } from "@phosphor-icons/react";
+import { Plus, Smiley, File, ChartBar } from "@phosphor-icons/react";
 
 type Target = { channel_id: string } | { conversation_id: string };
 
@@ -53,6 +54,7 @@ export function MessageInput({
   const [caret, setCaret] = useState(0);
   const [mentionMatches, setMentionMatches] = useState<string[]>([]);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [pollOpen, setPollOpen] = useState(false);
   const [emojiOpen, setEmojiOpen] = useState(false);
   const [multiline, setMultiline] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -303,10 +305,18 @@ export function MessageInput({
                 >
                   <File size={16} aria-hidden="true" /> Upload a file
                 </button>
+                <button
+                  type="button"
+                  onClick={() => { setMenuOpen(false); setPollOpen(true); }}
+                  className="w-full min-h-11 md:min-h-0 flex items-center gap-2 px-3 py-1.5 text-sm text-ink hover:bg-surface-2 text-left"
+                >
+                  <ChartBar size={16} aria-hidden="true" /> Create poll
+                </button>
               </div>
             )}
           </div>
           <input ref={fileRef} type="file" accept="*/*" multiple className="hidden" onChange={onPickFile} />
+          {pollOpen && <PollComposerDialog target={target} onClose={() => setPollOpen(false)} />}
           <textarea
             ref={taRef}
             value={text}

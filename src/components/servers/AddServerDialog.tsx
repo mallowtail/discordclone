@@ -77,7 +77,7 @@ export function AddServerDialog({ onClose }: { onClose: () => void }) {
         {error && <p className="text-danger text-body mb-2">{error}</p>}
         {tab === "create" ? (
           <>
-            <input autoFocus value={name} onChange={(e) => setName(e.target.value)}
+            <input autoFocus value={name} maxLength={100} onChange={(e) => setName(e.target.value)}
               placeholder="Server name"
               className="w-full p-2 rounded-control bg-surface-2 text-ink mb-3" />
             <button onClick={create} disabled={busy}

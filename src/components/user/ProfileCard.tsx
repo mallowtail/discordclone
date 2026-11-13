@@ -11,7 +11,7 @@ import { Avatar } from "@/components/user/Avatar";
 import { StatusBubble } from "@/components/user/StatusBubble";
 import { computePopoverPosition } from "@/lib/popover";
 import { openDmWith } from "@/lib/dm";
-import { validateMessage } from "@/lib/validation";
+import { sendErrorMessage, validateMessage } from "@/lib/validation";
 import { useMemberRoleColors } from "@/hooks/useMemberRoleColors";
 import { usePresence } from "@/hooks/usePresence";
 import { RolePill } from "@/components/servers/RolePill";
@@ -95,7 +95,7 @@ export function ProfileCard({
     const convId = await openDmWith(supabase, user.id, userId);
     if (!convId) { setSending(false); setSendError("Couldn't open the conversation — try again"); return; }
     const { error } = await supabase.from("messages").insert({ conversation_id: convId, author_id: user.id, content: v.value });
-    if (error) { setSending(false); setSendError("Couldn't send — try again"); return; }
+    if (error) { setSending(false); setSendError(sendErrorMessage(error.message)); return; }
     router.push(`/dms/${convId}`);
     onClose();
   }

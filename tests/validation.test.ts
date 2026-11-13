@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { validateMessage, validateUsername } from "@/lib/validation";
+import { validateMessage, validateUsername, sendErrorMessage } from "@/lib/validation";
 
 describe("validateMessage", () => {
   it("accepts normal text", () => {
@@ -37,5 +37,15 @@ describe("validateUsername", () => {
   });
   it("trims surrounding whitespace before validating", () => {
     expect(validateUsername("  abc  ")).toEqual({ ok: true, value: "abc" });
+  });
+});
+
+describe("sendErrorMessage", () => {
+  it("explains the spam limit", () => {
+    expect(sendErrorMessage("slow down: too many messages")).toBe("You're sending messages too fast — wait a few seconds.");
+  });
+  it("falls back to a generic message", () => {
+    expect(sendErrorMessage("network down")).toBe("Failed to send — try again");
+    expect(sendErrorMessage(undefined)).toBe("Failed to send — try again");
   });
 });

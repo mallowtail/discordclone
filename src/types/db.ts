@@ -71,6 +71,9 @@ export type Channel = {
 };
 
 export type ForwardSnapshot = {
+  /** The original message. The server rebuilds the rest of the snapshot from it (so forwards can't be
+   *  faked); absent on forwards made before that rule. */
+  message_id?: string;
   author_id: string;
   content: string;
   image_url: string | null;

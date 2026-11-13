@@ -121,7 +121,7 @@ export function ServerSettingsDialog({
               <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onPickIcon} />
             </div>
             <label className="text-muted text-meta">Name</label>
-            <input value={name} onChange={(e) => setName(e.target.value)}
+            <input value={name} maxLength={100} onChange={(e) => setName(e.target.value)}
               className="w-full p-2 rounded-control bg-surface-2 text-ink mt-1 mb-3" />
             <button onClick={saveName} disabled={busy}
               className="w-full bg-accent hover:bg-accent-strong text-white font-medium rounded-control p-2 disabled:opacity-50">

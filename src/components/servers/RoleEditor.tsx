@@ -59,7 +59,7 @@ export function RoleEditor({
       <label className="block text-body text-muted mb-1">Name</label>
       <input
         autoFocus
-        value={name}
+        value={name} maxLength={100}
         onChange={(e) => setName(e.target.value)}
         placeholder="Role name"
         className="w-full p-2 rounded-control bg-surface-2 text-ink mb-3"

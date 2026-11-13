@@ -38,7 +38,7 @@ export function CreateCategoryDialog({
         {error && <p className="text-danger text-body mb-2">{error}</p>}
         <input
           autoFocus
-          value={name}
+          value={name} maxLength={100}
           onChange={(e) => setName(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter") create(); }}
           placeholder="Category name"

@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Message } from "@/types/db";
 import { uploadImage, uploadFile, isImageType } from "@/lib/upload";
+import { sendErrorMessage } from "@/lib/validation";
 
 export type Target = { channel_id: string } | { conversation_id: string };
 
@@ -52,7 +53,7 @@ export async function uploadAndPostFile(opts: {
     .insert({ id, author_id: userId, content, ...attach, ...replyFields, ...target });
   if (error) {
     removePending(id);
-    return { error: "Failed to send — try again" };
+    return { error: sendErrorMessage(error.message) };
   }
   return {};
 }

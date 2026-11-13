@@ -43,7 +43,7 @@ export function CreateChannelDialog({
     <Modal onClose={onClose} title="Create channel" size="sm">
       <div className="p-5">
         {error && <p className="text-danger text-body mb-2">{error}</p>}
-        <input autoFocus value={name} onChange={(e) => setName(e.target.value)}
+        <input autoFocus value={name} maxLength={100} onChange={(e) => setName(e.target.value)}
           placeholder="channel-name" className="w-full p-2 rounded-control bg-surface-2 text-ink mb-3" />
         {categories.length > 0 && (
           <div className="mb-3">

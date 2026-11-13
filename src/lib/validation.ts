@@ -14,3 +14,9 @@ export function validateUsername(input: string): Validated {
   }
   return { ok: true, value };
 }
+
+/** User-facing text for a failed message insert (the database enforces a spam limit). */
+export function sendErrorMessage(message: string | undefined): string {
+  if (message?.includes("slow down")) return "You're sending messages too fast — wait a few seconds.";
+  return "Failed to send — try again";
+}

@@ -73,7 +73,9 @@ export function ForwardDialog({ message, onClose }: { message: Message; onClose:
     });
     const { error: err } = await supabase.from("messages").insert(rows);
     setBusy(false);
-    if (err) return setError("Couldn't forward — try again");
+    if (err) {
+      return setError(err.message.includes("slow down") ? "You're sending messages too fast — wait a few seconds." : "Couldn't forward — try again");
+    }
     onClose();
   }
 

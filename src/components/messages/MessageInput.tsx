@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useTopmostEscape } from "@/components/ui/overlayStack";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/components/providers/AuthProvider";
-import { validateMessage } from "@/lib/validation";
+import { sendErrorMessage, validateMessage } from "@/lib/validation";
 import { uploadAndPostFiles } from "@/lib/sendAttachment";
 import type { Message } from "@/types/db";
 import { MentionAutocomplete } from "@/components/messages/MentionAutocomplete";
@@ -159,7 +159,7 @@ export function MessageInput({
     if (err) {
       removePending(id);
       setText(draft);
-      setError("Failed to send — try again");
+      setError(sendErrorMessage(err.message));
       return;
     }
     onClearReply?.();

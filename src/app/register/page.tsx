@@ -7,12 +7,14 @@ import { createClient } from "@/lib/supabase/client";
 import { validateUsername } from "@/lib/validation";
 import { safeNext } from "@/lib/invite";
 import { OAuthButtons, OrDivider } from "@/components/auth/OAuthButtons";
+import { useAuth } from "@/components/providers/AuthProvider";
 
 function RegisterPageContent() {
   const supabase = createClient();
   const router = useRouter();
   const params = useSearchParams();
   const next = safeNext(params.get("next"));
+  const { refreshProfile } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [username, setUsername] = useState("");
@@ -40,6 +42,9 @@ function RegisterPageContent() {
       setBusy(false);
       return setError(profErr.message.includes("duplicate") ? "Username taken" : profErr.message);
     }
+    // Signing up signs in, and the app looks up the profile at that moment — before the insert
+    // above lands. Refresh it, or the app thinks there's no profile and sends them to /welcome.
+    await refreshProfile();
     router.push(next);
   }
 

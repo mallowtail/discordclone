@@ -43,21 +43,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [supabase]);
 
   const refreshProfile = useCallback(async () => {
-    if (!user) {
+    // Read the signed-in user from the client's own session rather than the `user` state: right
+    // after signUp the state can lag a render behind, and the register page calls this straight
+    // after inserting the profile.
+    const { data: sess } = await supabase.auth.getSession();
+    const current = sess.session?.user ?? null;
+    if (!current) {
       setProfile(null);
       setProfileFor(null);
       return;
     }
-    const { data, error } = await supabase.from("profiles").select("*").eq("id", user.id).maybeSingle();
+    const { data, error } = await supabase.from("profiles").select("*").eq("id", current.id).maybeSingle();
     setProfile((data as Profile) ?? null);
     // Only a successful lookup counts as "loaded": a network error must not look like "no profile".
-    if (!error) setProfileFor(user.id);
-  }, [supabase, user]);
+    if (!error) setProfileFor(current.id);
+  }, [supabase]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- shared public refetch; its null-user branch clears the old profile on sign-out
     refreshProfile();
-  }, [refreshProfile]);
+  }, [refreshProfile, user]); // re-check on every sign-in / sign-out
 
   const signOut = async () => {
     await supabase.auth.signOut();

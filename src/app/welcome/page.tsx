@@ -42,6 +42,12 @@ function WelcomeContent() {
       avatar_url: avatarFrom(meta),
     });
     if (insErr) {
+      // A duplicate *id* means this account already has a profile (e.g. created on the register
+      // page a moment before the app checked) — nothing to pick, just carry on.
+      if (insErr.message.includes("profiles_pkey")) {
+        await refreshProfile();
+        return router.replace(next);
+      }
       setBusy(false);
       return setError(insErr.message.includes("duplicate") ? "That username's taken — try another" : insErr.message);
     }

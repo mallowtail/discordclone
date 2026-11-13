@@ -1,65 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
-import { useAuth } from "@/components/providers/AuthProvider";
-import type { Profile } from "@/types/db";
-import { Avatar } from "@/components/user/Avatar";
-import { openDmWith } from "@/lib/dm";
-import { Modal } from "@/components/ui/Modal";
+import { PeoplePickerDialog } from "@/components/dms/PeoplePickerDialog";
 import { Plus } from "@phosphor-icons/react";
 
+/** The + next to "Direct Messages": start a DM or a group with people you can already reach. */
 export function NewDmDialog() {
-  const supabase = createClient();
-  const router = useRouter();
-  const { user } = useAuth();
   const [open, setOpen] = useState(false);
-  const [results, setResults] = useState<Profile[]>([]);
-
-  async function search(q: string) {
-    if (q.length < 2) return setResults([]);
-    const { data } = await supabase
-      .from("profiles")
-      .select("*")
-      .ilike("username", `%${q}%`)
-      .neq("id", user!.id)
-      .limit(10);
-    setResults((data as Profile[]) ?? []);
-  }
-
-  async function startDm(other: Profile) {
-    const convId = await openDmWith(supabase, user!.id, other.id);
-    if (!convId) return;
-    setOpen(false);
-    router.push(`/dms/${convId}`);
-  }
-
   return (
     <>
-      <button onClick={() => setOpen(true)} className="text-muted hover:text-ink" title="New DM">
+      <button onClick={() => setOpen(true)} className="text-muted hover:text-ink" title="New DM or group" aria-label="New DM or group">
         <Plus size={18} weight="bold" />
       </button>
-      {open && (
-        <Modal onClose={() => setOpen(false)} title="Start a DM" size="sm">
-          <div className="p-4">
-            <input autoFocus placeholder="Search username…"
-              className="w-full p-2 rounded-control bg-surface-2 text-ink"
-              onChange={(e) => search(e.target.value)} />
-            <ul className="mt-2 max-h-60 overflow-y-auto">
-              {results.map((p) => (
-                <li key={p.id}>
-                  <button onClick={() => startDm(p)}
-                    className="w-full text-left px-2 py-1 rounded-row hover:bg-surface text-ink flex items-center gap-2">
-                    <Avatar url={p.avatar_url ?? null} name={p.display_name} size="sm" />
-                    <span className="truncate">{p.display_name} <span className="text-muted">@{p.username}</span></span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </Modal>
-      )}
+      {open && <PeoplePickerDialog mode="new" onClose={() => setOpen(false)} />}
     </>
   );
 }

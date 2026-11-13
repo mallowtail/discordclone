@@ -1,11 +1,13 @@
 "use client";
 
-import { Suspense, use, useCallback, useEffect, useState } from "react";
+import { Suspense, use, useCallback, useState } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
-import { useAuth } from "@/components/providers/AuthProvider";
-import type { Profile, Message } from "@/types/db";
+import type { Message } from "@/types/db";
+import { useConversation } from "@/hooks/useConversations";
+import { GroupIcon } from "@/components/dms/GroupIcon";
+import { GroupMembersPanel } from "@/components/dms/GroupMembersPanel";
+import { HeaderButton, SidePanelOverlay, useOverlayMode } from "@/components/ui/SidePanel";
 import { useMessages } from "@/hooks/useMessages";
 import { usePinnedMessages } from "@/hooks/usePinnedMessages";
 import { MessageList, MessageRowSkeleton } from "@/components/messages/MessageList";
@@ -17,7 +19,7 @@ import { PinnedPanel } from "@/components/messages/PinnedPanel";
 import { useDrawer } from "@/components/providers/DrawerProvider";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { PushPin, List, WarningCircle } from "@phosphor-icons/react";
+import { PushPin, List, Users, WarningCircle } from "@phosphor-icons/react";
 
 /** Shown while the search-params-reading view suspends; mirrors the DM header + message area. */
 function DmSkeleton() {
@@ -51,11 +53,11 @@ function DmView({ conversationId }: { conversationId: string }) {
   const router = useRouter();
   const pathname = usePathname();
   const anchorId = searchParams.get("msg");
-  const supabase = createClient();
-  const { user } = useAuth();
-  const [other, setOther] = useState<Profile | null>(null);
-  const [otherLoaded, setOtherLoaded] = useState(false);
-  const [notFound, setNotFound] = useState(false);
+  const { conv, loaded: convLoaded, missing: notFound } = useConversation(conversationId);
+  const [showMembers, setShowMembers] = useState(false);
+  // Stable: SidePanelOverlay's effect depends on it, and new messages re-render this view.
+  const closeMembers = useCallback(() => setShowMembers(false), []);
+  const membersOverlayMode = useOverlayMode();
   const [replyTo, setReplyTo] = useState<Message | null>(null);
   const [replyToName, setReplyToName] = useState("");
   const [showPins, setShowPins] = useState(false);
@@ -71,30 +73,6 @@ function DmView({ conversationId }: { conversationId: string }) {
   }, []);
   const { open: drawerOpen, toggleDrawer } = useDrawer();
 
-  useEffect(() => {
-    if (!user) return;
-    let active = true;
-    supabase
-      .from("conversation_members")
-      .select("profiles(*)")
-      .eq("conversation_id", conversationId)
-      .neq("user_id", user.id)
-      .single()
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .then(({ data, error }: any) => {
-        if (!active) return;
-        if (error || !data?.profiles) {
-          setNotFound(true);
-          setOtherLoaded(true);
-          return;
-        }
-        setOther(data.profiles);
-        setOtherLoaded(true);
-      });
-    return () => {
-      active = false;
-    };
-  }, [supabase, conversationId, user]);
 
   if (notFound) {
     return (
@@ -102,7 +80,7 @@ function DmView({ conversationId }: { conversationId: string }) {
         <EmptyState
           icon={<WarningCircle size={32} weight="bold" aria-hidden="true" />}
           title="Conversation not found"
-          description="It may have been deleted, or you don't have access to it."
+          description="It may have been deleted, or you're no longer in it."
           action={
             <Link
               href="/dms"
@@ -128,17 +106,32 @@ function DmView({ conversationId }: { conversationId: string }) {
           >
             <List size={20} weight="bold" aria-hidden="true" />
           </button>
-          <span className="truncate">
-            {otherLoaded ? <>@ {other?.display_name ?? "Direct Message"}</> : <Skeleton className="h-4 w-28" />}
-          </span>
+          {!convLoaded || !conv ? (
+            <Skeleton className="h-4 w-28" />
+          ) : conv.isGroup ? (
+            <span className="flex items-center gap-2 min-w-0">
+              <GroupIcon />
+              <span className="truncate">{conv.label}</span>
+              <span className="hidden sm:inline flex-none text-meta font-normal text-muted">{conv.members.length} members</span>
+            </span>
+          ) : (
+            <span className="truncate">@ {conv.label}</span>
+          )}
         </span>
-        <button
-          onClick={() => setShowPins((s) => !s)}
-          data-trigger="pins"
-          className="min-h-11 flex-none text-xs font-normal text-muted hover:text-ink flex items-center gap-1"
-        >
-          <PushPin size={15} /> Pinned ({pinsState.count})
-        </button>
+        <span className="flex items-center flex-none">
+          <button
+            onClick={() => setShowPins((s) => !s)}
+            data-trigger="pins"
+            className="min-h-11 flex-none text-xs font-normal text-muted hover:text-ink flex items-center gap-1"
+          >
+            <PushPin size={15} /> Pinned ({pinsState.count})
+          </button>
+          {conv?.isGroup && (
+            <HeaderButton label="Show Member List" onClick={() => setShowMembers((s) => !s)}>
+              <Users size={17} />
+            </HeaderButton>
+          )}
+        </span>
         {showPins && (
           <PinnedPanel
             pins={pinsState.pins}
@@ -149,43 +142,59 @@ function DmView({ conversationId }: { conversationId: string }) {
           />
         )}
       </header>
-      <MessageDropZone
-        target={{ conversation_id: conversationId }}
-        addPending={addPending}
-        removePending={removePending}
-        className="flex-1 flex flex-col min-h-0"
-      >
-        <MessageList
-          messages={messages}
-          onReply={handleReply}
-          anchorId={anchorId}
-          anchored={anchored}
-          onLoadOlder={loadOlder}
-          loadingOlder={loadingOlder}
-          olderFailed={olderFailed}
-          hasMore={hasMore}
-          startLabel="This is the start of your conversation"
-        />
-        {anchored && (
-          <button
-            onClick={() => router.replace(pathname)}
-            className="absolute bottom-25 right-6 z-10 rounded-pill bg-accent text-white text-meta leading-4 px-3 py-1.5 shadow hover:opacity-90"
-          >
-            Jump to present ↓
-          </button>
-        )}
-        <TypingIndicator names={typing.names} />
-        <MessageInput
+      <div className="flex flex-1 min-h-0 relative">
+        <MessageDropZone
           target={{ conversation_id: conversationId }}
-          placeholder={`Message ${other?.display_name ?? ""}`}
-          replyTo={replyTo}
-          replyToName={replyToName}
-          onClearReply={() => setReplyTo(null)}
           addPending={addPending}
           removePending={removePending}
-          onTyping={(t) => (t ? typing.notifyTyping() : typing.notifyStopped())}
-        />
-      </MessageDropZone>
+          className="flex-1 flex flex-col min-h-0 min-w-0"
+        >
+          <MessageList
+            messages={messages}
+            onReply={handleReply}
+            anchorId={anchorId}
+            anchored={anchored}
+            onLoadOlder={loadOlder}
+            loadingOlder={loadingOlder}
+            olderFailed={olderFailed}
+            hasMore={hasMore}
+            startLabel={conv?.isGroup ? `This is the start of ${conv.label}` : "This is the start of your conversation"}
+          />
+          {anchored && (
+            <button
+              onClick={() => router.replace(pathname)}
+              className="absolute bottom-25 right-6 z-10 rounded-pill bg-accent text-white text-meta leading-4 px-3 py-1.5 shadow hover:opacity-90"
+            >
+              Jump to present ↓
+            </button>
+          )}
+          <TypingIndicator names={typing.names} />
+          <MessageInput
+            target={{ conversation_id: conversationId }}
+            placeholder={`Message ${conv?.label ?? ""}`}
+            replyTo={replyTo}
+            replyToName={replyToName}
+            onClearReply={() => setReplyTo(null)}
+            addPending={addPending}
+            removePending={removePending}
+            onTyping={(t) => (t ? typing.notifyTyping() : typing.notifyStopped())}
+          />
+        </MessageDropZone>
+      {conv?.isGroup && showMembers && (
+        membersOverlayMode ? (
+          <>
+            <div className="absolute inset-0 z-30" onClick={closeMembers} aria-hidden="true" />
+            <div className="absolute inset-y-0 right-0 z-40">
+              <SidePanelOverlay label="Group members" onClose={closeMembers}>
+                <GroupMembersPanel conv={conv} />
+              </SidePanelOverlay>
+            </div>
+          </>
+        ) : (
+          <GroupMembersPanel conv={conv} />
+        )
+      )}
+      </div>
     </>
   );
 }

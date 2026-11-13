@@ -5,18 +5,19 @@ import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { useServers } from "@/hooks/useServers";
 import { buildForwardSnapshot } from "@/lib/forward";
+import { fetchConversations } from "@/hooks/useConversations";
 import { Modal } from "@/components/ui/Modal";
 import type { Channel, Message } from "@/types/db";
-import { Hash, At, Check, MagnifyingGlass } from "@phosphor-icons/react";
+import { Hash, At, Check, MagnifyingGlass, UsersThree } from "@phosphor-icons/react";
 
-type Dest = { key: string; kind: "channel" | "dm"; id: string; label: string; group: string };
+type Dest = { key: string; kind: "channel" | "dm"; id: string; label: string; group: string; isGroup?: boolean };
 
 export function ForwardDialog({ message, onClose }: { message: Message; onClose: () => void }) {
   const supabase = useMemo(() => createClient(), []);
   const { user } = useAuth();
   const { servers } = useServers();
   const [channels, setChannels] = useState<Channel[]>([]);
-  const [dms, setDms] = useState<{ id: string; label: string }[]>([]);
+  const [dms, setDms] = useState<{ id: string; label: string; isGroup: boolean }[]>([]);
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [comment, setComment] = useState("");
@@ -33,16 +34,8 @@ export function ForwardDialog({ message, onClose }: { message: Message; onClose:
         const { data } = await supabase.from("channels").select("*").in("server_id", serverIds).order("position");
         if (active) setChannels((data as Channel[]) ?? []);
       } else if (active) setChannels([]);
-      const { data: memberships } = await supabase
-        .from("conversation_members").select("conversation_id").eq("user_id", user.id);
-      const convIds = (memberships ?? []).map((m) => m.conversation_id);
-      if (convIds.length) {
-        const { data: others } = await supabase
-          .from("conversation_members").select("conversation_id, profiles(*)")
-          .in("conversation_id", convIds).neq("user_id", user.id);
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        if (active) setDms(((others ?? []) as any[]).map((o) => ({ id: o.conversation_id, label: o.profiles?.display_name ?? "Direct message" })));
-      } else if (active) setDms([]);
+      const convs = await fetchConversations(supabase, user.id);
+      if (active) setDms(convs.map((c) => ({ id: c.id, label: c.label, isGroup: c.isGroup })));
     })();
     return () => { active = false; };
   }, [supabase, user, serverIdsKey]);
@@ -50,7 +43,7 @@ export function ForwardDialog({ message, onClose }: { message: Message; onClose:
   const serverName = (id: string) => servers.find((s) => s.id === id)?.name ?? "Server";
   const dests: Dest[] = [
     ...channels.map((c) => ({ key: `channel:${c.id}`, kind: "channel" as const, id: c.id, label: `#${c.name}`, group: serverName(c.server_id) })),
-    ...dms.map((d) => ({ key: `dm:${d.id}`, kind: "dm" as const, id: d.id, label: d.label, group: "Direct Messages" })),
+    ...dms.map((d) => ({ key: `dm:${d.id}`, kind: "dm" as const, id: d.id, label: d.label, group: "Direct Messages", isGroup: d.isGroup })),
   ];
   const q = search.trim().toLowerCase();
   const filtered = q ? dests.filter((d) => d.label.toLowerCase().includes(q) || d.group.toLowerCase().includes(q)) : dests;
@@ -115,7 +108,7 @@ export function ForwardDialog({ message, onClose }: { message: Message; onClose:
                     }`}
                   >
                     <span className="w-8 h-8 flex-none rounded-row bg-surface-2 text-muted flex items-center justify-center">
-                      {d.kind === "channel" ? <Hash size={16} weight="bold" /> : <At size={16} weight="bold" />}
+                      {d.kind === "channel" ? <Hash size={16} weight="bold" /> : d.isGroup ? <UsersThree size={16} weight="bold" /> : <At size={16} weight="bold" />}
                     </span>
                     <span className={`flex-1 min-w-0 text-body truncate ${on ? "text-ink font-medium" : "text-ink"}`}>{d.label}</span>
                     <span

@@ -1,12 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
-import { useAuth } from "@/components/providers/AuthProvider";
-import type { Profile } from "@/types/db";
 import { NewDmDialog } from "@/components/dms/NewDmDialog";
+import { GroupIcon } from "@/components/dms/GroupIcon";
+import { useConversations } from "@/hooks/useConversations";
 import { Avatar } from "@/components/user/Avatar";
 import { UserPanel } from "@/components/user/UserPanel";
 import { useProfilePopover } from "@/components/providers/ProfilePopoverProvider";
@@ -29,47 +27,19 @@ function DmRowSkeleton() {
 }
 
 export function DmSidebar() {
-  const supabase = createClient();
   const pathname = usePathname();
-  const { user } = useAuth();
   const { open } = useProfilePopover();
   const { isOnline } = usePresence();
   const { closeDrawer } = useDrawer();
-  const [dms, setDms] = useState<{ id: string; other: Profile }[]>([]);
-  const [loaded, setLoaded] = useState(false);
-  const { incoming } = useFriends();
-  const onFriendsPage = pathname === "/dms";
+  const { conversations: dms, loaded } = useConversations();
 
   // Extract active conversation ID from pathname (e.g., /dms/abc123 -> abc123)
   // pathSegments[2] is the segment after /dms/, which matches a real id or nothing
   const pathSegments = pathname.split("/");
   const activeConversationId = pathSegments[1] === "dms" ? pathSegments[2] : null;
 
-  useEffect(() => {
-    if (!user) return;
-    (async () => {
-      const { data: memberships } = await supabase
-        .from("conversation_members")
-        .select("conversation_id")
-        .eq("user_id", user.id);
-      const convIds = (memberships ?? []).map((m) => m.conversation_id);
-      if (convIds.length === 0) {
-        setDms([]);
-        setLoaded(true);
-        return;
-      }
-      const { data: others } = await supabase
-        .from("conversation_members")
-        .select("conversation_id, profiles(*)")
-        .in("conversation_id", convIds)
-        .neq("user_id", user.id);
-      setDms(
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (others ?? []).map((o: any) => ({ id: o.conversation_id, other: o.profiles }))
-      );
-      setLoaded(true);
-    })();
-  }, [supabase, user]);
+  const { incoming } = useFriends();
+  const onFriendsPage = pathname === "/dms";
 
   return (
     <aside className="w-[clamp(12.5rem,18vw,16.25rem)] bg-sidebar flex flex-col">
@@ -99,13 +69,16 @@ export function DmSidebar() {
           />
         ) : (
           dms.map((d) => {
-            const online = !!d.other && isOnline(d.other.id);
-            const displayName = d.other?.display_name ?? "Unknown";
+            const other = d.isGroup ? null : d.others[0] ?? null;
+            const online = !!other && isOnline(other.id);
             const isActive = d.id === activeConversationId;
+            const label = d.isGroup
+              ? `${d.label} — group, ${d.members.length} members`
+              : `${d.label} — ${online ? "Online" : "Offline"}`;
             return (
               <Link key={d.id} href={`/dms/${d.id}`}
                 aria-current={isActive ? "page" : undefined}
-                aria-label={`${displayName} — ${online ? "Online" : "Offline"}`}
+                aria-label={label}
                 onClick={closeDrawer}
                 className={`relative flex items-center gap-2 px-2 py-1 min-h-11 md:min-h-0 rounded-row text-body ${
                   isActive
@@ -118,28 +91,35 @@ export function DmSidebar() {
                     aria-hidden="true"
                   />
                 )}
-                <span
-                  role="button"
-                  tabIndex={0}
-                  aria-label={`View ${d.other?.display_name ?? "user"}'s profile`}
-                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); if (!d.other) return; open(d.other.id, e.currentTarget.getBoundingClientRect()); }}
-                  onKeyDown={(e) => {
-                    if (e.key !== "Enter" && e.key !== " ") return;
-                    e.preventDefault(); e.stopPropagation();
-                    if (!d.other) return;
-                    open(d.other.id, e.currentTarget.getBoundingClientRect());
-                  }}
-                  className="flex-none cursor-pointer"
-                >
-                  <Avatar
-                    url={d.other?.avatar_url ?? null}
-                    name={d.other?.display_name}
-                    seed={d.other?.id}
-                    presence={online ? "online" : "offline"}
-                    size="sm"
-                  />
+                {d.isGroup ? (
+                  <GroupIcon />
+                ) : (
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`View ${d.label}'s profile`}
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); if (!other) return; open(other.id, e.currentTarget.getBoundingClientRect()); }}
+                    onKeyDown={(e) => {
+                      if (e.key !== "Enter" && e.key !== " ") return;
+                      e.preventDefault(); e.stopPropagation();
+                      if (!other) return;
+                      open(other.id, e.currentTarget.getBoundingClientRect());
+                    }}
+                    className="flex-none cursor-pointer"
+                  >
+                    <Avatar
+                      url={other?.avatar_url ?? null}
+                      name={other?.display_name}
+                      seed={other?.id}
+                      presence={online ? "online" : "offline"}
+                      size="sm"
+                    />
+                  </span>
+                )}
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate">{d.label}</span>
+                  {d.isGroup && <span className="block text-micro text-muted font-normal">{d.members.length} members</span>}
                 </span>
-                {displayName}
               </Link>
             );
           })

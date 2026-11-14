@@ -126,7 +126,7 @@ export function isBlockedHostname(hostname: string): boolean {
 // Thumbnails are only relayed from the video/music sites' own image servers.
 const THUMBNAIL_HOSTS = [
   "ytimg.com", "vimeocdn.com", "tiktokcdn.com", "tiktokcdn-us.com", "ibyteimg.com", "jtvnw.net",
-  "cdninstagram.com", "fbcdn.net", "scdn.co", "spotifycdn.com", "sndcdn.com",
+  "cdninstagram.com", "fbcdn.net", "scdn.co", "spotifycdn.com", "sndcdn.com", "klipy.com",
 ];
 
 export function isAllowedThumbnailHost(url: string): boolean {

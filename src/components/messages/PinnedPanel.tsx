@@ -10,6 +10,7 @@ import { PushPin, X } from "@phosphor-icons/react";
 
 function snippet(m: Message): string {
   if (m.poll) return `📊 ${m.content}`;
+  if (m.gif && !m.content) return "GIF";
   if (m.content) return m.content.length > 80 ? m.content.slice(0, 80) + "…" : m.content;
   if (m.image_url) return "Image";
   if (m.file_url) return "File";

@@ -81,6 +81,8 @@ export type ForwardSnapshot = {
   image_url: string | null;
   file_url: string | null;
   file_name: string | null;
+  /** Filled in by the server when the forwarded message was a GIF. */
+  gif?: { url: string; width: number; height: number; title: string } | null;
   source: string;
 };
 
@@ -102,6 +104,8 @@ export type Message = {
   forward_snapshot: ForwardSnapshot | null;
   /** A poll: `content` is the question; answers and votes live in polls / poll_options / poll_votes. */
   poll?: boolean;
+  /** A KLIPY GIF (shown through our relay); see lib/gifs. */
+  gif?: { url: string; width: number; height: number; title: string } | null;
   pending?: boolean;
 };
 

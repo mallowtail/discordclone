@@ -76,7 +76,7 @@ export function DmSidebar() {
               ? `${d.label} — group, ${d.members.length} members`
               : `${d.label} — ${online ? "Online" : "Offline"}`;
             return (
-              <Link key={d.id} href={`/dms/${d.id}`}
+              <Link key={d.id} href={`/dms/${d.id}`} prefetch
                 aria-current={isActive ? "page" : undefined}
                 aria-label={label}
                 onClick={closeDrawer}

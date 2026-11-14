@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import { createPortal } from "react-dom";
+import { useRouter } from "next/navigation";
 import { ChatCircle, Plus } from "@phosphor-icons/react";
 import { useServers } from "@/hooks/useServers";
 import { useUnread } from "@/hooks/useUnread";
@@ -118,6 +119,7 @@ export function ServerRail({
   suppressFlyouts?: boolean;
 }) {
   const { servers } = useServers();
+  const router = useRouter();
   // One request for every server's channel list, so clicking a server can jump straight to a
   // channel (see AppShell.selectServer) instead of looking it up first.
   const serverKey = servers.map((s) => s.id).join(",");
@@ -125,10 +127,16 @@ export function ServerRail({
     if (!serverKey) return;
     let active = true;
     createClient().from("channels").select("*").in("server_id", serverKey.split(",")).then(({ data }) => {
-      if (active && data) navCache.rememberChannels(data as Channel[]);
+      if (!active || !data) return;
+      navCache.rememberChannels(data as Channel[]);
+      // Pre-download the page each server would open, so the first click doesn't wait for it.
+      for (const id of serverKey.split(",")) {
+        const channelId = navCache.channelToOpen(id);
+        if (channelId) router.prefetch(`/channels/${channelId}`);
+      }
     });
     return () => { active = false; };
-  }, [serverKey]);
+  }, [serverKey, router]);
   const [adding, setAdding] = useState(false);
   const { incoming } = useFriends();
 

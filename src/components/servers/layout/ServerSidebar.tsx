@@ -104,7 +104,7 @@ export function ServerSidebar({ serverId }: { serverId: string }) {
     // channel's left accent bar are mutually exclusive and never fight for the same spot.
     const unread = !isActive && isUnread(channel.id);
     return (
-      <Link key={channel.id} href={`/channels/${channel.id}`}
+      <Link key={channel.id} href={`/channels/${channel.id}`} prefetch
         aria-current={isActive ? "page" : undefined}
         onClick={closeDrawer}
         className={`relative flex items-center gap-2 px-2 py-1 min-h-11 md:min-h-0 ${hasMargin ? "ml-2" : ""} rounded-row text-body ${

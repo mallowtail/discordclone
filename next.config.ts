@@ -20,6 +20,12 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  // Keep visited pages in the browser for 5 minutes instead of re-downloading them on every switch.
+  // Safe here: every page under (app) is a client component whose data is fetched in the browser,
+  // so the cached page payload holds no user data.
+  experimental: {
+    staleTimes: { dynamic: 300 },
+  },
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },

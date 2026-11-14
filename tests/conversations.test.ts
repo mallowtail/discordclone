@@ -3,7 +3,7 @@ import { summarizeConversation, conversationLabel, pickerAction, groupErrorMessa
 import type { Profile } from "@/types/db";
 
 const p = (id: string, display_name = id): Profile => ({
-  id, username: id, display_name, avatar_url: null, bio: null, status: null, recent_emojis: [], created_at: "2026-01-01T00:00:00Z",
+  id, username: id, display_name, avatar_url: null, bio: null, status: null, recent_emojis: [], trusted_domains: [], created_at: "2026-01-01T00:00:00Z",
 });
 const row = (over: Partial<ConversationRow>, people: Profile[]): ConversationRow => ({
   id: "c1", is_group: true, name: null, owner_id: "me", created_at: "2026-01-01T00:00:00Z",

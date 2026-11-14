@@ -6,6 +6,8 @@ export type Profile = {
   bio: string | null;
   status: string | null;
   recent_emojis: string[];
+  /** Hostnames whose links open without the "Leaving Mallowchat" warning. */
+  trusted_domains: string[];
   created_at: string;
 };
 

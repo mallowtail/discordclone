@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { extractLinks, withParent, type EmbedShape } from "@/lib/embeds";
 import type { LinkPreview } from "@/lib/server/linkPreview";
 import { Play } from "@phosphor-icons/react";
+import { useLinkGuard } from "@/components/providers/LinkGuardProvider";
 
 // One request per link per page load, shared by every message that shows it.
 const requests = new Map<string, Promise<LinkPreview | null>>();
@@ -32,6 +33,7 @@ export function LinkPreviews({ content }: { content: string }) {
 }
 
 function LinkPreviewCard({ url }: { url: string }) {
+  const { guard } = useLinkGuard();
   const [preview, setPreview] = useState<LinkPreview | null | undefined>(undefined);
   useEffect(() => {
     let active = true;
@@ -50,6 +52,7 @@ function LinkPreviewCard({ url }: { url: string }) {
         {preview.author && <> · {preview.author}</>}
       </div>
       <a href={preview.url} target="_blank" rel="noopener noreferrer"
+        onClick={(e) => guard(e, preview.url)} onAuxClick={(e) => guard(e, preview.url)}
         className="mt-0.5 block text-body font-semibold text-accent hover:underline break-words">
         {preview.title}
       </a>

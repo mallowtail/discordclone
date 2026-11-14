@@ -5,11 +5,13 @@ import type { Message } from "@/types/db";
 import { remarkMentions } from "@/lib/mentions";
 import { File } from "@phosphor-icons/react";
 import { isHttpUrl, withDownloadName } from "@/lib/url";
+import { useLinkGuard } from "@/components/providers/LinkGuardProvider";
 
 // Discord-style subset. Anything not in this list renders as plain text.
 const ALLOWED = ["p", "strong", "em", "del", "code", "pre", "blockquote", "a", "ul", "ol", "li", "br", "h1", "h2", "h3"];
 
 export function MessageContent({ msg }: { msg: Message }) {
+  const { guard } = useLinkGuard();
   const safeImage = msg.image_url && isHttpUrl(msg.image_url) ? msg.image_url : null;
   const safeFile = msg.file_url && isHttpUrl(msg.file_url) ? msg.file_url : null;
   return (
@@ -28,7 +30,8 @@ export function MessageContent({ msg }: { msg: Message }) {
                 );
               }
               return (
-                <a href={href} target="_blank" rel="noopener noreferrer" className="text-accent underline">
+                <a href={href} target="_blank" rel="noopener noreferrer" className="text-accent underline"
+                  onClick={(e) => href && guard(e, href)} onAuxClick={(e) => href && guard(e, href)}>
                   {children}
                 </a>
               );

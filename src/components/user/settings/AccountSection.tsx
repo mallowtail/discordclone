@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/components/providers/AuthProvider";
+import { TrustedSitesSection } from "@/components/user/settings/TrustedSitesSection";
 
 const PASSWORD_MIN = 8;
 
@@ -96,6 +97,7 @@ export function AccountSection() {
           {busy ? "Updating…" : "Update password"}
         </button>
       </div>
+      <TrustedSitesSection />
     </div>
   );
 }

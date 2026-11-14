@@ -11,6 +11,7 @@ import { ProfilePopoverProvider } from "@/components/providers/ProfilePopoverPro
 import { PresenceProvider } from "@/components/providers/PresenceProvider";
 import { UnreadProvider } from "@/components/providers/UnreadProvider";
 import { FriendsProvider } from "@/components/providers/FriendsProvider";
+import { LinkGuardProvider } from "@/components/providers/LinkGuardProvider";
 import { DrawerProvider, useDrawer } from "@/components/providers/DrawerProvider";
 import { Drawer } from "@/components/ui/Drawer";
 
@@ -65,7 +66,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <UnreadProvider>
           <FriendsProvider>
             <ProfilePopoverProvider>
-              <AppShell activeServer={activeServer}>{children}</AppShell>
+              <LinkGuardProvider>
+                <AppShell activeServer={activeServer}>{children}</AppShell>
+              </LinkGuardProvider>
             </ProfilePopoverProvider>
           </FriendsProvider>
         </UnreadProvider>

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Avatar } from "@/components/user/profile/Avatar";
 import { isHttpUrl, withDownloadName } from "@/lib/media/url";
-import { fitGif, gifRelayUrl } from "@/lib/messages/gifs";
+import { fitGif, isKlipyMediaUrl } from "@/lib/messages/gifs";
 import type { ForwardSnapshot, Profile } from "@/types/db";
 import { ArrowBendUpRight } from "@phosphor-icons/react";
 
@@ -38,11 +38,11 @@ export function ForwardedBlock({ snapshot }: { snapshot: ForwardSnapshot }) {
         {snapshot.content && <div className="text-ink text-body break-words leading-relaxed">{snapshot.content}</div>}
         {/* eslint-disable-next-line @next/next/no-img-element -- user-uploaded Supabase storage content, not a static asset */}
         {img && <img src={img} alt="" className="mt-1 max-h-60 rounded-row" />}
-        {snapshot.gif && (() => {
+        {snapshot.gif && isKlipyMediaUrl(snapshot.gif.url) && (() => {
           const box = fitGif(snapshot.gif.width, snapshot.gif.height, 240, 240);
           return (
-            // eslint-disable-next-line @next/next/no-img-element -- relayed animated WebP; next/image would freeze it
-            <img src={gifRelayUrl(snapshot.gif.url)} alt={snapshot.gif.title ? `GIF: ${snapshot.gif.title}` : "GIF"}
+            // eslint-disable-next-line @next/next/no-img-element -- KLIPY media must load directly from their URL
+            <img src={snapshot.gif.url} alt={snapshot.gif.title ? `GIF: ${snapshot.gif.title}` : "GIF"}
               width={box.width} height={box.height} loading="lazy" className="mt-1 rounded-row" style={{ width: box.width, height: box.height }} />
           );
         })()}

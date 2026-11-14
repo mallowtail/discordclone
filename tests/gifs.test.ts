@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { normalizeKlipyItem, gifRelayUrl, fitGif } from "@/lib/messages/gifs";
+import { normalizeKlipyItem, fitGif, isKlipyMediaUrl } from "@/lib/messages/gifs";
 
 const v = (name: string, w: number, h: number, size: number) => ({ url: `https://static.klipy.com/ii/x/${name}`, width: w, height: h, size });
 const item = {
@@ -20,21 +20,23 @@ describe("normalizeKlipyItem", () => {
       full: { url: "https://static.klipy.com/ii/x/md.webp", width: 640, height: 358 },
     });
   });
-  it("skips files too big for the relay, and falls back to a still image", () => {
-    const big = { ...item, file: { md: { webp: v("md.webp", 640, 358, 5_000_000), jpg: v("md.jpg", 640, 358, 30_000) } } };
-    const n = normalizeKlipyItem(big)!;
-    expect(n.full.url).toBe("https://static.klipy.com/ii/x/md.jpg");
-    expect(n.preview.url).toBe("https://static.klipy.com/ii/x/md.jpg");
+  it("uses KLIPY's URLs exactly as given, query strings included", () => {
+    const tracked = { id: 1, title: "t", file: { md: { webp: { url: "https://static.klipy.com/a/b.webp?k=1&t=x", width: 10, height: 10, size: 99_000_000 } } } };
+    expect(normalizeKlipyItem(tracked)?.full.url).toBe("https://static.klipy.com/a/b.webp?k=1&t=x");
   });
-  it("rejects items with nothing usable or from other hosts", () => {
-    expect(normalizeKlipyItem({ id: 1, title: "x", file: {} })).toBeNull();
-    expect(normalizeKlipyItem({ id: 1, title: "x", file: { md: { webp: { url: "https://evil.example/a.webp", width: 1, height: 1, size: 1 } } } })).toBeNull();
+  it("falls back to whatever file exists rather than dropping the result", () => {
+    const onlyJpg = { id: 2, title: "x", file: { hd: { jpg: v("hd.jpg", 498, 278, 20_000) } } };
+    expect(normalizeKlipyItem(onlyJpg)?.preview.url).toBe("https://static.klipy.com/ii/x/hd.jpg");
+    expect(normalizeKlipyItem({ id: 3, title: "x", file: {} })).toBeNull();
   });
 });
 
-describe("gifRelayUrl / fitGif", () => {
-  it("routes KLIPY media through our relay", () => {
-    expect(gifRelayUrl("https://static.klipy.com/ii/x/md.webp")).toBe("/api/link-preview/image?src=https%3A%2F%2Fstatic.klipy.com%2Fii%2Fx%2Fmd.webp");
+describe("isKlipyMediaUrl / fitGif", () => {
+  it("accepts KLIPY's media hosts only", () => {
+    expect(isKlipyMediaUrl("https://static.klipy.com/ii/x/md.webp?k=1")).toBe(true);
+    expect(isKlipyMediaUrl("https://media.klipy.com/a.gif")).toBe(true);
+    expect(isKlipyMediaUrl("https://klipy.com.evil.net/a.gif")).toBe(false);
+    expect(isKlipyMediaUrl("http://static.klipy.com/a.gif")).toBe(false);
   });
   it("scales to fit a box, never up", () => {
     expect(fitGif(640, 358, 300, 300)).toEqual({ width: 300, height: 168 });

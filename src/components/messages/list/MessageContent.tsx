@@ -6,7 +6,7 @@ import { remarkMentions } from "@/lib/messages/mentions";
 import { File } from "@phosphor-icons/react";
 import { isHttpUrl, withDownloadName } from "@/lib/media/url";
 import { useLinkGuard } from "@/components/providers/LinkGuardProvider";
-import { fitGif, gifRelayUrl } from "@/lib/messages/gifs";
+import { fitGif, isKlipyMediaUrl } from "@/lib/messages/gifs";
 
 // Discord-style subset. Anything not in this list renders as plain text.
 const ALLOWED = ["p", "strong", "em", "del", "code", "pre", "blockquote", "a", "ul", "ol", "li", "br", "h1", "h2", "h3"];
@@ -45,12 +45,12 @@ export function MessageContent({ msg }: { msg: Message }) {
           {msg.content}
         </ReactMarkdown>
       )}
-      {msg.gif && (() => {
+      {msg.gif && isKlipyMediaUrl(msg.gif.url) && (() => {
         // Sized from the stored dimensions so the chat doesn't jump while it loads.
         const box = fitGif(msg.gif.width, msg.gif.height, 300, 300);
         return (
-          // eslint-disable-next-line @next/next/no-img-element -- relayed animated WebP; next/image would freeze it
-          <img src={gifRelayUrl(msg.gif.url)} alt={msg.gif.title ? `GIF: ${msg.gif.title}` : "GIF"} title={msg.gif.title || undefined}
+          // eslint-disable-next-line @next/next/no-img-element -- KLIPY media must load directly from their URL
+          <img src={msg.gif.url} alt={msg.gif.title ? `GIF: ${msg.gif.title}` : "GIF"} title={msg.gif.title || undefined}
             width={box.width} height={box.height} loading="lazy"
             className="mt-1 block rounded-control bg-surface-2" style={{ width: box.width, height: box.height }} />
         );

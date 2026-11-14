@@ -2,20 +2,47 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useTopmostEscape } from "@/components/ui/overlayStack";
-import { gifRelayUrl, type Gif } from "@/lib/messages/gifs";
+import { useAuth } from "@/components/providers/AuthProvider";
+import { normalizeKlipyItem, type Gif } from "@/lib/messages/gifs";
 import { Gif as GifIcon, MagnifyingGlass } from "@phosphor-icons/react";
 
 type Page = { gifs: Gif[]; hasNext: boolean };
 
-async function fetchGifs(q: string, page: number): Promise<Page & { error?: string }> {
-  const res = await fetch(`/api/gifs?q=${encodeURIComponent(q)}&page=${page}`);
-  const body = await res.json().catch(() => ({}));
-  if (!res.ok) return { gifs: [], hasNext: false, error: body.error ?? "GIF search is unavailable right now" };
-  return body as Page;
+// KLIPY's integration rules: the browser calls their API itself (their keys are made to be used in
+// apps), results are shown in the order given, and media loads straight from their URLs.
+const KLIPY_KEY = process.env.NEXT_PUBLIC_KLIPY_API_KEY;
+// PG-13: on KLIPY the same set as their loosest setting; their library is human-moderated.
+const RATING = "pg-13";
+
+/** KLIPY wants a per-user id; send a one-way hash, not the real account id. */
+async function customerId(userId: string): Promise<string> {
+  const bytes = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`mallowchat:${userId}`));
+  return [...new Uint8Array(bytes)].map((b) => b.toString(16).padStart(2, "0")).join("").slice(0, 32);
+}
+
+async function fetchGifs(q: string, page: number, userId: string): Promise<Page & { error?: string }> {
+  if (!KLIPY_KEY) return { gifs: [], hasNext: false, error: "GIFs aren't set up yet" };
+  const params = new URLSearchParams({
+    page: String(page), per_page: "24", customer_id: await customerId(userId), rating: RATING, locale: "en",
+  });
+  if (q) params.set("q", q);
+  try {
+    const res = await fetch(`https://api.klipy.com/api/v1/${encodeURIComponent(KLIPY_KEY)}/gifs/${q ? "search" : "trending"}?${params}`);
+    if (!res.ok) return { gifs: [], hasNext: false, error: res.status === 429 ? "Too many GIF searches — try again in a minute" : "GIF search is unavailable right now" };
+    const body = (await res.json()) as { data?: { data?: unknown[]; has_next?: boolean } };
+    const gifs = (body.data?.data ?? [])
+      .map((i) => normalizeKlipyItem(i as Parameters<typeof normalizeKlipyItem>[0]))
+      .filter((g): g is Gif => !!g); // only items with no file at all, which can't be shown
+    return { gifs, hasNext: !!body.data?.has_next };
+  } catch {
+    return { gifs: [], hasNext: false, error: "GIF search is unavailable right now" };
+  }
 }
 
 /** The GIF button in the message box and its search panel. Picking a GIF sends it right away. */
 export function GifPicker({ onPick, disabled }: { onPick: (gif: Gif) => void; disabled?: boolean }) {
+  const { user } = useAuth();
+  const userId = user?.id ?? "";
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [gifs, setGifs] = useState<Gif[]>([]);
@@ -26,13 +53,13 @@ export function GifPicker({ onPick, disabled }: { onPick: (gif: Gif) => void; di
   const ref = useRef<HTMLDivElement>(null);
   const reqId = useRef(0);
 
-  // Search as you type, but only after a short pause (each search uses up the shared GIF quota).
+  // Search as you type, but only after a short pause (each search uses up the GIF quota).
   useEffect(() => {
-    if (!open) return;
+    if (!open || !userId) return;
     const my = ++reqId.current;
     const t = setTimeout(async () => {
       setLoading(true);
-      const r = await fetchGifs(query.trim(), 1);
+      const r = await fetchGifs(query.trim(), 1, userId);
       if (my !== reqId.current) return;
       setGifs(r.gifs);
       setHasNext(r.hasNext);
@@ -41,7 +68,7 @@ export function GifPicker({ onPick, disabled }: { onPick: (gif: Gif) => void; di
       setLoading(false);
     }, query ? 400 : 0);
     return () => clearTimeout(t);
-  }, [open, query]);
+  }, [open, query, userId]);
 
   useEffect(() => {
     if (!open) return;
@@ -56,9 +83,9 @@ export function GifPicker({ onPick, disabled }: { onPick: (gif: Gif) => void; di
   async function more() {
     const my = ++reqId.current;
     setLoading(true);
-    const r = await fetchGifs(query.trim(), page + 1);
+    const r = await fetchGifs(query.trim(), page + 1, userId);
     if (my !== reqId.current) return;
-    setGifs((cur) => [...cur, ...r.gifs.filter((g) => !cur.some((c) => c.id === g.id))]);
+    setGifs((cur) => [...cur, ...r.gifs]); // appended as given, in KLIPY's order
     setHasNext(r.hasNext);
     setPage(page + 1);
     setLoading(false);
@@ -90,12 +117,12 @@ export function GifPicker({ onPick, disabled }: { onPick: (gif: Gif) => void; di
               <p className="p-3 text-body text-muted">No GIFs found.</p>
             ) : (
               <div className="columns-2 gap-1.5">
-                {gifs.map((g) => (
-                  <button key={g.id} type="button" onClick={() => { setOpen(false); onPick(g); }} title={g.title}
+                {gifs.map((g, i) => (
+                  <button key={`${g.id}-${i}`} type="button" onClick={() => { setOpen(false); onPick(g); }} title={g.title}
                     aria-label={`Send GIF: ${g.title || "untitled"}`}
                     className="mb-1.5 block w-full overflow-hidden rounded-row bg-surface-2 hover:ring-2 hover:ring-accent focus-visible:ring-2 focus-visible:ring-accent">
-                    {/* eslint-disable-next-line @next/next/no-img-element -- relayed animated WebP; next/image would freeze it */}
-                    <img src={gifRelayUrl(g.preview.url)} alt="" width={g.preview.width} height={g.preview.height} loading="lazy"
+                    {/* eslint-disable-next-line @next/next/no-img-element -- KLIPY media must load directly from their URL */}
+                    <img src={g.preview.url} alt="" width={g.preview.width} height={g.preview.height} loading="lazy"
                       className="block w-full h-auto" />
                   </button>
                 ))}

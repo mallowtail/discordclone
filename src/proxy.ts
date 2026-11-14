@@ -21,7 +21,10 @@ export async function proxy(request: NextRequest) {
     }
   );
 
-  await supabase.auth.getUser(); // refreshes the session
+  // Refreshes the session cookie when it's about to expire. getClaims verifies the token's signature
+  // locally (asymmetric keys, cached), so a page change doesn't wait on a round trip to Supabase
+  // Auth the way getUser() did — that check ran on every navigation and prefetch.
+  await supabase.auth.getClaims();
   return response;
 }
 

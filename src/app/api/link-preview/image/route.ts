@@ -13,8 +13,10 @@ const IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif", "imag
  */
 export async function GET(request: NextRequest) {
   const supabase = await createServerSupabase();
-  const { data } = await supabase.auth.getUser();
-  if (!data.user) return new Response("Sign in first", { status: 401 });
+  // Signature checked locally (no round trip to Supabase Auth per preview / thumbnail).
+  const { data } = await supabase.auth.getClaims();
+  const userId = data?.claims?.sub;
+  if (!userId) return new Response("Sign in first", { status: 401 });
 
   const src = request.nextUrl.searchParams.get("src") ?? "";
   if (!isAllowedThumbnailHost(src)) return new Response("Not allowed", { status: 400 });

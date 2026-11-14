@@ -25,15 +25,17 @@ function allowed(userId: string): boolean {
 
 export async function GET(request: NextRequest) {
   const supabase = await createServerSupabase();
-  const { data } = await supabase.auth.getUser();
-  if (!data.user) return Response.json({ error: "Sign in first" }, { status: 401 });
+  // Signature checked locally (no round trip to Supabase Auth per preview / thumbnail).
+  const { data } = await supabase.auth.getClaims();
+  const userId = data?.claims?.sub;
+  if (!userId) return Response.json({ error: "Sign in first" }, { status: 401 });
 
   const url = request.nextUrl.searchParams.get("url") ?? "";
   if (url.length > 2048 || !/^https?:\/\//i.test(url)) return Response.json({ error: "Bad link" }, { status: 400 });
 
   const hit = cache.get(url);
   if (hit && Date.now() - hit.at < CACHE_MS) return reply(hit.value);
-  if (!allowed(data.user.id)) return Response.json({ error: "Too many previews" }, { status: 429 });
+  if (!allowed(userId)) return Response.json({ error: "Too many previews" }, { status: 429 });
 
   const value = await buildLinkPreview(url).catch(() => null);
   if (cache.size >= CACHE_MAX) cache.delete(cache.keys().next().value!);

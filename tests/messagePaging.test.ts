@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { mergeMessages, hasMoreAfter, nextHasMore, reconcileNewestPage, MESSAGE_PAGE } from "@/lib/messages/messagePaging";
+import { mergeMessages, hasMoreAfter, nextHasMore, reconcileNewestPage, refreshCachedPage, MESSAGE_PAGE } from "@/lib/messages/messagePaging";
 import type { Message } from "@/types/db";
 
 function msg(id: string, created_at: string, extra: Partial<Message> = {}): Message {
@@ -156,5 +156,28 @@ describe("reconcileNewestPage", () => {
     const prev = range(0, MESSAGE_PAGE);
     const page = range(1000, MESSAGE_PAGE);
     expect(reconcileNewestPage(prev, page, MESSAGE_PAGE).replaced).toBe(true);
+  });
+});
+
+describe("refreshCachedPage (remembered messages + a fresh newest page)", () => {
+  it("takes the fresh page as the truth for its time range: edits applied, deletions dropped", () => {
+    const edited = { ...m3, content: "edited" };
+    const r = refreshCachedPage([m1, m2, m3, m4], [m2, edited], 10);
+    // m4 was deleted while away (newer than the page start, missing from it); m1 is older than the page: kept
+    expect(r.messages.map((m) => [m.id, m.content])).toEqual([["m1", "content m1"], ["m2", "content m2"], ["m3", "edited"]]);
+    expect(r.replaced).toBe(false);
+  });
+  it("adds messages that arrived while away", () => {
+    expect(refreshCachedPage([m1, m2], [m2, m3, m4], 10).messages.map((m) => m.id)).toEqual(["m1", "m2", "m3", "m4"]);
+  });
+  it("a full page with no overlap means a gap: replace and let scrolling page back", () => {
+    const r = refreshCachedPage([m1], [m3, m4], 2);
+    expect(r.messages.map((m) => m.id)).toEqual(["m3", "m4"]);
+    expect(r.replaced).toBe(true);
+  });
+  it("keeps my unsent (pending) messages, and an empty channel empties the list", () => {
+    const pending = msg("p1", "2026-10-30T10:05:00Z", { pending: true });
+    expect(refreshCachedPage([m1, pending], [m1], 10).messages.map((m) => m.id)).toEqual(["m1", "p1"]);
+    expect(refreshCachedPage([m1, m2], [], 10).messages).toEqual([]);
   });
 });

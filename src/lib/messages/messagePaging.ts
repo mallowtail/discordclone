@@ -70,3 +70,26 @@ export function reconcileNewestPage(
   }
   return { messages: mergeMessages(prev, page), replaced: false };
 }
+
+/**
+ * Remembered messages (shown instantly when you reopen a chat) meet the freshly fetched newest
+ * page. Within the page's time range the page is the truth — edits applied, messages deleted while
+ * you were away dropped; older remembered messages are kept; your own unsent ones stay. A full page
+ * sharing nothing with what was remembered means a gap: replace, and `replaced` resets paging.
+ */
+export function refreshCachedPage(
+  cached: Message[],
+  page: Message[],
+  pageSize: number
+): { messages: Message[]; replaced: boolean } {
+  const pending = cached.filter((m) => m.pending);
+  const confirmed = cached.filter((m) => !m.pending);
+  const pageIds = new Set(page.map((m) => m.id));
+  if (page.length >= pageSize && confirmed.length > 0 && !confirmed.some((m) => pageIds.has(m.id))) {
+    return { messages: mergeMessages(page, pending), replaced: true };
+  }
+  if (page.length === 0) return { messages: pending, replaced: false };
+  const start = page[0].created_at;
+  const older = confirmed.filter((m) => m.created_at < start);
+  return { messages: mergeMessages([...older, ...page], pending), replaced: false };
+}

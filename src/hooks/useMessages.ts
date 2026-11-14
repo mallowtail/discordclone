@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { MESSAGE_PAGE, mergeMessages, nextHasMore, reconcileNewestPage } from "@/lib/messages/messagePaging";
+import { MESSAGE_PAGE, mergeMessages, nextHasMore, reconcileNewestPage, refreshCachedPage } from "@/lib/messages/messagePaging";
+import { navCache } from "@/lib/cache/navCache";
 import type { Message } from "@/types/db";
 
 type Target =
@@ -21,6 +22,8 @@ type State = {
   anchorFound: boolean;
   /** A server page has landed; later (reconnect) loads keep the paged `hasMore` instead. */
   loaded: boolean;
+  /** Restored from navCache: shown at once, and the first fresh page reconciles with it. */
+  fromCache?: boolean;
 };
 
 // One stable empty array: MessageList treats "still the very first instance and empty" as
@@ -31,6 +34,12 @@ function fresh(key: string): State {
   return { key, messages: EMPTY, hasMore: true, loadingOlder: false, olderFailed: false, anchorFound: false, loaded: false };
 }
 
+/** The remembered state for a chat (not for `?msg=` anchored views), else a fresh empty one. */
+function initial(key: string, anchored: boolean): State {
+  const cached = anchored ? undefined : navCache.getMessages<State>(key);
+  return cached ? { ...cached, key, loadingOlder: false, fromCache: true } : fresh(key);
+}
+
 export function useMessages(target: Target) {
   const supabase = createClient();
   const column = "channelId" in target ? "channel_id" : "conversation_id";
@@ -38,10 +47,10 @@ export function useMessages(target: Target) {
   const anchorId = target.anchorId ?? null;
   const key = `${column}:${value}:${anchorId ?? ""}`;
 
-  const [state, setState] = useState<State>(() => fresh(key));
-  // Derived reset: when the target changes we show a fresh empty state until the new target's
-  // first write lands (no setState-in-effect needed).
-  const current = state.key === key ? state : fresh(key);
+  const [state, setState] = useState<State>(() => initial(key, !!anchorId));
+  // Derived reset: when the target changes we show its remembered state (or a fresh empty one)
+  // until the new target's first write lands (no setState-in-effect needed).
+  const current = state.key === key ? state : initial(key, !!anchorId);
 
   // Latest target key, for discarding async results that resolve after a chat switch.
   const keyRef = useRef(key);
@@ -56,8 +65,14 @@ export function useMessages(target: Target) {
 
   /** Apply `fn` to the state for target `k`, starting from fresh if the stored state is another target's. */
   const update = useCallback((k: string, fn: (s: State) => State) => {
-    setState((prev) => fn(prev.key === k ? prev : fresh(k)));
+    setState((prev) => fn(prev.key === k ? prev : initial(k, !k.endsWith(":"))));
   }, []);
+
+  // Remember the latest loaded state (minus unsent messages) so reopening this chat is instant.
+  useEffect(() => {
+    if (anchorId || !current.loaded || current.fromCache) return;
+    navCache.setMessages(key, { ...current, messages: current.messages.filter((m) => !m.pending), loadingOlder: false });
+  }, [current, key, anchorId]);
 
   const addPending = useCallback(
     (m: Message) => {
@@ -122,6 +137,11 @@ export function useMessages(target: Target) {
       const page = ((recent.data ?? []) as Message[]).reverse();
       const ok = !recent.error && !!recent.data;
       update(key, (s) => {
+        if (s.fromCache && ok) {
+          // Reopened chat: the fresh page replaces the remembered one for its time range.
+          const r = refreshCachedPage(s.messages, page, MESSAGE_PAGE);
+          return { ...s, messages: r.messages, hasMore: r.replaced ? true : s.hasMore, anchorFound: false, loaded: true, fromCache: false, olderFailed: false };
+        }
         // Reconnect after a long outage: a full newest page disjoint from what we hold means a
         // hole loadOlder could never fill → reconcileNewestPage replaces the list and we reset
         // hasMore so scrolling up pages back through the missed messages.

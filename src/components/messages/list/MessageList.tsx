@@ -1,5 +1,6 @@
 "use client";
 
+import { navCache } from "@/lib/cache/navCache";
 import { memo, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { Message, Profile } from "@/types/db";
@@ -90,6 +91,8 @@ export const MessageList = memo(function MessageList({
   const flashedRef = useRef<string | null>(null);
   const { user, profile: myProfile } = useAuth();
   const [attempted, setAttempted] = useState<Record<string, true>>({});
+  // Authors already loaded this session (navCache) show at once, without another lookup.
+  const profileOf = (id: string) => profiles[id] ?? navCache.getProfile(id);
   const reactionsByMessage = useReactions(messages.map((m) => m.id), user?.id ?? "");
   const byId = new Map(messages.map((m) => [m.id, m]));
   const { colorFor } = useMemberRoleColors(serverId);
@@ -105,11 +108,14 @@ export const MessageList = memo(function MessageList({
   useEffect(() => {
     // `attempted` stops an id whose profile never comes back (deleted user, RLS) from being
     // re-requested forever, and lets the render below fall back to a neutral name for it.
-    const missing = [...new Set(messages.map((m) => m.author_id))].filter((id) => !profiles[id] && !attempted[id]);
+    const authors = [...new Set(messages.map((m) => m.author_id))];
+    // Authors already known this session (navCache) are looked up at render; don't ask again.
+    const missing = authors.filter((id) => !profiles[id] && !navCache.getProfile(id) && !attempted[id]);
     if (missing.length === 0) return;
     supabase.from("profiles").select("*").in("id", missing).then(({ data }) => {
       const next: Record<string, Profile> = {};
       (data as Profile[] | null)?.forEach((p) => (next[p.id] = p));
+      navCache.rememberProfiles((data as Profile[] | null) ?? []);
       setProfiles((prev) => ({ ...prev, ...next }));
       setAttempted((prev) => ({ ...prev, ...Object.fromEntries(missing.map((id) => [id, true as const])) }));
     });
@@ -236,7 +242,7 @@ export const MessageList = memo(function MessageList({
           // optimistic message never waits on a round-trip; for anyone else, only the NAME shows
           // a skeleton until their profile fetch settles, after which an unresolved author
           // (deleted / blocked) gets a neutral name instead of staying pending forever.
-          const author = profiles[m.author_id] ?? (m.author_id === user?.id ? myProfile ?? undefined : undefined);
+          const author = profileOf(m.author_id) ?? (m.author_id === user?.id ? myProfile ?? undefined : undefined);
           const authorPending = !author && !attempted[m.author_id];
           return (
             <MessageItem
@@ -248,7 +254,7 @@ export const MessageList = memo(function MessageList({
               showHeader={showHeader}
               pills={reactionsByMessage[m.id] ?? []}
               repliedTo={repliedTo}
-              repliedToName={repliedTo ? profiles[repliedTo.author_id]?.display_name : undefined}
+              repliedToName={repliedTo ? profileOf(repliedTo.author_id)?.display_name : undefined}
               onReply={onReply}
               serverId={serverId}
               authorColor={colorFor(m.author_id)}

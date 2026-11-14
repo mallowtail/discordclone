@@ -4,6 +4,7 @@ import { Suspense, use, useCallback, useEffect, useState } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { navCache } from "@/lib/cache/navCache";
 import type { Channel, Message } from "@/types/db";
 import { useMessages } from "@/hooks/useMessages";
 import { usePinnedMessages } from "@/hooks/usePinnedMessages";
@@ -49,15 +50,24 @@ function ChannelSkeleton() {
 export default function ChannelPage({ params }: { params: Promise<{ channelId: string }> }) {
   const { channelId: id } = use(params);
   const supabase = createClient();
-  const [channel, setChannel] = useState<Channel | null>(null);
-  const [missing, setMissing] = useState(false);
+  const [fetched, setFetched] = useState<Channel | null>(null);
+  const [missingId, setMissingId] = useState<string | null>(null);
+  // Render straight away from the remembered row (sidebar/rail already loaded it) so messages start
+  // loading immediately; the fetch below still confirms it and catches deleted channels.
+  const channel = fetched?.id === id ? fetched : navCache.getChannel(id) ?? null;
+  const missing = missingId === id;
 
   useEffect(() => {
+    let active = true;
     supabase.from("channels").select("*").eq("id", id).single()
       .then(({ data }) => {
-        if (data) setChannel(data as Channel);
-        else setMissing(true);
+        if (!active) return;
+        if (data) {
+          setFetched(data as Channel);
+          navCache.visitChannel(data as Channel);
+        } else setMissingId(id);
       });
+    return () => { active = false; };
   }, [supabase, id]);
 
   if (missing) {

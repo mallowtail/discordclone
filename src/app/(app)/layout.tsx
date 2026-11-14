@@ -14,6 +14,7 @@ import { FriendsProvider } from "@/components/providers/FriendsProvider";
 import { LinkGuardProvider } from "@/components/providers/LinkGuardProvider";
 import { DrawerProvider, useDrawer } from "@/components/providers/DrawerProvider";
 import { Drawer } from "@/components/ui/Drawer";
+import { navCache } from "@/lib/cache/navCache";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, loading, profile, profileLoaded } = useAuth();
@@ -49,6 +50,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     // DMs / home (cleared during render above), or the transient /channels/first landing
     // (leave as-is until it resolves)
     if (!m || m[1] === "first") return;
+    // Already know this channel's server (sidebar/rail loaded it): no lookup, no sidebar flicker.
+    const known = navCache.getChannel(m[1]);
+    if (known?.server_id) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- synchronous cache hit for the route's server
+      setResolvedServer(known.server_id);
+      return;
+    }
     let active = true;
     supabase.from("channels").select("server_id").eq("id", m[1]).single().then(({ data }) => {
       if (active && data) setResolvedServer(data.server_id as string);
@@ -59,6 +67,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }, [pathname, supabase]);
 
   if (loading || !user) return <div className="p-6 text-muted">Loading…</div>;
+  // Everything remembered for fast switching belongs to this account; a different one wipes it.
+  // (Idempotent module bookkeeping, safe to run during render.)
+  navCache.setOwner(user.id);
 
   return (
     <DrawerProvider>
@@ -87,7 +98,10 @@ function AppShell({ activeServer, children }: { activeServer: string | null; chi
   const { open, isMobile, closeDrawer } = useDrawer();
 
   function selectServer(id: string) {
-    router.push(`/channels/first?server=${id}`);
+    // Straight to the channel you were last in (or the first one), skipping the /channels/first
+    // hop and its lookups; that page is only the fallback before the channel lists have loaded.
+    const channelId = navCache.channelToOpen(id);
+    router.push(channelId ? `/channels/${channelId}` : `/channels/first?server=${id}`);
     closeDrawer();
   }
   function selectHome() {

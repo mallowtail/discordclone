@@ -1,5 +1,6 @@
 "use client";
 
+import { navCache } from "@/lib/cache/navCache";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -68,6 +69,7 @@ export function ServerSidebar({ serverId }: { serverId: string }) {
     setServer((s as Server) ?? null);
     setCategories((cats as Category[]) ?? []);
     setChannels((chs as Channel[]) ?? []);
+    if (chs) navCache.rememberChannels(chs as Channel[], serverId);
     setLoaded(true);
   }, [supabase, serverId]);
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import { createPortal } from "react-dom";
 import { ChatCircle, Plus } from "@phosphor-icons/react";
 import { useServers } from "@/hooks/useServers";
@@ -9,7 +9,9 @@ import { ServerIcon } from "@/components/servers/layout/ServerIcon";
 import { useFriends } from "@/components/providers/FriendsProvider";
 import { RequestBadge } from "@/components/dms/sidebar/RequestBadge";
 import { AddServerDialog } from "@/components/servers/dialogs/AddServerDialog";
-import type { Server } from "@/types/db";
+import type { Channel, Server } from "@/types/db";
+import { createClient } from "@/lib/supabase/client";
+import { navCache } from "@/lib/cache/navCache";
 
 function RailItem({
   active,
@@ -116,6 +118,17 @@ export function ServerRail({
   suppressFlyouts?: boolean;
 }) {
   const { servers } = useServers();
+  // One request for every server's channel list, so clicking a server can jump straight to a
+  // channel (see AppShell.selectServer) instead of looking it up first.
+  const serverKey = servers.map((s) => s.id).join(",");
+  useEffect(() => {
+    if (!serverKey) return;
+    let active = true;
+    createClient().from("channels").select("*").in("server_id", serverKey.split(",")).then(({ data }) => {
+      if (active && data) navCache.rememberChannels(data as Channel[]);
+    });
+    return () => { active = false; };
+  }, [serverKey]);
   const [adding, setAdding] = useState(false);
   const { incoming } = useFriends();
 

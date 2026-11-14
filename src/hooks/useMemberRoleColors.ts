@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useId, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { Role } from "@/types/db";
-import { topRoleColor } from "@/lib/roleColor";
+import { topRoleColor } from "@/lib/servers/roleColor";
 
 export function useMemberRoleColors(serverId: string | null | undefined): {
   colorFor: (userId: string) => string | null;

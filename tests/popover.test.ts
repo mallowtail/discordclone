@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { computePopoverPosition } from "@/lib/popover";
+import { computePopoverPosition } from "@/lib/users/popover";
 
 const vp = { width: 1000, height: 800 };
 

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { aggregateReactions, upsertReaction, removeReaction, chunkIds, REACTION_ID_CHUNK } from "@/lib/reactions";
+import { aggregateReactions, upsertReaction, removeReaction, chunkIds, REACTION_ID_CHUNK } from "@/lib/messages/reactions";
 import type { Reaction } from "@/types/db";
 
 function r(user_id: string, emoji: string): Reaction {

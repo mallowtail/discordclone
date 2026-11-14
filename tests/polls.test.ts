@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { validatePollDraft, tallyPoll, pollTimeLabel, POLL_DURATIONS } from "@/lib/polls";
+import { validatePollDraft, tallyPoll, pollTimeLabel, POLL_DURATIONS } from "@/lib/messages/polls";
 
 describe("validatePollDraft", () => {
   it("trims, drops blank answers, and accepts 2–10 answers", () => {

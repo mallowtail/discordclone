@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { canManageRoleClient, canTogglePermClient } from "@/lib/roleHierarchy";
-import { canEditRoleClient } from "@/lib/roleHierarchy";
+import { canManageRoleClient, canTogglePermClient } from "@/lib/servers/roleHierarchy";
+import { canEditRoleClient } from "@/lib/servers/roleHierarchy";
 
 describe("canManageRoleClient", () => {
   it("owner can manage any role", () => {

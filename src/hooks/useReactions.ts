@@ -3,7 +3,7 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { Reaction } from "@/types/db";
-import { aggregateReactions, upsertReaction, removeReaction, chunkIds, type ReactionPill } from "@/lib/reactions";
+import { aggregateReactions, upsertReaction, removeReaction, chunkIds, type ReactionPill } from "@/lib/messages/reactions";
 
 // Short, stable hash so the realtime channel name stays small even when `key`
 // is hundreds of joined UUIDs (channel names must not balloon to thousands of chars).

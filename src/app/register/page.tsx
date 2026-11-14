@@ -4,8 +4,8 @@ import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
-import { validateUsername } from "@/lib/validation";
-import { safeNext } from "@/lib/invite";
+import { validateUsername } from "@/lib/messages/validation";
+import { safeNext } from "@/lib/servers/invite";
 import { OAuthButtons, OrDivider } from "@/components/auth/OAuthButtons";
 import { useAuth } from "@/components/providers/AuthProvider";
 

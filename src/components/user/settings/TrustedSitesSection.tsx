@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/components/providers/AuthProvider";
-import { removeTrustedDomain } from "@/lib/linkGuard";
+import { removeTrustedDomain } from "@/lib/messages/linkGuard";
 
 /** Sites trusted from the "Leaving Mallowchat" warning; removing one brings the warning back. */
 export function TrustedSitesSection() {

@@ -1,0 +1,277 @@
+"use client";
+
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { Message } from "@/types/db";
+import { formatTime } from "@/lib/messages/format";
+import { useAuth } from "@/components/providers/AuthProvider";
+import { createClient } from "@/lib/supabase/client";
+import { validateMessage } from "@/lib/messages/validation";
+import { mentionsMe } from "@/lib/messages/mentions";
+import { MessageContent } from "@/components/messages/list/MessageContent";
+import { MessageActions } from "@/components/messages/list/MessageActions";
+import { ReactionBar } from "@/components/messages/list/ReactionBar";
+import { ForwardDialog } from "@/components/messages/forwarding/ForwardDialog";
+import { ForwardedBlock } from "@/components/messages/forwarding/ForwardedBlock";
+import { PollCard } from "@/components/messages/polls/PollCard";
+import { LinkPreviews } from "@/components/messages/list/LinkPreviews";
+import { Avatar } from "@/components/user/profile/Avatar";
+import { Skeleton } from "@/components/ui/Skeleton";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { useProfilePopover } from "@/components/providers/ProfilePopoverProvider";
+import type { ReactionPill } from "@/lib/messages/reactions";
+import { ArrowBendUpLeft, PushPin } from "@phosphor-icons/react";
+import { toolbarRecents } from "@/lib/messages/recentEmojis";
+
+function snippet(m: Message): string {
+  if (m.poll) return `📊 ${m.content}`;
+  if (m.gif && !m.content) return "GIF";
+  if (m.content) return m.content.length > 60 ? m.content.slice(0, 60) + "…" : m.content;
+  if (m.image_url) return "Image";
+  if (m.file_url) return "File";
+  return "";
+}
+
+export function MessageItem({
+  msg,
+  authorName,
+  authorPending = false,
+  authorAvatar,
+  showHeader,
+  pills,
+  repliedTo,
+  repliedToName,
+  onReply,
+  serverId,
+  authorColor,
+  flash,
+}: {
+  msg: Message;
+  authorName: string;
+  /** Profile still loading: show a name-width skeleton instead of the name. */
+  authorPending?: boolean;
+  authorAvatar: string | null;
+  showHeader: boolean;
+  pills: ReactionPill[];
+  repliedTo: Message | null;
+  repliedToName?: string;
+  onReply?: (m: Message, authorName: string) => void;
+  serverId?: string;
+  authorColor?: string | null;
+  flash?: boolean;
+}) {
+  const { user, profile, refreshProfile } = useAuth();
+  const supabase = useMemo(() => createClient(), []);
+  const { open } = useProfilePopover();
+  const isMine = user?.id === msg.author_id;
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(msg.content);
+  const [error, setError] = useState<string | null>(null);
+  const [forwarding, setForwarding] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+
+  const highlighted = mentionsMe({
+    content: msg.content,
+    myUsername: profile?.username ?? null,
+    myId: user?.id ?? null,
+    replyToId: msg.reply_to_id,
+    mentionAuthor: msg.mention_author,
+    repliedToAuthorId: repliedTo?.author_id ?? null,
+  });
+
+  // Search-jump flash: accent tint that eases out over the flash window. Mention (amber) wins, so no flash then.
+  const rowRef = useRef<HTMLDivElement>(null);
+  const showFlash = !!flash && !highlighted;
+  useEffect(() => {
+    const el = rowRef.current;
+    if (!showFlash || !el || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const tint = "color-mix(in srgb, var(--color-accent) 25%, transparent)";
+    const anim = el.animate(
+      [
+        { backgroundColor: tint, boxShadow: "inset 2px 0 0 var(--color-accent)" },
+        { backgroundColor: "transparent", boxShadow: "inset 2px 0 0 transparent" },
+      ],
+      { duration: 2000, easing: "ease-out" },
+    );
+    return () => anim.cancel();
+  }, [showFlash]);
+
+  async function saveEdit() {
+    const v = validateMessage(draft);
+    if (!v.ok && !msg.image_url && !msg.file_url) return setError(v.error);
+    const newContent = v.ok ? v.value : "";
+    const { error: err } = await supabase
+      .from("messages")
+      .update({ content: newContent, updated_at: new Date().toISOString() })
+      .eq("id", msg.id);
+    if (err) return setError("Couldn't save — try again");
+    setEditing(false);
+    setError(null);
+  }
+
+  async function remove() {
+    const { error: err } = await supabase.from("messages").delete().eq("id", msg.id);
+    if (err) setError("Couldn't delete — try again");
+  }
+
+  async function togglePin() {
+    const { error: err } = await supabase.rpc("toggle_pin", { msg: msg.id });
+    if (err) setError("Couldn't pin — try again");
+    else setError(null);
+  }
+
+  async function react(emoji: string) {
+    if (!user) return;
+    const mine = pills.find((p) => p.emoji === emoji)?.mine ?? false;
+    if (mine) {
+      await supabase
+        .from("reactions")
+        .delete()
+        .eq("message_id", msg.id)
+        .eq("user_id", user.id)
+        .eq("emoji", emoji);
+    } else {
+      await supabase.from("reactions").insert({ message_id: msg.id, user_id: user.id, emoji });
+      await supabase.rpc("push_recent_emoji", { e: emoji });
+      await refreshProfile();
+    }
+  }
+
+  function jumpToOriginal() {
+    if (repliedTo) document.getElementById(`msg-${repliedTo.id}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+
+  function openProfile(e: React.MouseEvent<HTMLElement>) {
+    open(msg.author_id, e.currentTarget.getBoundingClientRect(), serverId);
+  }
+
+  return (
+    <div
+      ref={rowRef}
+      id={`msg-${msg.id}`}
+      className={`group relative px-2 md:px-4 hover:bg-black/10 ${showHeader ? "mt-3 pt-0.5" : ""} ${
+        highlighted ? "bg-amber/10 border-l-2 border-amber" : showFlash ? "motion-reduce:bg-accent/25" : ""
+      } ${msg.pending ? "opacity-50" : ""}`}
+    >
+      {!showHeader && msg.pinned && (
+        <span className="absolute left-1 top-0.5 text-muted" title="Pinned" aria-label="Pinned">
+          <PushPin size={15} weight="fill" />
+        </span>
+      )}
+      <div className="flex gap-2 md:gap-3">
+        <div className="w-8 md:w-10 flex-none">
+          {showHeader && (
+            <button onClick={openProfile} className="hover:opacity-80" aria-label={`View ${authorName || "user"}'s profile`}>
+              <Avatar url={authorAvatar} name={authorName} size="md" />
+            </button>
+          )}
+        </div>
+        {/* `pr-12` reserves space for the persistent mobile "more actions" trigger (a 44px
+            button pinned `right-2` of this row, i.e. flush with this column's own right edge)
+            so its opaque background never sits over live text — most visibly on a
+            continuation message (`showHeader=false`), whose first line starts flush at the
+            top of the row with nothing above it to push the trigger clear of. Not needed at
+            `md`+, where the toolbar (and this trigger) only ever shows on hover. */}
+        <div className="flex-1 min-w-0 pr-12 md:pr-0">
+          {msg.reply_to_id && (
+            <div
+              onClick={jumpToOriginal}
+              className="flex items-center gap-1 text-[11px] text-muted mb-0.5 cursor-pointer"
+            >
+              <span className="text-muted"><ArrowBendUpLeft size={14} weight="bold" /></span>
+              {repliedTo ? (
+                <>
+                  {msg.mention_author ? (
+                    <span className="bg-mention text-mention-ink rounded px-1 font-medium">@{repliedToName ?? "user"}</span>
+                  ) : (
+                    <span className="text-ink font-semibold">{repliedToName ?? "user"}</span>
+                  )}
+                  <span className="truncate">{snippet(repliedTo)}</span>
+                </>
+              ) : (
+                <span className="italic">Original message</span>
+              )}
+            </div>
+          )}
+
+          {showHeader && (
+            <div>
+              <button onClick={openProfile} className="font-semibold text-ink hover:underline" style={{ color: authorColor ?? undefined }}>{authorPending ? <Skeleton className="inline-block h-3 w-24 align-middle" /> : authorName}</button>
+              <span className="text-xs text-muted ml-2">{formatTime(msg.created_at)}</span>
+              {msg.pinned && (
+                <span className="text-muted ml-2 inline-flex align-middle" title="Pinned" aria-label="Pinned">
+                  <PushPin size={15} weight="fill" />
+                </span>
+              )}
+            </div>
+          )}
+
+          {editing ? (
+            <div>
+              <textarea
+                autoFocus
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    saveEdit();
+                  }
+                  if (e.key === "Escape") {
+                    setEditing(false);
+                    setDraft(msg.content);
+                    setError(null);
+                  }
+                }}
+                className="w-full p-2 rounded-xl bg-surface text-ink outline-none"
+              />
+              {error && <p className="text-danger text-sm">{error}</p>}
+              <p className="text-xs text-muted">Enter to save · Esc to cancel</p>
+            </div>
+          ) : msg.poll ? (
+            <PollCard msg={msg} />
+          ) : (
+            <>
+              <MessageContent msg={msg} />
+              {msg.content && <LinkPreviews content={msg.content} />}
+            </>
+          )}
+          {!editing && msg.forward_snapshot && <ForwardedBlock snapshot={msg.forward_snapshot} />}
+          {error && !editing && <p className="text-danger text-sm">{error}</p>}
+
+          {!editing && <ReactionBar pills={pills} onReact={react} />}
+        </div>
+      </div>
+      {!editing && (
+        <MessageActions
+          recents={toolbarRecents(profile?.recent_emojis ?? [])}
+          onReact={react}
+          onReply={() => onReply?.(msg, authorName)}
+          onForward={() => setForwarding(true)}
+          onPin={togglePin}
+          pinned={msg.pinned}
+          canEdit={isMine}
+          editable={!msg.poll}
+          onEdit={() => {
+            setDraft(msg.content);
+            setEditing(true);
+          }}
+          onDelete={() => setConfirmingDelete(true)}
+        />
+      )}
+      {forwarding && <ForwardDialog message={msg} onClose={() => setForwarding(false)} />}
+      {confirmingDelete && (
+        <ConfirmDialog
+          title="Delete message"
+          message="Delete this message?"
+          confirmLabel="Delete"
+          destructive
+          onConfirm={() => {
+            setConfirmingDelete(false);
+            remove();
+          }}
+          onClose={() => setConfirmingDelete(false)}
+        />
+      )}
+    </div>
+  );
+}

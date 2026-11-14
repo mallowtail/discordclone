@@ -1,0 +1,187 @@
+"use client";
+
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useTopmostEscape } from "@/components/ui/overlayStack";
+import { createPortal } from "react-dom";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
+import { useAuth } from "@/components/providers/AuthProvider";
+import type { Profile } from "@/types/db";
+import { Avatar } from "@/components/user/profile/Avatar";
+import { StatusBubble } from "@/components/user/profile/StatusBubble";
+import { computePopoverPosition } from "@/lib/users/popover";
+import { openDmWith } from "@/lib/users/dm";
+import { sendErrorMessage, validateMessage } from "@/lib/messages/validation";
+import { useMemberRoleColors } from "@/hooks/useMemberRoleColors";
+import { usePresence } from "@/hooks/usePresence";
+import { RolePill } from "@/components/servers/roles/RolePill";
+import { FriendButton } from "@/components/user/profile/FriendButton";
+
+const CARD_WIDTH = 256; // w-64
+
+export function ProfileCard({
+  userId,
+  anchorRect,
+  serverId,
+  onClose,
+  onOpenFull,
+}: {
+  userId: string;
+  anchorRect: DOMRect;
+  serverId?: string;
+  onClose: () => void;
+  onOpenFull?: () => void;
+}) {
+  const supabase = useMemo(() => createClient(), []);
+  const router = useRouter();
+  const { user } = useAuth();
+  const cardRef = useRef<HTMLDivElement>(null);
+  const bioRef = useRef<HTMLParagraphElement>(null);
+
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
+  const [expandBio, setExpandBio] = useState(false);
+  const [bioOverflows, setBioOverflows] = useState(false);
+  const [draft, setDraft] = useState("");
+  const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
+
+  const { colorFor, rolesFor } = useMemberRoleColors(serverId);
+  const { isOnline } = usePresence();
+
+  const isSelf = user?.id === userId;
+  const online = isOnline(userId);
+
+  useEffect(() => {
+    let active = true;
+    supabase.from("profiles").select("*").eq("id", userId).single().then(({ data }) => {
+      if (active) setProfile((data as Profile) ?? null);
+    });
+    return () => { active = false; };
+  }, [supabase, userId]);
+
+  // Position after render, measuring the card's actual height. Recomputes when content changes.
+  useLayoutEffect(() => {
+    const h = cardRef.current?.offsetHeight ?? 0;
+    setPos(
+      computePopoverPosition(
+        { top: anchorRect.top, bottom: anchorRect.bottom, left: anchorRect.left, right: anchorRect.right },
+        { width: CARD_WIDTH, height: h },
+        { width: window.innerWidth, height: window.innerHeight }
+      )
+    );
+    if (bioRef.current && !expandBio) {
+      setBioOverflows(bioRef.current.scrollHeight > bioRef.current.clientHeight + 1);
+    }
+  }, [anchorRect, profile, expandBio, rolesFor]);
+
+  useEffect(() => {
+    function onDown(e: MouseEvent) {
+      if (cardRef.current && !cardRef.current.contains(e.target as Node)) onClose();
+    }
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [onClose]);
+
+  useTopmostEscape(true, onClose);
+
+  async function send() {
+    if (sending) return;
+    const v = validateMessage(draft);
+    if (!v.ok) { setSendError(v.error ?? "Message can't be sent"); return; }
+    if (!user) return;
+    setSendError(null);
+    setSending(true);
+    const convId = await openDmWith(supabase, user.id, userId);
+    if (!convId) { setSending(false); setSendError("Couldn't open the conversation — try again"); return; }
+    const { error } = await supabase.from("messages").insert({ conversation_id: convId, author_id: user.id, content: v.value });
+    if (error) { setSending(false); setSendError(sendErrorMessage(error.message)); return; }
+    router.push(`/dms/${convId}`);
+    onClose();
+  }
+
+  function openFullPage() {
+    onOpenFull?.();
+    onClose();
+  }
+
+  const memberSince = profile
+    ? new Date(profile.created_at).toLocaleDateString(undefined, { year: "numeric", month: "long" })
+    : "";
+
+  return createPortal(
+    <div
+      ref={cardRef}
+      role="dialog"
+      aria-label={`${profile?.display_name ?? "User"}'s profile`}
+      style={{
+        position: "fixed",
+        top: pos?.top ?? -9999,
+        left: pos?.left ?? -9999,
+        width: CARD_WIDTH,
+        visibility: pos ? "visible" : "hidden",
+      }}
+      className="z-50 bg-surface border border-line rounded-card shadow-xl overflow-hidden"
+    >
+      <div className="p-4">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={openFullPage}
+            title="View full profile"
+            aria-label={`${profile?.display_name ?? "View full profile"} — ${online ? "Online" : "Offline"}`}
+            className="block flex-none"
+          >
+            <Avatar
+              url={profile?.avatar_url ?? null}
+              name={profile?.display_name}
+              seed={userId}
+              presence={online ? "online" : "offline"}
+              presenceRing="ring-surface"
+              size="lg"
+            />
+          </button>
+          <StatusBubble status={profile?.status} />
+        </div>
+        <div className="mt-2 flex items-center gap-2">
+          <span className="text-ink font-semibold truncate" style={{ color: colorFor(userId) ?? undefined }}>{profile?.display_name ?? "…"}</span>
+        </div>
+        {profile?.username && <div className="text-muted text-body">@{profile.username}</div>}
+        {rolesFor(userId).length > 0 && (
+          <div className="flex flex-wrap gap-1 mt-2">
+            {rolesFor(userId).map((r) => <RolePill key={r.id} role={r} />)}
+          </div>
+        )}
+        {profile?.bio && (
+          <div className="mt-2">
+            <p ref={bioRef} className={`text-muted text-body whitespace-pre-wrap ${expandBio ? "" : "line-clamp-3"}`}>
+              {profile.bio}
+            </p>
+            {bioOverflows && !expandBio && (
+              <button onClick={() => setExpandBio(true)} className="text-accent text-meta mt-0.5">View full bio</button>
+            )}
+          </div>
+        )}
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+          <span className="text-muted text-meta">Member since {memberSince}</span>
+          {!isSelf && <FriendButton userId={userId} />}
+        </div>
+      </div>
+      {!isSelf && (
+        <div className="border-t border-line p-2">
+          <input
+            value={draft}
+            onChange={(e) => { setDraft(e.target.value); setSendError(null); }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
+            }}
+            disabled={sending}
+            placeholder={`Message @${profile?.username ?? "user"}`}
+            className="w-full p-2 rounded-xl bg-surface-2 text-ink text-body leading-5 outline-none disabled:opacity-50"
+          />
+          {sendError && <p className="text-danger text-meta mt-1">{sendError}</p>}
+        </div>
+      )}
+    </div>,
+    document.body
+  );
+}

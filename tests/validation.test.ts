@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { validateMessage, validateUsername, sendErrorMessage } from "@/lib/validation";
+import { validateMessage, validateUsername, sendErrorMessage } from "@/lib/messages/validation";
 
 describe("validateMessage", () => {
   it("accepts normal text", () => {

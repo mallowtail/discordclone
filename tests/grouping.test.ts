@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { startsNewGroup } from "@/lib/grouping";
+import { startsNewGroup } from "@/lib/messages/grouping";
 import type { Message } from "@/types/db";
 
 function msg(author_id: string, created_at: string): Message {

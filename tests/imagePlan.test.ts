@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { planImage, shouldUseEncoded, renameForType, ATTACHMENT_MAX_DIM, ICON_MAX_DIM } from "@/lib/imagePlan";
+import { planImage, shouldUseEncoded, renameForType, ATTACHMENT_MAX_DIM, ICON_MAX_DIM } from "@/lib/media/imagePlan";
 
 const MB = 1024 * 1024;
 

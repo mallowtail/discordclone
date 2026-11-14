@@ -9,7 +9,7 @@ import {
   summarizeConversation,
   type ConversationRow,
   type ConversationSummary,
-} from "@/lib/conversations";
+} from "@/lib/users/conversations";
 
 /** All of my DMs and groups, newest first. RLS returns only conversations I'm a member of. */
 export async function fetchConversations(supabase: SupabaseClient, myId: string): Promise<ConversationSummary[]> {

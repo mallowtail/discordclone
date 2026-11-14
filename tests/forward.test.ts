@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildForwardSnapshot } from "@/lib/forward";
+import { buildForwardSnapshot } from "@/lib/messages/forward";
 import type { Message } from "@/types/db";
 
 function msg(over: Partial<Message> = {}): Message {

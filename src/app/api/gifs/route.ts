@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import type { NextRequest } from "next/server";
 import { createServerSupabase } from "@/lib/supabase/server";
-import { normalizeKlipyItem, type Gif } from "@/lib/gifs";
+import { normalizeKlipyItem, type Gif } from "@/lib/messages/gifs";
 
 // GIF search and trending through KLIPY. The API key never leaves the server.
 // Content rating PG-13: on KLIPY that's the same set as their loosest setting, and their library is

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { avatarColor, initials } from "@/lib/avatarColor";
+import { avatarColor, initials } from "@/lib/users/avatarColor";
 
 const HEX_PAIR = /^#[0-9a-fA-F]{6}$/;
 

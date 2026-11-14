@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/components/providers/AuthProvider";
-import { ServerIcon } from "@/components/servers/ServerIcon";
+import { ServerIcon } from "@/components/servers/layout/ServerIcon";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { LinkBreak } from "@phosphor-icons/react";

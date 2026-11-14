@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { MESSAGE_PAGE, mergeMessages, nextHasMore, reconcileNewestPage } from "@/lib/messagePaging";
+import { MESSAGE_PAGE, mergeMessages, nextHasMore, reconcileNewestPage } from "@/lib/messages/messagePaging";
 import type { Message } from "@/types/db";
 
 type Target =

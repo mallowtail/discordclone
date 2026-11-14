@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { unreadCount, hasUnread } from "@/lib/unread";
+import { unreadCount, hasUnread } from "@/lib/messages/unread";
 import type { Message } from "@/types/db";
 
 function msg(id: string, author_id: string, created_at: string): Message {

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { inviteUrl, safeNext, parseInviteCode } from "@/lib/invite";
+import { inviteUrl, safeNext, parseInviteCode } from "@/lib/servers/invite";
 
 describe("inviteUrl", () => {
   it("builds a full invite URL from an explicit origin", () => {
@@ -61,7 +61,7 @@ import {
   EXPIRY_OPTIONS,
   MAX_USES_OPTIONS,
   DEFAULT_EXPIRY_SECONDS,
-} from "@/lib/invite";
+} from "@/lib/servers/invite";
 
 describe("validateVanityCode", () => {
   it("accepts letters (any case), numbers and hyphens, 2–32 long", () => {

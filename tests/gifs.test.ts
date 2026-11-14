@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { normalizeKlipyItem, gifRelayUrl, fitGif } from "@/lib/gifs";
+import { normalizeKlipyItem, gifRelayUrl, fitGif } from "@/lib/messages/gifs";
 
 const v = (name: string, w: number, h: number, size: number) => ({ url: `https://static.klipy.com/ii/x/${name}`, width: w, height: h, size });
 const item = {

@@ -4,7 +4,7 @@ import { createContext, useCallback, useContext, useMemo, useState } from "react
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/components/providers/AuthProvider";
-import { addTrustedDomain, linkDecision } from "@/lib/linkGuard";
+import { addTrustedDomain, linkDecision } from "@/lib/messages/linkGuard";
 import { Modal } from "@/components/ui/Modal";
 
 type Ctx = {

@@ -1,14 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // uploadImage/uploadFile create their own Supabase client internally, so mock the upload module.
-vi.mock("@/lib/upload", () => ({
+vi.mock("@/lib/media/upload", () => ({
   isImageType: (t: string) => t.startsWith("image/"),
   uploadImage: vi.fn(),
   uploadFile: vi.fn(),
 }));
 
-import { uploadImage, uploadFile } from "@/lib/upload";
-import { uploadAndPostFile, uploadAndPostFiles } from "@/lib/sendAttachment";
+import { uploadImage, uploadFile } from "@/lib/media/upload";
+import { uploadAndPostFile, uploadAndPostFiles } from "@/lib/messages/sendAttachment";
 import { fakeSupabase } from "./_fakeSupabase";
 
 const img = new File(["x"], "pic.png", { type: "image/png" });

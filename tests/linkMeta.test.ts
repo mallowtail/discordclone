@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseHtmlMeta, isPrivateAddress, isAllowedThumbnailHost, isBlockedHostname } from "@/lib/linkMeta";
+import { parseHtmlMeta, isPrivateAddress, isAllowedThumbnailHost, isBlockedHostname } from "@/lib/server/linkMeta";
 
 describe("parseHtmlMeta", () => {
   it("prefers Open Graph, falls back to <title> and meta description, decodes entities", () => {

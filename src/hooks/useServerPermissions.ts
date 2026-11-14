@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/components/providers/AuthProvider";
-import type { Permission } from "@/lib/permissions";
+import type { Permission } from "@/lib/servers/permissions";
 
 export function useServerPermissions(serverId: string | null): {
   perms: string[];

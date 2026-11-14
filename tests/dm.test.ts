@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { openDmWith } from "@/lib/dm";
+import { openDmWith } from "@/lib/users/dm";
 import { fakeSupabase } from "./_fakeSupabase";
 
 // openDmWith now delegates the find-or-create to the get_or_create_dm RPC (atomic + race-safe;

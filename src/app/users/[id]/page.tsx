@@ -4,7 +4,7 @@ import { use, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { PresenceProvider } from "@/components/providers/PresenceProvider";
-import { FullProfileModal } from "@/components/user/FullProfileModal";
+import { FullProfileModal } from "@/components/user/profile/FullProfileModal";
 import { Skeleton } from "@/components/ui/Skeleton";
 
 export default function UserPage({ params }: { params: Promise<{ id: string }> }) {

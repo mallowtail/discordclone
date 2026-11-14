@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { PERMISSIONS, PERMISSION_LABELS, isPermission } from "@/lib/permissions";
+import { PERMISSIONS, PERMISSION_LABELS, isPermission } from "@/lib/servers/permissions";
 
 describe("permissions", () => {
   it("exposes the seven permission keys", () => {

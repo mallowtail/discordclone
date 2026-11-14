@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { pushRecent, toolbarRecents } from "@/lib/recentEmojis";
+import { pushRecent, toolbarRecents } from "@/lib/messages/recentEmojis";
 
 describe("pushRecent", () => {
   it("unshifts a new emoji to the front", () => {

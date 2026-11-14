@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { sortFriendships, relationTo, sendResultMessage, escapeLike, type FriendshipRow } from "@/lib/friends";
+import { sortFriendships, relationTo, sendResultMessage, escapeLike, type FriendshipRow } from "@/lib/users/friends";
 import type { Profile } from "@/types/db";
 
 const p = (id: string, display_name = id): Profile => ({

@@ -1,0 +1,423 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import { useTopmostEscape } from "@/components/ui/overlayStack";
+import { createClient } from "@/lib/supabase/client";
+import { useAuth } from "@/components/providers/AuthProvider";
+import { sendErrorMessage, validateMessage } from "@/lib/messages/validation";
+import { uploadAndPostFiles } from "@/lib/messages/sendAttachment";
+import { PollComposerDialog } from "@/components/messages/polls/PollComposerDialog";
+import { GifPicker } from "@/components/messages/composer/GifPicker";
+import type { Gif } from "@/lib/messages/gifs";
+import type { Message } from "@/types/db";
+import { MentionAutocomplete } from "@/components/messages/composer/MentionAutocomplete";
+import EmojiPicker, { Theme } from "emoji-picker-react";
+import { Plus, Smiley, File, ChartBar } from "@phosphor-icons/react";
+
+type Target = { channel_id: string } | { conversation_id: string };
+
+// The active @mention query is the @-word immediately before the caret, if any.
+function mentionQueryAt(text: string, caret: number): string | null {
+  const before = text.slice(0, caret);
+  const m = before.match(/(?:^|\s)@([a-zA-Z0-9_]*)$/);
+  return m ? m[1] : null;
+}
+
+export function MessageInput({
+  target,
+  placeholder,
+  replyTo,
+  replyToName,
+  onClearReply,
+  addPending,
+  removePending,
+  onTyping,
+}: {
+  target: Target;
+  placeholder: string;
+  replyTo?: Message | null;
+  replyToName?: string;
+  onClearReply?: () => void;
+  addPending: (m: Message) => void;
+  removePending: (id: string) => void;
+  /** Composer went non-empty (true) or empty / was sent (false); drives the typing indicator. */
+  onTyping?: (typing: boolean) => void;
+}) {
+  const supabase = createClient();
+  const { user } = useAuth();
+  const [text, setText] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  // Files waiting or in flight. Picking more while one uploads queues them instead of dropping them.
+  const [queued, setQueued] = useState(0);
+  const uploading = queued > 0;
+  const queueRef = useRef<File[]>([]);
+  const drainingRef = useRef(false);
+  const [pingAuthor, setPingAuthor] = useState(true);
+  const [caret, setCaret] = useState(0);
+  const [mentionMatches, setMentionMatches] = useState<string[]>([]);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [pollOpen, setPollOpen] = useState(false);
+  const [emojiOpen, setEmojiOpen] = useState(false);
+  const [multiline, setMultiline] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const taRef = useRef<HTMLTextAreaElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const emojiRef = useRef<HTMLDivElement>(null);
+  const mentionQuery = mentionQueryAt(text, caret);
+  const acOpen = mentionQuery !== null && mentionMatches.length > 0;
+  const [timedOutUntil, setTimedOutUntil] = useState<string | null>(null);
+  // No user / not a channel (DMs): never timed out. Adjusted during render instead of in the effect.
+  const noTimeoutTarget = !user || !("channel_id" in target);
+  if (noTimeoutTarget && timedOutUntil !== null) setTimedOutUntil(null);
+  // A new reply target re-enables "ping author" (adjusted during render when replyTo changes).
+  const [prevReplyId, setPrevReplyId] = useState(replyTo?.id);
+  if (replyTo?.id !== prevReplyId) {
+    setPrevReplyId(replyTo?.id);
+    setPingAuthor(true);
+  }
+
+  // Primitive dep: pages pass `target` as an inline object, so depending on it would re-run these
+  // two queries on every parent re-render (e.g. each typing-indicator update).
+  const timeoutChannelId = "channel_id" in target ? target.channel_id : null;
+  useEffect(() => {
+    if (!user || !timeoutChannelId) return;
+    let active = true;
+    (async () => {
+      const { data: ch } = await supabase.from("channels").select("server_id").eq("id", timeoutChannelId).single();
+      const serverId = (ch as { server_id: string } | null)?.server_id;
+      if (!serverId) return;
+      const { data: mem } = await supabase.from("server_members").select("timeout_until").eq("server_id", serverId).eq("user_id", user.id).single();
+      const until = (mem as { timeout_until: string | null } | null)?.timeout_until ?? null;
+      if (active) setTimedOutUntil(until && new Date(until) > new Date() ? until : null);
+    })();
+    return () => { active = false; };
+  }, [supabase, user, timeoutChannelId]);
+
+  // Close the + menu on outside-click / Escape.
+  useEffect(() => {
+    if (!menuOpen) return;
+    function onDown(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false);
+    }
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [menuOpen]);
+
+  useTopmostEscape(menuOpen, () => setMenuOpen(false));
+
+  // Close the emoji picker on outside-click / Escape.
+  useEffect(() => {
+    if (!emojiOpen) return;
+    function onDown(e: MouseEvent) {
+      if (emojiRef.current && !emojiRef.current.contains(e.target as Node)) setEmojiOpen(false);
+    }
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [emojiOpen]);
+
+  useTopmostEscape(emojiOpen, () => setEmojiOpen(false));
+
+  function replyFields() {
+    return replyTo ? { reply_to_id: replyTo.id, mention_author: pingAuthor } : {};
+  }
+
+  /** Send a GIF straight away (like Discord), as a reply if one is set up. */
+  async function sendGif(g: Gif) {
+    if (timedOutUntil || !user) return;
+    setError(null);
+    const id = crypto.randomUUID();
+    const gif = { url: g.full.url, width: g.full.width, height: g.full.height, title: g.title };
+    addPending({
+      id,
+      author_id: user.id,
+      channel_id: "channel_id" in target ? target.channel_id : null,
+      conversation_id: "conversation_id" in target ? target.conversation_id : null,
+      content: "",
+      image_url: null,
+      file_url: null,
+      file_name: null,
+      gif,
+      created_at: new Date().toISOString(),
+      updated_at: null,
+      reply_to_id: replyTo?.id ?? null,
+      mention_author: replyTo ? pingAuthor : false,
+      pinned: false,
+      pinned_at: null,
+      forward_snapshot: null,
+      pending: true,
+    });
+    const { error: err } = await supabase
+      .from("messages")
+      .insert({ id, author_id: user.id, content: "", gif, ...replyFields(), ...target });
+    if (err) {
+      removePending(id);
+      return setError(sendErrorMessage(err.message));
+    }
+    onClearReply?.();
+  }
+
+  function resetHeight() {
+    if (taRef.current) taRef.current.style.height = "auto";
+    setMultiline(false);
+  }
+
+  async function submit() {
+    if (timedOutUntil) return;
+    if (uploading) return;
+    if (!text.trim()) return; // empty message: silently do nothing (no "Message is empty" warning)
+    const v = validateMessage(text);
+    if (!v.ok) return setError(v.error);
+    setError(null);
+    const draft = v.value;
+    setText("");
+    resetHeight();
+    onTyping?.(false); // stop right away, not after the insert round-trip
+    const id = crypto.randomUUID();
+    const optimistic: Message = {
+      id,
+      author_id: user!.id,
+      channel_id: "channel_id" in target ? target.channel_id : null,
+      conversation_id: "conversation_id" in target ? target.conversation_id : null,
+      content: draft,
+      image_url: null,
+      file_url: null,
+      file_name: null,
+      created_at: new Date().toISOString(),
+      updated_at: null,
+      reply_to_id: replyTo?.id ?? null,
+      mention_author: replyTo ? pingAuthor : false,
+      pinned: false,
+      pinned_at: null,
+      forward_snapshot: null,
+      pending: true,
+    };
+    addPending(optimistic);
+    const { error: err } = await supabase
+      .from("messages")
+      .insert({ id, author_id: user!.id, content: draft, ...replyFields(), ...target });
+    if (err) {
+      removePending(id);
+      setText(draft);
+      setError(sendErrorMessage(err.message));
+      return;
+    }
+    onClearReply?.();
+  }
+
+  function send(e: React.FormEvent) {
+    e.preventDefault();
+    submit();
+  }
+
+  async function handleFiles(files: File[]) {
+    queueRef.current.push(...files);
+    setQueued((n) => n + files.length);
+    if (drainingRef.current) return; // the running loop below picks these up
+    drainingRef.current = true;
+    setError(null);
+    onTyping?.(false); // the send starts now; don't keep "typing" through the upload
+    const caption = text.trim();
+    let captionUsed = false;
+    const errors: string[] = [];
+    while (queueRef.current.length) {
+      const file = queueRef.current.shift()!;
+      const res = await uploadAndPostFiles({
+        supabase,
+        userId: user!.id,
+        target,
+        files: [file],
+        content: captionUsed ? "" : caption,
+        replyFields: captionUsed ? {} : replyFields(),
+        addPending,
+        removePending,
+      });
+      setQueued((n) => n - 1);
+      errors.push(...res.errors);
+      if (res.posted && !captionUsed) {
+        captionUsed = true;
+        // Only clear the box if it still holds the caption that was sent with the file (the user may
+        // have started typing something new during the upload).
+        if ((taRef.current?.value ?? "").trim() === caption) {
+          setText("");
+          resetHeight();
+        }
+        onClearReply?.();
+      }
+    }
+    drainingRef.current = false;
+    if (errors.length) setError(errors.join(" · "));
+  }
+
+  function onPickFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? []);
+    e.target.value = "";
+    if (files.length) handleFiles(files);
+  }
+
+  function pickMention(username: string) {
+    const before = text.slice(0, caret).replace(/@([a-zA-Z0-9_]*)$/, `@${username} `);
+    const after = text.slice(caret);
+    const next = before + after;
+    setText(next);
+    setCaret(before.length);
+    requestAnimationFrame(() => {
+      taRef.current?.focus();
+      taRef.current?.setSelectionRange(before.length, before.length);
+    });
+  }
+
+  function insertEmoji(emoji: string) {
+    const before = text.slice(0, caret);
+    const after = text.slice(caret);
+    const next = before + emoji + after;
+    setText(next);
+    const newCaret = before.length + emoji.length;
+    setCaret(newCaret);
+    requestAnimationFrame(() => {
+      taRef.current?.focus();
+      taRef.current?.setSelectionRange(newCaret, newCaret);
+    });
+  }
+
+  function autoGrow(el: HTMLTextAreaElement) {
+    el.style.height = "auto";
+    const sh = el.scrollHeight;
+    el.style.height = Math.min(sh, 192) + "px";
+    // one line ≈ the 44px min-height; taller means it wrapped → top-align the side buttons.
+    setMultiline(sh > 48);
+  }
+
+  return (
+    <form onSubmit={send} className="p-2 md:p-3 relative">
+      <MentionAutocomplete query={mentionQuery} onPick={pickMention} onResults={setMentionMatches} />
+      {error && <p className="text-danger text-sm mb-1">{error}</p>}
+      {replyTo && (
+        <div className="flex items-center justify-between bg-surface rounded-t-xl px-2 py-1 text-[11px] text-muted">
+          <span>
+            Replying to <b className="text-ink">{replyToName ?? "user"}</b>
+          </span>
+          <span className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setPingAuthor((p) => !p)}
+              className={`min-h-11 md:min-h-0 rounded-full px-2 font-semibold border ${
+                pingAuthor ? "border-accent bg-mention text-mention-ink" : "border-line text-muted"
+              }`}
+            >
+              {pingAuthor ? "@ ON" : "@ OFF"}
+            </button>
+            <button
+              type="button"
+              onClick={onClearReply}
+              title="Cancel reply"
+              aria-label="Cancel reply"
+              className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 flex items-center justify-center hover:text-ink"
+            >
+              ✕
+            </button>
+          </span>
+        </div>
+      )}
+      <div className="relative">
+        <div className={`flex ${multiline ? "items-start" : "items-center"} gap-2 rounded-card border border-line bg-surface px-3 py-2`}>
+          <div className="relative" ref={menuRef}>
+            <button
+              type="button"
+              onClick={() => setMenuOpen((o) => !o)}
+              title="Add"
+              aria-label="Add attachment"
+              aria-haspopup="menu"
+              aria-expanded={menuOpen}
+              disabled={!!timedOutUntil}
+              className="w-11 h-11 md:w-8 md:h-8 flex items-center justify-center rounded-full bg-surface-2 text-muted hover:text-ink text-lg leading-none disabled:opacity-50"
+            >
+              <Plus size={18} weight="bold" />
+            </button>
+            {menuOpen && (
+              <div className="absolute bottom-full mb-2 left-0 z-20 w-40 rounded-xl border border-line bg-surface shadow-lg py-1">
+                <button
+                  type="button"
+                  onClick={() => { setMenuOpen(false); fileRef.current?.click(); }}
+                  className="w-full min-h-11 md:min-h-0 flex items-center gap-2 px-3 py-1.5 text-sm text-ink hover:bg-surface-2 text-left"
+                >
+                  <File size={16} aria-hidden="true" /> Upload a file
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setMenuOpen(false); setPollOpen(true); }}
+                  className="w-full min-h-11 md:min-h-0 flex items-center gap-2 px-3 py-1.5 text-sm text-ink hover:bg-surface-2 text-left"
+                >
+                  <ChartBar size={16} aria-hidden="true" /> Create poll
+                </button>
+              </div>
+            )}
+          </div>
+          <input ref={fileRef} type="file" accept="*/*" multiple className="hidden" onChange={onPickFile} />
+          {pollOpen && <PollComposerDialog target={target} onClose={() => setPollOpen(false)} />}
+          <textarea
+            ref={taRef}
+            value={text}
+            onChange={(e) => {
+              setText(e.target.value);
+              onTyping?.(e.target.value !== "");
+              setCaret(e.target.selectionStart ?? e.target.value.length);
+              autoGrow(e.target);
+            }}
+            onKeyUp={(e) => setCaret((e.target as HTMLTextAreaElement).selectionStart ?? 0)}
+            onClick={(e) => setCaret((e.target as HTMLTextAreaElement).selectionStart ?? 0)}
+            onKeyDown={(e) => {
+              if (acOpen && (e.key === "Enter" || e.key === "Tab")) {
+                e.preventDefault();
+                pickMention(mentionMatches[0]);
+                return;
+              }
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                submit();
+              }
+            }}
+            rows={1}
+            disabled={!!timedOutUntil}
+            placeholder={
+              timedOutUntil
+                ? `You're timed out until ${new Date(timedOutUntil).toLocaleString()}`
+                : uploading
+                  ? `Uploading ${queued} file${queued === 1 ? "" : "s"}…`
+                  : placeholder
+            }
+            className="flex-1 bg-transparent text-ink outline-none resize-none min-h-[44px] max-h-48 py-2"
+          />
+          <GifPicker onPick={sendGif} disabled={!!timedOutUntil} />
+          <div className="relative" ref={emojiRef}>
+            <button
+              type="button"
+              onClick={() => setEmojiOpen((o) => !o)}
+              title="Emoji"
+              aria-label="Add emoji"
+              aria-expanded={emojiOpen}
+              disabled={!!timedOutUntil}
+              className="w-11 h-11 md:w-8 md:h-8 flex items-center justify-center rounded-full text-muted hover:text-ink text-lg leading-none"
+            >
+              <Smiley size={20} />
+            </button>
+            {emojiOpen && (
+              <div className="absolute bottom-full right-0 mb-2 z-30 max-w-[calc(100vw-2rem)]">
+                {/* emoji-picker-react renders at a fixed 350×450 by default, which overflows a
+                    phone — `min()` keeps that exact size from `md` up and shrinks to fit the
+                    viewport below it. */}
+                <EmojiPicker
+                  theme={Theme.DARK}
+                  onEmojiClick={(d) => insertEmoji(d.emoji)}
+                  lazyLoadEmojis
+                  skinTonesDisabled
+                  width="min(90vw, 350px)"
+                  height="min(60vh, 450px)"
+                />
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </form>
+  );
+}

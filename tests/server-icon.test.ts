@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { serverInitials, colorFromName } from "@/lib/server-icon";
+import { serverInitials, colorFromName } from "@/lib/servers/server-icon";
 
 describe("serverInitials", () => {
   it("one word -> first two letters", () => {

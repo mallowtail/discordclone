@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { activeToken, suggestKind, applySuggestion } from "@/lib/searchSuggest";
+import { activeToken, suggestKind, applySuggestion } from "@/lib/search/searchSuggest";
 
 describe("activeToken", () => {
   it("finds the token the caret sits inside", () => {

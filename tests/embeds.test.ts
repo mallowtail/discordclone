@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { extractLinks, detectEmbed, withParent, isShortLink } from "@/lib/embeds";
+import { extractLinks, detectEmbed, withParent, isShortLink } from "@/lib/messages/embeds";
 
 describe("extractLinks", () => {
   it("finds up to 3 distinct links, trimming trailing punctuation", () => {

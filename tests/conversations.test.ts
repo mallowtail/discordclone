@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { summarizeConversation, conversationLabel, pickerAction, groupErrorMessage, type ConversationRow } from "@/lib/conversations";
+import { summarizeConversation, conversationLabel, pickerAction, groupErrorMessage, type ConversationRow } from "@/lib/users/conversations";
 import type { Profile } from "@/types/db";
 
 const p = (id: string, display_name = id): Profile => ({

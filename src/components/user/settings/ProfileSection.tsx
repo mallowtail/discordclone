@@ -3,15 +3,15 @@
 import { useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/components/providers/AuthProvider";
-import { uploadAvatar } from "@/lib/upload";
-import { Avatar } from "@/components/user/Avatar";
+import { uploadAvatar } from "@/lib/media/upload";
+import { Avatar } from "@/components/user/profile/Avatar";
 import {
   clampProfileText,
   validateDisplayName,
   STATUS_MAX,
   BIO_MAX,
   DISPLAY_MAX,
-} from "@/lib/profile";
+} from "@/lib/users/profile";
 
 export function ProfileSection() {
   const supabase = createClient();

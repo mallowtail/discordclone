@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { mergeMessages, hasMoreAfter, nextHasMore, reconcileNewestPage, MESSAGE_PAGE } from "@/lib/messagePaging";
+import { mergeMessages, hasMoreAfter, nextHasMore, reconcileNewestPage, MESSAGE_PAGE } from "@/lib/messages/messagePaging";
 import type { Message } from "@/types/db";
 
 function msg(id: string, created_at: string, extra: Partial<Message> = {}): Message {

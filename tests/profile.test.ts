@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { clampProfileText, STATUS_MAX, BIO_MAX, DISPLAY_MAX, validateDisplayName } from "@/lib/profile";
+import { clampProfileText, STATUS_MAX, BIO_MAX, DISPLAY_MAX, validateDisplayName } from "@/lib/users/profile";
 
 describe("clampProfileText", () => {
   it("trims surrounding whitespace", () => {

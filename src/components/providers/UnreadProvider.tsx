@@ -4,7 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { usePathname } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/components/providers/AuthProvider";
-import { hasUnread } from "@/lib/unread";
+import { hasUnread } from "@/lib/messages/unread";
 import type { Message } from "@/types/db";
 
 type UnreadCtx = {

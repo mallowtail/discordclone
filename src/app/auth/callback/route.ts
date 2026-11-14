@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerSupabase } from "@/lib/supabase/server";
-import { safeNext } from "@/lib/invite";
+import { safeNext } from "@/lib/servers/invite";
 
 // Google/GitHub/Discord send the browser back here with ?code=…. We trade the code for a session
 // (createServerSupabase's cookie adapter writes the auth cookies onto this response), then send

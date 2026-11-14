@@ -2,7 +2,7 @@ import http from "node:http";
 import https from "node:https";
 import dns from "node:dns";
 import type { LookupFunction } from "node:net";
-import { isBlockedHostname, isPrivateAddress } from "@/lib/linkMeta";
+import { isBlockedHostname, isPrivateAddress } from "@/lib/server/linkMeta";
 
 /**
  * Fetch a URL someone pasted, without letting it reach private networks. The address check runs

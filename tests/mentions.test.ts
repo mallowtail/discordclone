@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { extractMentions, mentionsMe } from "@/lib/mentions";
+import { extractMentions, mentionsMe } from "@/lib/messages/mentions";
 
 describe("extractMentions", () => {
   it("finds @usernames", () => {

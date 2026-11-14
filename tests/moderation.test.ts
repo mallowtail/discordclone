@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { canModerate, TIMEOUT_PRESETS } from "@/lib/moderation";
+import { canModerate, TIMEOUT_PRESETS } from "@/lib/servers/moderation";
 
 const base = { isOwner: false, hasPerm: true, viewerRank: 5, targetRank: 2, targetIsOwner: false, targetIsSelf: false };
 

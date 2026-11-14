@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { applyPinUpdate, PIN_PAGE } from "@/lib/pins";
+import { applyPinUpdate, PIN_PAGE } from "@/lib/messages/pins";
 import type { Message } from "@/types/db";
 
 function msg(id: string, pinned_at: string | null, extra: Partial<Message> = {}): Message {

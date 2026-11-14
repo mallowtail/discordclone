@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { ROLE_COLORS, validateHexColor } from "@/lib/roleColors";
+import { ROLE_COLORS, validateHexColor } from "@/lib/servers/roleColors";
 
 describe("roleColors", () => {
   it("exposes a non-empty preset palette of hex colors", () => {

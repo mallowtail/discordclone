@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseSearchQuery, toRpcArgs } from "@/lib/searchQuery";
+import { parseSearchQuery, toRpcArgs } from "@/lib/search/searchQuery";
 
 describe("parseSearchQuery", () => {
   it("plain words become text", () => {

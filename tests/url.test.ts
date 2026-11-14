@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isHttpUrl, withDownloadName } from "@/lib/url";
+import { isHttpUrl, withDownloadName } from "@/lib/media/url";
 
 describe("withDownloadName", () => {
   it("appends ?download=<name> when the url has no existing query", () => {

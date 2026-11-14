@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { searchMessages } from "@/lib/search";
-import { parseSearchQuery } from "@/lib/searchQuery";
+import { searchMessages } from "@/lib/search/search";
+import { parseSearchQuery } from "@/lib/search/searchQuery";
 import { fakeSupabase } from "./_fakeSupabase";
 
 describe("searchMessages", () => {

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/components/providers/AuthProvider";
-import { pruneTypists, TYPING_THROTTLE_MS, type Typists } from "@/lib/typing";
+import { pruneTypists, TYPING_THROTTLE_MS, type Typists } from "@/lib/messages/typing";
 
 type TypingPayload = { user_id: string; name: string; typing: boolean };
 

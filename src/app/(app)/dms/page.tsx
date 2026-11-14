@@ -8,12 +8,12 @@ import { useFriends } from "@/components/providers/FriendsProvider";
 import { useProfilePopover } from "@/components/providers/ProfilePopoverProvider";
 import { useDrawer } from "@/components/providers/DrawerProvider";
 import { usePresence } from "@/hooks/usePresence";
-import { openDmWith } from "@/lib/dm";
-import { escapeLike, sendResultMessage } from "@/lib/friends";
-import { Avatar } from "@/components/user/Avatar";
+import { openDmWith } from "@/lib/users/dm";
+import { escapeLike, sendResultMessage } from "@/lib/users/friends";
+import { Avatar } from "@/components/user/profile/Avatar";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Skeleton } from "@/components/ui/Skeleton";
-import { RequestBadge } from "@/components/dms/RequestBadge";
+import { RequestBadge } from "@/components/dms/sidebar/RequestBadge";
 import type { Profile } from "@/types/db";
 import { ChatCircleDots, Check, List, UserMinus, UserPlus, Users, X } from "@phosphor-icons/react";
 

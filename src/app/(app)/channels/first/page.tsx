@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { useServerPermissions } from "@/hooks/useServerPermissions";
-import { CreateChannelDialog } from "@/components/servers/CreateChannelDialog";
+import { CreateChannelDialog } from "@/components/servers/dialogs/CreateChannelDialog";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
 import type { Category } from "@/types/db";

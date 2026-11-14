@@ -1,8 +1,8 @@
 "use client";
 
 import { createContext, useCallback, useContext, useState } from "react";
-import { ProfileCard } from "@/components/user/ProfileCard";
-import { FullProfileModal } from "@/components/user/FullProfileModal";
+import { ProfileCard } from "@/components/user/profile/ProfileCard";
+import { FullProfileModal } from "@/components/user/profile/FullProfileModal";
 
 type OpenArgs = { userId: string; anchorRect: DOMRect; serverId?: string };
 type FullArgs = { userId: string; serverId?: string };

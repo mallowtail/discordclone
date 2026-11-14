@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { formatTime } from "@/lib/format";
+import { formatTime } from "@/lib/messages/format";
 
 describe("formatTime", () => {
   it("formats an ISO timestamp as HH:MM (24h)", () => {

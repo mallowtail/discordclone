@@ -10,7 +10,7 @@ import {
   type FriendshipRow,
   type Relation,
   type SendResult,
-} from "@/lib/friends";
+} from "@/lib/users/friends";
 import type { Profile } from "@/types/db";
 
 type Ctx = {

@@ -4,9 +4,9 @@ import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/components/providers/AuthProvider";
-import { safeNext } from "@/lib/invite";
-import { validateUsername } from "@/lib/validation";
-import { avatarFrom, displayNameFrom, suggestUsername } from "@/lib/oauthProfile";
+import { safeNext } from "@/lib/servers/invite";
+import { validateUsername } from "@/lib/messages/validation";
+import { avatarFrom, displayNameFrom, suggestUsername } from "@/lib/users/oauthProfile";
 
 // First stop after a Google/GitHub/Discord sign-in for anyone without a profile row yet. Email
 // sign-ups pick a username on /register; OAuth skips that form, so they pick one here.

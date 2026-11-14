@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatTyping, pruneTypists, TYPING_THROTTLE_MS, TYPING_TTL_MS, type Typists } from "@/lib/typing";
+import { formatTyping, pruneTypists, TYPING_THROTTLE_MS, TYPING_TTL_MS, type Typists } from "@/lib/messages/typing";
 
 describe("formatTyping", () => {
   it("returns empty string for nobody", () => {

@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { suggestUsername, displayNameFrom, avatarFrom } from "@/lib/oauthProfile";
-import { validateUsername } from "@/lib/validation";
+import { suggestUsername, displayNameFrom, avatarFrom } from "@/lib/users/oauthProfile";
+import { validateUsername } from "@/lib/messages/validation";
 
 describe("suggestUsername", () => {
   it("uses GitHub's user_name when present", () => {

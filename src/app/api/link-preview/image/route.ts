@@ -1,6 +1,6 @@
 import type { NextRequest } from "next/server";
 import { createServerSupabase } from "@/lib/supabase/server";
-import { isAllowedThumbnailHost } from "@/lib/linkMeta";
+import { isAllowedThumbnailHost } from "@/lib/server/linkMeta";
 import { safeFetch } from "@/lib/server/safeFetch";
 
 const MAX_BYTES = 3 * 1024 * 1024;

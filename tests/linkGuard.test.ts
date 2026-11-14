@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { linkDecision, addTrustedDomain, removeTrustedDomain } from "@/lib/linkGuard";
+import { linkDecision, addTrustedDomain, removeTrustedDomain } from "@/lib/messages/linkGuard";
 
 const ORIGIN = "https://website-mallow1.vercel.app";
 

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { topRoleColor } from "@/lib/roleColor";
+import { topRoleColor } from "@/lib/servers/roleColor";
 
 describe("topRoleColor", () => {
   it("returns the color of the highest-position colored role", () => {

@@ -1,5 +1,5 @@
-import { detectEmbed, isShortLink, PROVIDER_NAMES, type Embed, type EmbedProvider } from "@/lib/embeds";
-import { isAllowedThumbnailHost, parseHtmlMeta } from "@/lib/linkMeta";
+import { detectEmbed, isShortLink, PROVIDER_NAMES, type Embed, type EmbedProvider } from "@/lib/messages/embeds";
+import { isAllowedThumbnailHost, parseHtmlMeta } from "@/lib/server/linkMeta";
 import { safeFetch } from "@/lib/server/safeFetch";
 
 export type LinkPreview = {

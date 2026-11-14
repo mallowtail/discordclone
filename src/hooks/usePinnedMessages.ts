@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { PIN_PAGE, applyPinUpdate } from "@/lib/pins";
+import { PIN_PAGE, applyPinUpdate } from "@/lib/messages/pins";
 import type { Message } from "@/types/db";
 
 type Target = { channelId: string } | { conversationId: string };

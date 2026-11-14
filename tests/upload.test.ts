@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { validateImage, isImageType } from "@/lib/upload";
+import { validateImage, isImageType } from "@/lib/media/upload";
 
 const MB = 1024 * 1024;
 

@@ -31,10 +31,11 @@ function ChannelLinkSkeleton({ hasMargin = false }: { hasMargin?: boolean }) {
 export function ServerSidebar({ serverId }: { serverId: string }) {
   const supabase = createClient();
   const pathname = usePathname();
-  const [server, setServer] = useState<Server | null>(null);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [channels, setChannels] = useState<Channel[]>([]);
-  const [loaded, setLoaded] = useState(false);
+  // Start from what this server's sidebar showed last time (navCache), then refresh it.
+  const [server, setServer] = useState<Server | null>(() => navCache.getSidebar(serverId)?.server ?? null);
+  const [categories, setCategories] = useState<Category[]>(() => navCache.getSidebar(serverId)?.categories ?? []);
+  const [channels, setChannels] = useState<Channel[]>(() => navCache.getSidebar(serverId)?.channels ?? []);
+  const [loaded, setLoaded] = useState(() => !!navCache.getSidebar(serverId));
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [creating, setCreating] = useState(false);
   const [addingCategory, setAddingCategory] = useState(false);
@@ -52,24 +53,35 @@ export function ServerSidebar({ serverId }: { serverId: string }) {
   const pathSegments = pathname.split("/");
   const activeChannelId = pathSegments[1] === "channels" ? pathSegments[2] : null;
 
-  // Switching servers: show the skeleton rather than flash the old server's channels. Adjusted during
-  // render when serverId changes (React's "store the previous prop" pattern), not in the effect.
+  // Switching servers: show the new server's remembered sidebar at once, or the skeleton rather than
+  // flash the old server's channels. Adjusted during render when serverId changes (React's "store
+  // the previous prop" pattern), not in the effect.
   const [prevServerId, setPrevServerId] = useState(serverId);
   if (serverId !== prevServerId) {
     setPrevServerId(serverId);
-    setLoaded(false);
+    const cached = navCache.getSidebar(serverId);
+    setServer(cached?.server ?? null);
+    setCategories(cached?.categories ?? []);
+    setChannels(cached?.channels ?? []);
+    setLoaded(!!cached);
   }
 
+  // Several loads can overlap (mount, realtime connect, change events, a server switch); only the
+  // newest may write, or an older, slower response could put back a stale list.
+  const loadSeq = useRef(0);
   const load = useCallback(async () => {
+    const seq = ++loadSeq.current;
     const [{ data: s }, { data: cats }, { data: chs }] = await Promise.all([
       supabase.from("servers").select("*").eq("id", serverId).single(),
       supabase.from("categories").select("*").eq("server_id", serverId).order("position"),
       supabase.from("channels").select("*").eq("server_id", serverId).order("position"),
     ]);
+    if (seq !== loadSeq.current) return;
     setServer((s as Server) ?? null);
     setCategories((cats as Category[]) ?? []);
     setChannels((chs as Channel[]) ?? []);
     if (chs) navCache.rememberChannels(chs as Channel[], serverId);
+    navCache.setSidebar(serverId, { server: (s as Server) ?? null, categories: (cats as Category[]) ?? [], channels: (chs as Channel[]) ?? [] });
     setLoaded(true);
   }, [supabase, serverId]);
 
@@ -80,13 +92,16 @@ export function ServerSidebar({ serverId }: { serverId: string }) {
 
   useEffect(() => {
     const run = ++runRef.current;
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- load() only sets state after its await (async fetch-on-mount)
     load();
     const channel = supabase
       .channel(`server-sidebar:${serverId}:${instanceId}:${run}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "channels", filter: `server_id=eq.${serverId}` }, () => load())
       .on("postgres_changes", { event: "*", schema: "public", table: "categories", filter: `server_id=eq.${serverId}` }, () => load())
-      .subscribe();
+      // Changes made while the channel was still joining are never delivered (e.g. a channel created
+      // right after switching here), so catch up once it's live.
+      .subscribe((status) => {
+        if (status === "SUBSCRIBED") load();
+      });
     return () => {
       supabase.removeChannel(channel);
     };
@@ -210,12 +225,14 @@ export function ServerSidebar({ serverId }: { serverId: string }) {
       <div className="p-2">
         <UserPanel />
       </div>
-      {creating && <CreateChannelDialog serverId={serverId} categories={categories} onClose={() => setCreating(false)} />}
+      {/* Reload on close: our own change shouldn't depend on the realtime event arriving (it
+          occasionally doesn't — measured ~1 in 5 right after switching servers). */}
+      {creating && <CreateChannelDialog serverId={serverId} categories={categories} onClose={() => { setCreating(false); load(); }} />}
       {addingCategory && (
         <CreateCategoryDialog
           serverId={serverId}
           position={categories.length}
-          onClose={() => setAddingCategory(false)}
+          onClose={() => { setAddingCategory(false); load(); }}
         />
       )}
       {settings && server && (

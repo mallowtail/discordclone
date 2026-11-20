@@ -1,4 +1,6 @@
-import type { Channel, Profile } from "@/types/db";
+import type { Category, Channel, Profile, Server } from "@/types/db";
+
+export type SidebarData = { server: Server | null; categories: Category[]; channels: Channel[] };
 
 /**
  * In-memory memory of things already loaded this session, so switching around is instant:
@@ -14,12 +16,14 @@ const channels = new Map<string, Channel>();
 const lastChannel = new Map<string, string>(); // server id → channel id
 const profiles = new Map<string, Profile>();
 const messages = new Map<string, unknown>(); // insertion order = least recently used first
+const sidebars = new Map<string, SidebarData>(); // server id → what its sidebar last showed
 
 function clear() {
   channels.clear();
   lastChannel.clear();
   profiles.clear();
   messages.clear();
+  sidebars.clear();
 }
 
 export const navCache = {
@@ -53,6 +57,13 @@ export const navCache = {
       if (c.server_id === serverId && (!first || c.position < first.position)) first = c;
     }
     return first?.id ?? null;
+  },
+
+  getSidebar(serverId: string): SidebarData | undefined {
+    return sidebars.get(serverId);
+  },
+  setSidebar(serverId: string, data: SidebarData) {
+    sidebars.set(serverId, data);
   },
 
   getProfile(id: string): Profile | undefined {

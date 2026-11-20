@@ -29,7 +29,9 @@ describe("navCache", () => {
     navCache.setOwner("u1");
     navCache.rememberChannels([ch("a", "s1", 1)]);
     navCache.setMessages("channel_id:a:", { key: "channel_id:a:" } as never);
+    navCache.setSidebar("s1", { server: null, categories: [], channels: [] });
     navCache.setOwner("u2");
+    expect(navCache.getSidebar("s1")).toBeUndefined();
     expect(navCache.getChannel("a")).toBeUndefined();
     expect(navCache.getMessages("channel_id:a:")).toBeUndefined();
     expect(navCache.channelToOpen("s1")).toBeNull();

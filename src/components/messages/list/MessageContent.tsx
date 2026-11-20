@@ -1,3 +1,4 @@
+import { memo } from "react";
 import ReactMarkdown, { defaultUrlTransform } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkBreaks from "remark-breaks";
@@ -7,17 +8,25 @@ import { File } from "@phosphor-icons/react";
 import { isHttpUrl, withDownloadName } from "@/lib/media/url";
 import { useLinkGuard } from "@/components/providers/LinkGuardProvider";
 import { fitGif, isKlipyMediaUrl } from "@/lib/messages/gifs";
+import { isPlainText } from "@/lib/messages/plainText";
 
 // Discord-style subset. Anything not in this list renders as plain text.
 const ALLOWED = ["p", "strong", "em", "del", "code", "pre", "blockquote", "a", "ul", "ol", "li", "br", "h1", "h2", "h3"];
 
-export function MessageContent({ msg }: { msg: Message }) {
+/**
+ * A message's body. Memoized on what it actually shows, so the whole list redrawing (author names,
+ * reactions or role colours arriving) doesn't re-run the Markdown formatter for every message; and
+ * plain sentences skip the formatter entirely. Both matter most when opening a chat.
+ */
+export const MessageContent = memo(function MessageContent({ msg }: { msg: Message }) {
   const { guard } = useLinkGuard();
   const safeImage = msg.image_url && isHttpUrl(msg.image_url) ? msg.image_url : null;
   const safeFile = msg.file_url && isHttpUrl(msg.file_url) ? msg.file_url : null;
   return (
     <div className="text-ink break-words leading-relaxed">
-      {msg.content && (
+      {msg.content && isPlainText(msg.content) ? (
+        <p>{msg.content}</p>
+      ) : msg.content ? (
         <ReactMarkdown
           remarkPlugins={[remarkGfm, remarkBreaks, remarkMentions]}
           allowedElements={ALLOWED}
@@ -44,7 +53,7 @@ export function MessageContent({ msg }: { msg: Message }) {
         >
           {msg.content}
         </ReactMarkdown>
-      )}
+      ) : null}
       {msg.gif && isKlipyMediaUrl(msg.gif.url) && (() => {
         // Sized from the stored dimensions so the chat doesn't jump while it loads.
         const box = fitGif(msg.gif.width, msg.gif.height, 300, 300);
@@ -78,4 +87,12 @@ export function MessageContent({ msg }: { msg: Message }) {
       {msg.updated_at && <span className="text-meta text-muted ml-1">(edited)</span>}
     </div>
   );
-}
+}, (a, b) =>
+  a.msg.id === b.msg.id &&
+  a.msg.content === b.msg.content &&
+  a.msg.updated_at === b.msg.updated_at &&
+  a.msg.image_url === b.msg.image_url &&
+  a.msg.file_url === b.msg.file_url &&
+  a.msg.file_name === b.msg.file_name &&
+  a.msg.gif?.url === b.msg.gif?.url
+);

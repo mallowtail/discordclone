@@ -12,6 +12,7 @@ import { PresenceProvider } from "@/components/providers/PresenceProvider";
 import { UnreadProvider } from "@/components/providers/UnreadProvider";
 import { FriendsProvider } from "@/components/providers/FriendsProvider";
 import { LinkGuardProvider } from "@/components/providers/LinkGuardProvider";
+import { FavoriteGifsProvider } from "@/components/providers/FavoriteGifsProvider";
 import { DrawerProvider, useDrawer } from "@/components/providers/DrawerProvider";
 import { Drawer } from "@/components/ui/Drawer";
 import { navCache } from "@/lib/cache/navCache";
@@ -78,7 +79,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <FriendsProvider>
             <ProfilePopoverProvider>
               <LinkGuardProvider>
-                <AppShell activeServer={activeServer}>{children}</AppShell>
+                <FavoriteGifsProvider>
+                  <AppShell activeServer={activeServer}>{children}</AppShell>
+                </FavoriteGifsProvider>
               </LinkGuardProvider>
             </ProfilePopoverProvider>
           </FriendsProvider>

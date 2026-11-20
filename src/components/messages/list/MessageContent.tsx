@@ -9,6 +9,7 @@ import { isHttpUrl, withDownloadName } from "@/lib/media/url";
 import { useLinkGuard } from "@/components/providers/LinkGuardProvider";
 import { fitGif, isKlipyMediaUrl } from "@/lib/messages/gifs";
 import { isPlainText } from "@/lib/messages/plainText";
+import { GifFavoriteStar } from "@/components/messages/list/GifFavoriteStar";
 
 // Discord-style subset. Anything not in this list renders as plain text.
 const ALLOWED = ["p", "strong", "em", "del", "code", "pre", "blockquote", "a", "ul", "ol", "li", "br", "h1", "h2", "h3"];
@@ -58,10 +59,13 @@ export const MessageContent = memo(function MessageContent({ msg }: { msg: Messa
         // Sized from the stored dimensions so the chat doesn't jump while it loads.
         const box = fitGif(msg.gif.width, msg.gif.height, 300, 300);
         return (
-          // eslint-disable-next-line @next/next/no-img-element -- KLIPY media must load directly from their URL
-          <img src={msg.gif.url} alt={msg.gif.title ? `GIF: ${msg.gif.title}` : "GIF"} title={msg.gif.title || undefined}
-            width={box.width} height={box.height} loading="lazy"
-            className="mt-1 block rounded-control bg-surface-2" style={{ width: box.width, height: box.height }} />
+          <span className="group relative mt-1 block w-fit">
+            {/* eslint-disable-next-line @next/next/no-img-element -- KLIPY media must load directly from their URL */}
+            <img src={msg.gif.url} alt={msg.gif.title ? `GIF: ${msg.gif.title}` : "GIF"} title={msg.gif.title || undefined}
+              width={box.width} height={box.height} loading="lazy"
+              className="block rounded-control bg-surface-2" style={{ width: box.width, height: box.height }} />
+            <GifFavoriteStar gif={msg.gif} />
+          </span>
         );
       })()}
       {safeImage && (

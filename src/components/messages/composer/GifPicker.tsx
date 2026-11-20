@@ -4,7 +4,9 @@ import { useEffect, useRef, useState } from "react";
 import { useTopmostEscape } from "@/components/ui/overlayStack";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { normalizeKlipyItem, type Gif } from "@/lib/messages/gifs";
-import { Gif as GifIcon, MagnifyingGlass } from "@phosphor-icons/react";
+import { Gif as GifIcon, MagnifyingGlass, Star } from "@phosphor-icons/react";
+import { GifFavoriteStar } from "@/components/messages/list/GifFavoriteStar";
+import { useFavoriteGifs } from "@/components/providers/FavoriteGifsProvider";
 
 type Page = { gifs: Gif[]; hasNext: boolean };
 
@@ -44,6 +46,8 @@ export function GifPicker({ onPick, disabled }: { onPick: (gif: Gif) => void; di
   const { user } = useAuth();
   const userId = user?.id ?? "";
   const [open, setOpen] = useState(false);
+  const [tab, setTab] = useState<"klipy" | "favorites">("klipy");
+  const { favorites } = useFavoriteGifs();
   const [query, setQuery] = useState("");
   const [gifs, setGifs] = useState<Gif[]>([]);
   const [page, setPage] = useState(1);
@@ -104,32 +108,48 @@ export function GifPicker({ onPick, disabled }: { onPick: (gif: Gif) => void; di
           <div className="p-2 border-b border-line">
             <div className="flex items-center gap-2 rounded-control bg-surface-2 border border-line px-2 focus-within:border-accent">
               <MagnifyingGlass size={15} className="text-muted flex-none" aria-hidden="true" />
-              <input autoFocus value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search KLIPY"
+              <input autoFocus value={query} onChange={(e) => { setQuery(e.target.value); setTab("klipy"); }} placeholder="Search KLIPY"
                 aria-label="Search GIFs" maxLength={100}
                 className="flex-1 min-w-0 bg-transparent py-2 text-body text-ink outline-none" />
             </div>
           </div>
+          <div className="flex gap-1 px-2 pt-2" role="tablist" aria-label="GIF sections">
+            {([["klipy", query ? "Results" : "Trending"], ["favorites", `Favorites${favorites.length ? ` (${favorites.length})` : ""}`]] as const).map(([id, label]) => (
+              <button key={id} type="button" role="tab" aria-selected={tab === id} onClick={() => setTab(id)}
+                className={`flex items-center gap-1 rounded-control px-2.5 py-1 text-meta font-medium min-h-9 md:min-h-0 ${
+                  tab === id ? "bg-surface-2 text-ink" : "text-muted hover:text-ink"
+                }`}>
+                {id === "favorites" && <Star size={13} weight="fill" className="text-amber" aria-hidden="true" />}
+                {label}
+              </button>
+            ))}
+          </div>
           <div className="flex-1 overflow-y-auto p-2">
-            {!query && gifs.length > 0 && <p className="px-1 pb-1.5 text-micro font-semibold uppercase tracking-wider text-muted">Trending</p>}
-            {error ? (
+            {tab === "favorites" ? (
+              favorites.length === 0 ? (
+                <p className="p-3 text-body text-muted">No favorites yet. Hover over a GIF and click the star to save it here.</p>
+              ) : (
+                <div className="columns-2 gap-1.5">
+                  {favorites.map((f) => (
+                    <GifTile key={f.url} gif={{ id: f.url, title: f.title, preview: f, full: f }}
+                      onSend={(g) => { setOpen(false); onPick(g); }} />
+                  ))}
+                </div>
+              )
+            ) : error ? (
               <p className="p-3 text-body text-muted">{error}</p>
             ) : gifs.length === 0 && !loading ? (
               <p className="p-3 text-body text-muted">No GIFs found.</p>
             ) : (
+              // KLIPY's results in their own grid, in the order given.
               <div className="columns-2 gap-1.5">
                 {gifs.map((g, i) => (
-                  <button key={`${g.id}-${i}`} type="button" onClick={() => { setOpen(false); onPick(g); }} title={g.title}
-                    aria-label={`Send GIF: ${g.title || "untitled"}`}
-                    className="mb-1.5 block w-full overflow-hidden rounded-row bg-surface-2 hover:ring-2 hover:ring-accent focus-visible:ring-2 focus-visible:ring-accent">
-                    {/* eslint-disable-next-line @next/next/no-img-element -- KLIPY media must load directly from their URL */}
-                    <img src={g.preview.url} alt="" width={g.preview.width} height={g.preview.height} loading="lazy"
-                      className="block w-full h-auto" />
-                  </button>
+                  <GifTile key={`${g.id}-${i}`} gif={g} onSend={(x) => { setOpen(false); onPick(x); }} />
                 ))}
               </div>
             )}
-            {loading && <p className="p-2 text-center text-meta text-muted">Loading…</p>}
-            {hasNext && !loading && !error && (
+            {tab === "klipy" && loading && <p className="p-2 text-center text-meta text-muted">Loading…</p>}
+            {tab === "klipy" && hasNext && !loading && !error && (
               <button type="button" onClick={more} className="mt-1 w-full rounded-control py-2 text-meta text-muted hover:bg-surface-2 hover:text-ink">
                 Load more
               </button>
@@ -138,6 +158,22 @@ export function GifPicker({ onPick, disabled }: { onPick: (gif: Gif) => void; di
           <p className="px-3 py-1.5 border-t border-line text-micro text-muted text-right">Powered by KLIPY</p>
         </div>
       )}
+    </div>
+  );
+}
+
+/** One GIF in the picker: click to send, star (top-right, on hover) to favourite. */
+function GifTile({ gif, onSend }: { gif: Gif; onSend: (g: Gif) => void }) {
+  return (
+    <div className="group relative mb-1.5 break-inside-avoid">
+      <button type="button" onClick={() => onSend(gif)} title={gif.title}
+        aria-label={`Send GIF: ${gif.title || "untitled"}`}
+        className="block w-full overflow-hidden rounded-row bg-surface-2 hover:ring-2 hover:ring-accent focus-visible:ring-2 focus-visible:ring-accent">
+        {/* eslint-disable-next-line @next/next/no-img-element -- KLIPY media must load directly from their URL */}
+        <img src={gif.preview.url} alt="" width={gif.preview.width} height={gif.preview.height} loading="lazy"
+          className="block w-full h-auto" />
+      </button>
+      <GifFavoriteStar gif={{ url: gif.full.url, width: gif.full.width, height: gif.full.height, title: gif.title }} />
     </div>
   );
 }

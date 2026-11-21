@@ -7,12 +7,27 @@ export function validateMessage(input: string): Validated {
   return { ok: true, value };
 }
 
+const USERNAME_FORMAT_ERROR = "1-20 letters, numbers, or underscores only";
+const USERNAME_RESERVED_ERROR = "Usernames can't start with deleted_";
+
+/** Same rules as the database (migration 0046): 1–20 of A-Z a-z 0-9 _, and not starting with
+ *  `deleted_` (any case) — those names belong to deleted accounts. */
 export function validateUsername(input: string): Validated {
   const value = input.trim();
-  if (!/^[A-Za-z0-9_]{3,20}$/.test(value)) {
-    return { ok: false, error: "3-20 letters, numbers, or underscores only" };
+  if (!/^[A-Za-z0-9_]{1,20}$/.test(value)) {
+    return { ok: false, error: USERNAME_FORMAT_ERROR };
   }
+  if (/^deleted_/i.test(value)) return { ok: false, error: USERNAME_RESERVED_ERROR };
   return { ok: true, value };
+}
+
+/** User-facing text for a failed profile insert/update that set a username. */
+export function usernameErrorMessage(message: string | undefined): string {
+  if (message?.includes("duplicate") || message?.includes("profiles_username_key")) return "That username's taken — try another";
+  if (message?.includes("profiles_username_reserved")) return USERNAME_RESERVED_ERROR;
+  if (message?.includes("profiles_username_format")) return USERNAME_FORMAT_ERROR;
+  if (message?.includes("this account was deleted")) return "This account was deleted.";
+  return "Couldn't save — try again";
 }
 
 /** User-facing text for a failed message insert (the database enforces a spam limit). */

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isHttpUrl, withDownloadName } from "@/lib/media/url";
+import { isHttpUrl, storagePathFromPublicUrl, withDownloadName } from "@/lib/media/url";
 
 describe("withDownloadName", () => {
   it("appends ?download=<name> when the url has no existing query", () => {
@@ -34,5 +34,21 @@ describe("isHttpUrl", () => {
   it("rejects non-http protocols and invalid urls", () => {
     expect(isHttpUrl("javascript:alert(1)")).toBe(false);
     expect(isHttpUrl("not a url")).toBe(false);
+  });
+});
+
+describe("storagePathFromPublicUrl", () => {
+  const base = "https://proj.supabase.co/storage/v1/object/public";
+  it("returns the file name inside the bucket", () => {
+    expect(storagePathFromPublicUrl(`${base}/avatars/0b1c-2d.webp`, "avatars")).toBe("0b1c-2d.webp");
+    expect(storagePathFromPublicUrl(`${base}/server-icons/abc.png`, "server-icons")).toBe("abc.png");
+  });
+  it("is null for another bucket, an outside URL, nested paths or nothing", () => {
+    expect(storagePathFromPublicUrl(`${base}/attachments/x.png`, "avatars")).toBeNull();
+    expect(storagePathFromPublicUrl("https://cdn.discordapp.com/avatars/1/2.png", "avatars")).toBeNull();
+    expect(storagePathFromPublicUrl(`${base}/avatars/a/b.png`, "avatars")).toBeNull();
+    expect(storagePathFromPublicUrl(`${base}/avatars/`, "avatars")).toBeNull();
+    expect(storagePathFromPublicUrl("not a url", "avatars")).toBeNull();
+    expect(storagePathFromPublicUrl(null, "avatars")).toBeNull();
   });
 });

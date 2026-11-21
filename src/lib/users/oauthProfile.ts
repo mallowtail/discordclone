@@ -10,7 +10,7 @@ function str(v: unknown): string {
 
 /**
  * A username suggestion for the first-sign-in step, or "" when the provider gave us nothing that
- * survives our username rules (3-20 of A-Z a-z 0-9 _). Never trusted as-is: the user can edit it,
+ * survives our username rules (1-20 of A-Z a-z 0-9 _, not starting with deleted_). Never trusted as-is: the user can edit it,
  * and the insert still goes through validateUsername and the unique constraint.
  */
 export function suggestUsername(meta: Meta): string {
@@ -24,7 +24,7 @@ export function suggestUsername(meta: Meta): string {
   ];
   for (const c of candidates) {
     const cleaned = c.replace(/[^A-Za-z0-9_]/g, "").slice(0, 20);
-    if (cleaned.length >= 3) return cleaned;
+    if (cleaned.length >= 1 && !/^deleted_/i.test(cleaned)) return cleaned;
   }
   return "";
 }

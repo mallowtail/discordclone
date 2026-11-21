@@ -15,14 +15,21 @@ describe("suggestUsername", () => {
   it("caps at 20 characters", () => {
     expect(suggestUsername({ name: "a".repeat(40) })).toHaveLength(20);
   });
-  it("returns empty when nothing usable survives (emoji-only, too short)", () => {
+  it("suggests short names (usernames may be 1 character)", () => {
+    expect(suggestUsername({ name: "J" })).toBe("J");
+    expect(suggestUsername({ name: "ab" })).toBe("ab");
+  });
+  it("skips candidates that start with the reserved deleted_ prefix", () => {
+    expect(suggestUsername({ user_name: "deleted_bob", email: "bob@x.io" })).toBe("bob");
+    expect(suggestUsername({ user_name: "Deleted_bob" })).toBe("");
+  });
+  it("returns empty when nothing usable survives (emoji-only)", () => {
     expect(suggestUsername({ name: "🙂🙂" })).toBe("");
-    expect(suggestUsername({ name: "ab" })).toBe("");
     expect(suggestUsername({})).toBe("");
     expect(suggestUsername(undefined)).toBe("");
   });
   it("every non-empty suggestion passes validateUsername", () => {
-    for (const meta of [{ name: "Zoë Ångström" }, { user_name: "a-b-c-d" }, { email: "x_y.z@q.io" }]) {
+    for (const meta of [{ name: "Zoë Ångström" }, { user_name: "a-b-c-d" }, { email: "x_y.z@q.io" }, { name: "Z" }, { user_name: "deleted_1", name: "ok" }]) {
       const s = suggestUsername(meta);
       if (s) expect(validateUsername(s).ok).toBe(true);
     }

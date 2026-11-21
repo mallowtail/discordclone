@@ -22,6 +22,9 @@ describe("describeAuditEntry", () => {
     expect(describeAuditEntry(e("sticker_create", { reason: "sad cat", target: null }))).toBe("Sam added the sticker “sad cat”");
     expect(describeAuditEntry(e("sticker_delete", { reason: "sad cat", target: null }))).toBe("Sam deleted the sticker “sad cat”");
   });
+  it("describes an ownership transfer", () => {
+    expect(describeAuditEntry(e("ownership_transfer"))).toBe("Sam made Alex the owner");
+  });
   it("copes with deleted accounts", () => {
     expect(describeAuditEntry(e("kick", { actor: null, target: null }))).toBe("Someone kicked a deleted user");
   });

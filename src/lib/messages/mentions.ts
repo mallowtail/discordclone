@@ -1,5 +1,6 @@
-// Matches @username not preceded by a word char (so emails like a@b don't match).
-const MENTION_RE = /(?<![a-zA-Z0-9_])@([a-zA-Z0-9_]{2,32})/g;
+// Matches @username not preceded by a word char (so emails like a@b don't match). Usernames are
+// 1–20 characters; the upper bound stays loose so a long @word isn't cut into a fake mention.
+const MENTION_RE = /(?<![a-zA-Z0-9_])@([a-zA-Z0-9_]{1,32})/g;
 
 export function extractMentions(text: string): string[] {
   const out: string[] = [];

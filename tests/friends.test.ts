@@ -3,7 +3,7 @@ import { sortFriendships, relationTo, sendResultMessage, escapeLike, type Friend
 import type { Profile } from "@/types/db";
 
 const p = (id: string, display_name = id): Profile => ({
-  id, username: id, display_name, avatar_url: null, bio: null, status: null, recent_emojis: [], trusted_domains: [], dm_policy: "reachable", fr_everyone: true, fr_friends_of_friends: true, fr_server_members: true, created_at: "2026-01-01T00:00:00Z",
+  id, username: id, display_name, avatar_url: null, bio: null, status: null, recent_emojis: [], trusted_domains: [], dm_policy: "reachable", fr_everyone: true, fr_friends_of_friends: true, fr_server_members: true, created_at: "2026-01-01T00:00:00Z", deleted_at: null,
 });
 const row = (requester: string, addressee: string, status: "pending" | "accepted", created_at = "2026-01-01T00:00:00Z"): FriendshipRow => ({
   requester, addressee, status, created_at, accepted_at: status === "accepted" ? created_at : null,

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { validateMessage, validateUsername, sendErrorMessage } from "@/lib/messages/validation";
+import { validateMessage, validateUsername, sendErrorMessage, usernameErrorMessage } from "@/lib/messages/validation";
 
 describe("validateMessage", () => {
   it("accepts normal text", () => {
@@ -17,17 +17,25 @@ describe("validateMessage", () => {
 });
 
 describe("validateUsername", () => {
-  it("accepts 3-20 chars of letters, digits, underscore", () => {
+  it("accepts 1-20 chars of letters, digits, underscore", () => {
     expect(validateUsername("cool_kid7").ok).toBe(true);
   });
-  it("rejects too short", () => {
-    expect(validateUsername("ab").ok).toBe(false);
+  it("rejects empty", () => {
+    expect(validateUsername("").ok).toBe(false);
+    expect(validateUsername("   ").ok).toBe(false);
   });
   it("rejects spaces and symbols", () => {
     expect(validateUsername("bad name!").ok).toBe(false);
   });
-  it("accepts the minimum length (3)", () => {
-    expect(validateUsername("abc").ok).toBe(true);
+  it("accepts the minimum length (1)", () => {
+    expect(validateUsername("a")).toEqual({ ok: true, value: "a" });
+    expect(validateUsername("ab").ok).toBe(true);
+  });
+  it("refuses names starting with deleted_ (reserved for deleted accounts), any case", () => {
+    expect(validateUsername("deleted_abc")).toEqual({ ok: false, error: "Usernames can't start with deleted_" });
+    expect(validateUsername("Deleted_x").ok).toBe(false);
+    expect(validateUsername("deleted").ok).toBe(true);
+    expect(validateUsername("undeleted_x").ok).toBe(true);
   });
   it("accepts the maximum length (20)", () => {
     expect(validateUsername("a".repeat(20)).ok).toBe(true);
@@ -53,5 +61,23 @@ describe("sendErrorMessage", () => {
   it("falls back to a generic message", () => {
     expect(sendErrorMessage("network down")).toBe("Failed to send — try again");
     expect(sendErrorMessage(undefined)).toBe("Failed to send — try again");
+  });
+});
+
+describe("usernameErrorMessage", () => {
+  it("explains a taken username", () => {
+    expect(usernameErrorMessage('duplicate key value violates unique constraint "profiles_username_key"')).toBe("That username's taken — try another");
+  });
+  it("explains the format check", () => {
+    expect(usernameErrorMessage('new row for relation "profiles" violates check constraint "profiles_username_format"')).toBe("1-20 letters, numbers, or underscores only");
+  });
+  it("explains the reserved prefix", () => {
+    expect(usernameErrorMessage('new row for relation "profiles" violates check constraint "profiles_username_reserved"')).toBe("Usernames can't start with deleted_");
+  });
+  it("explains a deleted account", () => {
+    expect(usernameErrorMessage("this account was deleted")).toBe("This account was deleted.");
+  });
+  it("falls back to a generic message", () => {
+    expect(usernameErrorMessage("network down")).toBe("Couldn't save — try again");
   });
 });

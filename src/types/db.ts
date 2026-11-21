@@ -17,6 +17,8 @@ export type Profile = {
   fr_friends_of_friends: boolean;
   fr_server_members: boolean;
   created_at: string;
+  /** Set when the account was deleted (migration 0046): the row is then a "Deleted User" tombstone. */
+  deleted_at: string | null;
 };
 
 export type Server = {

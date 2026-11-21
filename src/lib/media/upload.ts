@@ -68,3 +68,26 @@ export async function uploadFile(file: File): Promise<{ url: string; name: strin
   const { data } = supabase.storage.from("attachments").getPublicUrl(path);
   return { url: data.publicUrl, name: file.name };
 }
+
+/**
+ * What went wrong with a Storage remove, or null when every file went. Storage reports success
+ * even when its delete rules let nothing through, so the removed list is compared to the request.
+ */
+export function removalProblem(
+  paths: string[],
+  result: { data: { name: string }[] | null; error: { message: string } | null },
+): string | null {
+  if (result.error) return result.error.message;
+  const removed = new Set((result.data ?? []).map((f) => f.name));
+  const missing = paths.filter((p) => !removed.has(p));
+  return missing.length > 0 ? `not removed: ${missing.join(", ")}` : null;
+}
+
+/** Remove files, best effort: a failure is logged, never thrown (it mustn't block a deletion). */
+export async function removeStorageFiles(bucket: string, paths: string[]): Promise<boolean> {
+  if (paths.length === 0) return true;
+  const result = await createClient().storage.from(bucket).remove(paths);
+  const problem = removalProblem(paths, result);
+  if (problem) console.error(`Couldn't remove ${bucket} files (${problem})`);
+  return !problem;
+}

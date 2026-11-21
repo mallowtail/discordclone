@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { validateImage, isImageType } from "@/lib/media/upload";
+import { validateImage, isImageType, removalProblem } from "@/lib/media/upload";
 
 const MB = 1024 * 1024;
 
@@ -29,5 +29,18 @@ describe("isImageType", () => {
     expect(isImageType("application/pdf")).toBe(false);
     expect(isImageType("text/plain")).toBe(false);
     expect(isImageType("")).toBe(false);
+  });
+});
+
+describe("removalProblem", () => {
+  it("is null when every file was removed", () => {
+    expect(removalProblem(["a.png", "b.png"], { data: [{ name: "b.png" }, { name: "a.png" }], error: null })).toBeNull();
+  });
+  it("reports files Storage silently kept (delete rules let nothing through)", () => {
+    expect(removalProblem(["a.png"], { data: [], error: null })).toBe("not removed: a.png");
+    expect(removalProblem(["a.png", "b.png"], { data: [{ name: "a.png" }], error: null })).toBe("not removed: b.png");
+  });
+  it("reports an error", () => {
+    expect(removalProblem(["a.png"], { data: null, error: { message: "boom" } })).toBe("boom");
   });
 });

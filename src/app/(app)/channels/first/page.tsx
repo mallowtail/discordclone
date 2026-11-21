@@ -49,7 +49,7 @@ export default function FirstChannel() {
       }
       if (!serverId) return router.replace("/dms");
       const { data: chans } = await supabase
-        .from("channels").select("id").eq("server_id", serverId).order("position").limit(1);
+        .from("channels").select("id").eq("server_id", serverId).neq("kind", "voice").order("position").limit(1);
       if (!active) return;
       if (chans && chans[0]) return router.replace(`/channels/${chans[0].id}`);
 

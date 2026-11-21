@@ -1,5 +1,6 @@
 "use client";
 
+import { VoiceBar } from "@/components/voice/VoiceBar";
 import { useState } from "react";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { useProfilePopover } from "@/components/providers/ProfilePopoverProvider";
@@ -18,6 +19,7 @@ export function UserPanel() {
 
   return (
     <>
+      <VoiceBar />
       <div className="p-2 bg-surface-2 rounded-card flex items-center gap-1 text-body">
         {/* Clicking your avatar/name opens the little profile popover (not a full window). */}
         <button

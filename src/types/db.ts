@@ -78,6 +78,8 @@ export type Channel = {
   created_at: string;
   server_id: string;
   category_id: string | null;
+  /** "voice" channels are LiveKit rooms (migration 0042); missing means "text". */
+  kind?: "text" | "voice";
 };
 
 export type ForwardSnapshot = {

@@ -1,5 +1,7 @@
 "use client";
 
+import { VoiceChannelRow } from "@/components/voice/VoiceChannelRow";
+import { useVoiceRooms } from "@/hooks/useVoiceRooms";
 import { createPortal } from "react-dom";
 import { navCache } from "@/lib/cache/navCache";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
@@ -113,6 +115,9 @@ export function ServerSidebar({ serverId }: { serverId: string }) {
   }
 
   function renderChannelLink(channel: Channel, hasMargin = false) {
+    if (channel.kind === "voice") {
+      return <VoiceChannelRow key={channel.id} channel={channel} occupants={voiceRooms[channel.id] ?? []} hasMargin={hasMargin} />;
+    }
     const isActive = channel.id === activeChannelId;
     // The active channel is never shown as unread — you can't have unread messages in
     // what you're currently looking at. Because of that, the unread dot and the active
@@ -148,6 +153,7 @@ export function ServerSidebar({ serverId }: { serverId: string }) {
   }
 
   const uncategorized = channelsIn(null);
+  const voiceRooms = useVoiceRooms(serverId, channels.some((c) => c.kind === "voice"));
 
   return (
     <aside className="w-[clamp(12.5rem,18vw,16.25rem)] bg-sidebar flex flex-col">

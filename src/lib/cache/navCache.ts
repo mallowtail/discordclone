@@ -54,7 +54,8 @@ export const navCache = {
     if (last && channels.get(last)?.server_id === serverId) return last;
     let first: Channel | null = null;
     for (const c of channels.values()) {
-      if (c.server_id === serverId && (!first || c.position < first.position)) first = c;
+      // Voice channels are joined, not opened as a page.
+      if (c.server_id === serverId && c.kind !== "voice" && (!first || c.position < first.position)) first = c;
     }
     return first?.id ?? null;
   },

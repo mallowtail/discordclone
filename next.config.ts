@@ -7,7 +7,8 @@ import type { NextConfig } from "next";
 //   of which the app uses. (A full script/style CSP isn't set: it needs nonces to work with Next.)
 // - nosniff: browsers must trust the declared file type rather than guess (uploads stay downloads).
 // - Referrer-Policy: other sites see only our domain, not full URLs with channel/conversation ids.
-// - Permissions-Policy: the app never needs the camera, microphone or location.
+// - Permissions-Policy: the microphone is allowed for this site only (voice chat); the camera and
+//   location are never used, so they're off.
 const securityHeaders = [
   {
     key: "Content-Security-Policy",
@@ -16,7 +17,7 @@ const securityHeaders = [
   { key: "X-Frame-Options", value: "DENY" },
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-  { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+  { key: "Permissions-Policy", value: "camera=(), microphone=(self), geolocation=()" },
 ];
 
 const nextConfig: NextConfig = {

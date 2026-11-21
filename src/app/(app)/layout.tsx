@@ -14,6 +14,7 @@ import { FriendsProvider } from "@/components/providers/FriendsProvider";
 import { LinkGuardProvider } from "@/components/providers/LinkGuardProvider";
 import { FavoriteGifsProvider } from "@/components/providers/FavoriteGifsProvider";
 import { SafetyProvider } from "@/components/providers/SafetyProvider";
+import { VoiceProvider } from "@/components/providers/VoiceProvider";
 import { DrawerProvider, useDrawer } from "@/components/providers/DrawerProvider";
 import { Drawer } from "@/components/ui/Drawer";
 import { navCache } from "@/lib/cache/navCache";
@@ -80,6 +81,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <FriendsProvider>
             {/* Safety, link guard and favourites sit outside ProfilePopoverProvider: it draws the
                 profile cards itself, and they need these too (Block/Ignore lives on the card). */}
+            <VoiceProvider>
             <SafetyProvider>
               <LinkGuardProvider>
                 <FavoriteGifsProvider>
@@ -89,6 +91,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 </FavoriteGifsProvider>
               </LinkGuardProvider>
             </SafetyProvider>
+            </VoiceProvider>
           </FriendsProvider>
         </UnreadProvider>
       </PresenceProvider>

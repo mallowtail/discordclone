@@ -5,6 +5,7 @@ import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { navCache } from "@/lib/cache/navCache";
+import { VoiceChannelView } from "@/components/voice/VoiceChannelView";
 import type { Channel, Message } from "@/types/db";
 import { useMessages } from "@/hooks/useMessages";
 import { usePinnedMessages } from "@/hooks/usePinnedMessages";
@@ -90,6 +91,7 @@ export default function ChannelPage({ params }: { params: Promise<{ channelId: s
     );
   }
   if (!channel) return <ChannelSkeleton />;
+  if (channel.kind === "voice") return <VoiceChannelView channel={channel} />;
   return (
     <Suspense fallback={<ChannelSkeleton />}>
       <ChannelView channel={channel} />

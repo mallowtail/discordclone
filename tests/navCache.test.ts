@@ -18,6 +18,11 @@ describe("navCache", () => {
     expect(navCache.channelToOpen("unknown")).toBeNull();
     expect(navCache.getChannel("x")?.server_id).toBe("s2");
   });
+  it("never opens a voice channel as the server's landing channel", () => {
+    navCache.setOwner("u1");
+    navCache.rememberChannels([{ ...ch("v", "s1", 0), kind: "voice" }, ch("t", "s1", 5)]);
+    expect(navCache.channelToOpen("s1")).toBe("t");
+  });
   it("forgets a last-opened channel that's since been deleted", () => {
     navCache.setOwner("u1");
     navCache.rememberChannels([ch("a", "s1", 1), ch("b", "s1", 2)]);

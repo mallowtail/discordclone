@@ -10,7 +10,17 @@ import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import type { Role } from "@/types/db";
 import { CaretUp, CaretDown, PencilSimple, Trash } from "@phosphor-icons/react";
 
+/** The roles window (kept for anywhere that opens roles on their own). */
 export function RolesDialog({ serverId, onClose }: { serverId: string; onClose: () => void }) {
+  return (
+    <Modal onClose={onClose} title="Roles" size="sm">
+      <RolesPanel serverId={serverId} />
+    </Modal>
+  );
+}
+
+/** Create, edit, reorder and delete roles (used in the roles window and Server Settings > Roles). */
+export function RolesPanel({ serverId }: { serverId: string }) {
   const supabase = useMemo(() => createClient(), []);
   const { perms, isOwner, rank, refresh } = useServerPermissions(serverId);
   const [roles, setRoles] = useState<Role[]>([]);
@@ -78,7 +88,7 @@ export function RolesDialog({ serverId, onClose }: { serverId: string; onClose: 
   const newPosition = roles.length ? Math.min(...roles.map((r) => r.position)) - 1 : 1;
 
   return (
-    <Modal onClose={onClose} title="Roles" size="sm">
+    <div>
       <div className="p-5">
         {error && <p className="text-danger text-body mb-2">{error}</p>}
 
@@ -181,6 +191,6 @@ export function RolesDialog({ serverId, onClose }: { serverId: string; onClose: 
           onClose={() => setConfirmingDelete(null)}
         />
       )}
-    </Modal>
+    </div>
   );
 }

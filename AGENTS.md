@@ -15,14 +15,14 @@ Imports always use `@/…` (= `src/…`). Pure logic lives in `src/lib` and is u
   - `messages/list/` — MessageList, MessageItem, MessageContent (markdown, images, files, GIFs), MessageActions, ReactionBar, TypingIndicator, LinkPreviews
   - `messages/composer/` — MessageInput (+ menu, uploads queue, GIF/emoji), MentionAutocomplete, MessageDropZone, GifPicker
   - `messages/polls/`, `messages/forwarding/`, `messages/pins/`
-  - `servers/layout/` — ServerRail, ServerSidebar, ServerIcon · `servers/dialogs/` — add/create/settings/invite · `servers/members/` · `servers/roles/` · `servers/search/`
+  - `servers/layout/` — ServerRail, ServerSidebar, ServerIcon · `servers/settings/` — ServerSettings (full-screen tabs: Overview, Roles, Members, Invites, Bans, Audit Log) · `servers/dialogs/` — add/create/invite · `servers/members/` · `servers/roles/` (RolesPanel) · `servers/search/`
   - `dms/sidebar/` — DmSidebar, NewDmDialog, PeoplePickerDialog, RequestBadge · `dms/groups/` — GroupIcon, GroupMembersPanel
   - `user/profile/` — Avatar, ProfileCard, FullProfileModal, FriendButton, StatusBubble, UserPanel · `user/settings/` — UserSettings + sections
   - `auth/` — OAuthButtons
 - `src/lib/`
   - `messages/` — validation, mentions, reactions, pins, polls, gifs, embeds (link → player), linkGuard, forward, grouping, messagePaging, sendAttachment, typing, unread, format, recentEmojis
   - `media/` — upload, imageOptimize, imagePlan, url
-  - `servers/` — invite, permissions, roleHierarchy, roleColor(s), moderation, server-icon
+  - `servers/` — invite, permissions, roleHierarchy, roleColor(s), moderation, auditLog, server-icon
   - `search/` — search, searchQuery, searchSuggest
   - `users/` — profile, oauthProfile, friends, conversations, dm, avatarColor, popover
   - `server/` — server-only: safeFetch (SSRF-safe fetch), linkPreview, linkMeta

@@ -20,6 +20,8 @@ export type Profile = {
 export type Server = {
   id: string;
   name: string;
+  /** Up to 300 characters (migration 0041). */
+  description: string | null;
   icon_url: string | null;
   owner_id: string | null;
   is_public: boolean;

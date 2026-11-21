@@ -25,6 +25,7 @@ export function MemberModMenu({
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
   const [confirmingKick, setConfirmingKick] = useState(false);
+  const [kickReason, setKickReason] = useState("");
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -52,7 +53,7 @@ export function MemberModMenu({
     return run(() => supabase.rpc("timeout_member", { srv: serverId, target: targetId, until: null }));
   }
   function kick() {
-    return run(() => supabase.rpc("kick_member", { srv: serverId, target: targetId }));
+    return run(() => supabase.rpc("kick_member", { srv: serverId, target: targetId, reason: kickReason.trim() || null }));
   }
   function ban() {
     return run(() => supabase.rpc("ban_member", { srv: serverId, target: targetId, reason: reason.trim() || null }));
@@ -108,7 +109,14 @@ export function MemberModMenu({
       {confirmingKick && (
         <ConfirmDialog
           title="Kick member"
-          message={`Kick ${targetName}? They can rejoin with an invite.`}
+          message={
+            <>
+              Kick {targetName}? They can rejoin with an invite.
+              <input value={kickReason} onChange={(e) => setKickReason(e.target.value)} maxLength={512}
+                placeholder="Reason (optional, shown in the audit log)" aria-label="Kick reason"
+                className="mt-3 block w-full rounded-control bg-surface-2 border border-line px-3 py-2 text-body text-ink outline-none focus:border-accent" />
+            </>
+          }
           confirmLabel="Kick"
           destructive
           onConfirm={() => {

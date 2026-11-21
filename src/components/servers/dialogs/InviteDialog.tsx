@@ -54,6 +54,15 @@ export function InviteDialog({
   isManager: boolean;
   onClose: () => void;
 }) {
+  return (
+    <Modal onClose={onClose} title={`Invite people to ${server.name}`} size="md">
+      <InvitesPanel server={server} isManager={isManager} />
+    </Modal>
+  );
+}
+
+/** Create invites, the custom link and the list of active invites (also Server Settings > Invites). */
+export function InvitesPanel({ server, isManager }: { server: Server; isManager: boolean }) {
   const supabase = useMemo(() => createClient(), []);
   const { user } = useAuth();
   const isOwner = !!user && user.id === server.owner_id;
@@ -77,7 +86,6 @@ export function InviteDialog({
   }, [load]);
 
   return (
-    <Modal onClose={onClose} title={`Invite people to ${server.name}`} size="md">
       <div className="p-5 space-y-6">
         {vanity && !isOwner && (
           <section>
@@ -89,7 +97,6 @@ export function InviteDialog({
         {isOwner && <VanityEditor serverId={server.id} current={vanity?.code ?? null} onSaved={load} />}
         {isManager && <ActiveInvites invites={regular} onChanged={load} />}
       </div>
-    </Modal>
   );
 }
 

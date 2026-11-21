@@ -1,5 +1,6 @@
 "use client";
 
+import { createPortal } from "react-dom";
 import { navCache } from "@/lib/cache/navCache";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import Link from "next/link";
@@ -9,7 +10,7 @@ import { createClient } from "@/lib/supabase/client";
 import type { Server, Category, Channel } from "@/types/db";
 import { CreateChannelDialog } from "@/components/servers/dialogs/CreateChannelDialog";
 import { CreateCategoryDialog } from "@/components/servers/dialogs/CreateCategoryDialog";
-import { ServerSettingsDialog } from "@/components/servers/dialogs/ServerSettingsDialog";
+import { ServerSettings } from "@/components/servers/settings/ServerSettings";
 import { InviteDialog } from "@/components/servers/dialogs/InviteDialog";
 import { UserPanel } from "@/components/user/profile/UserPanel";
 import { useServerPermissions } from "@/hooks/useServerPermissions";
@@ -46,7 +47,6 @@ export function ServerSidebar({ serverId }: { serverId: string }) {
   const { closeDrawer } = useDrawer();
   const canManageChannels = has("manage_channels");
   const canManageServer = has("manage_server");
-  const canManageRoles = has("manage_roles");
 
   // Extract active channel ID from pathname (e.g., /channels/abc123 -> abc123)
   // On /channels/first landing page, pathSegments[2] is "first" which matches no real id
@@ -236,7 +236,7 @@ export function ServerSidebar({ serverId }: { serverId: string }) {
         />
       )}
       {settings && server && (
-        <ServerSettingsDialog server={server} canManageServer={canManageServer} canManageRoles={canManageRoles} onSaved={load} onClose={() => setSettings(false)} />
+        createPortal(<ServerSettings server={server} onSaved={load} onClose={() => setSettings(false)} />, document.body)
       )}
       {inviting && server && (
         <InviteDialog server={server} isManager={canManageServer} onClose={() => setInviting(false)} />

@@ -12,16 +12,16 @@ Imports always use `@/…` (= `src/…`). Pure logic lives in `src/lib` and is u
 - `src/components/`
   - `ui/` — Modal, ConfirmDialog, Drawer, Dropdown, EmptyState, Skeleton, SidePanel (header buttons + side-panel overlay), overlayStack (Escape handling)
   - `providers/` — Auth, Presence, Unread, Friends, LinkGuard ("Leaving Mallowchat"), FavoriteGifs, Safety (block/ignore), Voice (the one LiveKit connection), ProfilePopover, Drawer
-  - `messages/list/` — MessageList, MessageItem, MessageContent (markdown, images, files, GIFs), MessageActions, ReactionBar, TypingIndicator, LinkPreviews
-  - `messages/composer/` — MessageInput (+ menu, uploads queue, GIF/emoji), MentionAutocomplete, MessageDropZone, GifPicker
+  - `messages/list/` — MessageList, MessageItem, MessageContent (markdown, images, files, GIFs), StickerImage, MessageActions, ReactionBar, TypingIndicator, LinkPreviews
+  - `messages/composer/` — MessageInput (+ menu, uploads queue, GIF/emoji), MentionAutocomplete, MessageDropZone, GifPicker, StickerPicker
   - `messages/polls/`, `messages/forwarding/`, `messages/pins/`
-  - `servers/layout/` — ServerRail, ServerSidebar, ServerIcon · `servers/settings/` — ServerSettings (full-screen tabs: Overview, Roles, Members, Invites, Bans, Audit Log) · `servers/dialogs/` — add/create/invite · `servers/members/` · `servers/roles/` (RolesPanel) · `servers/search/`
+  - `servers/layout/` — ServerRail, ServerSidebar, ServerIcon · `servers/settings/` — ServerSettings (full-screen tabs: Overview, Roles, Members, Invites, Bans, Stickers (StickersTab), Audit Log) · `servers/dialogs/` — add/create/invite · `servers/members/` · `servers/roles/` (RolesPanel) · `servers/search/`
   - `dms/sidebar/` — DmSidebar, NewDmDialog, PeoplePickerDialog, RequestBadge · `dms/groups/` — GroupIcon, GroupMembersPanel
   - `user/profile/` — Avatar, ProfileCard, FullProfileModal, FriendButton, StatusBubble, UserPanel · `user/settings/` — UserSettings + sections
   - `voice/` — VoiceBar, VoiceChannelRow, VoiceChannelView, CallButton, IncomingCall, ScreenShares (watch-to-download streams), micGate (voice activity / push-to-talk gate)
   - `auth/` — OAuthButtons
 - `src/lib/`
-  - `messages/` — validation, mentions, reactions, pins, polls, gifs, embeds (link → player), linkGuard, forward, grouping, messagePaging, sendAttachment, typing, unread, format, recentEmojis
+  - `messages/` — validation, mentions, reactions, pins, polls, gifs, stickers, embeds (link → player), linkGuard, forward, grouping, messagePaging, sendAttachment, typing, unread, format, recentEmojis
   - `media/` — upload, imageOptimize, imagePlan, url
   - `servers/` — invite, permissions, roleHierarchy, roleColor(s), moderation, auditLog, server-icon
   - `search/` — search, searchQuery, searchSuggest

@@ -36,8 +36,10 @@ export function ReportsTab({ server, reports, error, reload, onClose }: {
   const canDelete = isOwner || has("manage_messages");
   const [view, setView] = useState<"open" | "handled">("open");
   // message id → its channel, for messages that still exist (deleted ones aren't returned).
-  const [live, setLive] = useState<Map<string, string | null>>(new Map());
-  const [members, setMembers] = useState<Map<string, Member>>(new Map());
+  // `key` is the id list the map was loaded for, so cards don't claim "deleted" / "not in the
+  // server" before the lookup has answered.
+  const [live, setLive] = useState<{ key: string; map: Map<string, string | null> }>({ key: "", map: new Map() });
+  const [members, setMembers] = useState<{ key: string; map: Map<string, Member> }>({ key: "", map: new Map() });
   const [deleting, setDeleting] = useState<ReportRow | null>(null);
   const [actionError, setActionError] = useState<{ id: string; text: string } | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -49,7 +51,7 @@ export function ReportsTab({ server, reports, error, reload, onClose }: {
     if (!messageIds) return;
     let active = true;
     supabase.from("messages").select("id, channel_id").in("id", messageIds.split(",")).then(({ data }) => {
-      if (active) setLive(new Map(((data ?? []) as { id: string; channel_id: string | null }[]).map((m) => [m.id, m.channel_id])));
+      if (active) setLive({ key: messageIds, map: new Map(((data ?? []) as { id: string; channel_id: string | null }[]).map((m) => [m.id, m.channel_id])) });
     });
     return () => { active = false; };
   }, [supabase, messageIds, refreshKey]);
@@ -59,7 +61,7 @@ export function ReportsTab({ server, reports, error, reload, onClose }: {
     let active = true;
     supabase.from("server_members").select("user_id, timeout_until").eq("server_id", server.id).in("user_id", targetIds.split(","))
       .then(({ data }) => {
-        if (active) setMembers(new Map(((data ?? []) as Member[]).map((m) => [m.user_id, m])));
+        if (active) setMembers({ key: targetIds, map: new Map(((data ?? []) as Member[]).map((m) => [m.user_id, m])) });
       });
     return () => { active = false; };
   }, [supabase, server.id, targetIds, refreshKey]);
@@ -109,11 +111,13 @@ export function ReportsTab({ server, reports, error, reload, onClose }: {
       ) : (
         <div className="flex flex-col gap-3">
           {shown.map((r) => {
-            const channelId = r.message_id ? live.get(r.message_id) : undefined;
+            const liveLoaded = live.key === messageIds;
+            const membersLoaded = members.key === targetIds;
+            const channelId = r.message_id ? live.map.get(r.message_id) : undefined;
             const exists = channelId !== undefined;
             const href = exists ? jumpLink(channelId ?? null, r.message_id) : null;
             const target = r.target_user_id;
-            const member = target ? members.get(target) : undefined;
+            const member = target ? members.map.get(target) : undefined;
             const targetName = personName(r.target);
             const targetRank = target ? rolesFor(target).reduce((mx, role) => Math.max(mx, role.position), -1) : -1;
             const ctx = { isOwner, viewerRank: rank ?? -1, targetRank, targetIsOwner: target === server.owner_id, targetIsSelf: target === user?.id };
@@ -128,9 +132,9 @@ export function ReportsTab({ server, reports, error, reload, onClose }: {
                         className="rounded-control border border-line px-3 py-1.5 min-h-11 md:min-h-0 text-meta font-medium text-ink hover:bg-surface-2">
                         Jump to message
                       </button>
-                    ) : (
+                    ) : liveLoaded ? (
                       <span className="text-meta text-muted">The message has been deleted.</span>
-                    )}
+                    ) : null}
                     {exists && canDelete && (
                       <button type="button" onClick={() => setDeleting(r)}
                         className="rounded-control border border-danger/50 px-3 py-1.5 min-h-11 md:min-h-0 text-meta font-medium text-danger hover:bg-danger/10">
@@ -144,7 +148,7 @@ export function ReportsTab({ server, reports, error, reload, onClose }: {
                         canTimeout={canModerate({ ...ctx, hasPerm: has("timeout_members") })}
                         onDone={refresh} />
                     )}
-                    {target && !member && !isDeletedProfile(r.target) && (
+                    {target && membersLoaded && !member && !isDeletedProfile(r.target) && (
                       <span className="text-meta text-muted">{targetName} isn&apos;t in the server anymore.</span>
                     )}
                     {r.status === "open" && <MarkHandledButton reportId={r.id} onDone={reload} />}

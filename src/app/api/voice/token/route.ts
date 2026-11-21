@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
   }
 
   const { data: profile } = await supabase.from("profiles").select("display_name").eq("id", userId).maybeSingle();
-  const token = new AccessToken(key, secret, { identity: userId, name: profile?.display_name ?? "Someone", ttl: "6h" });
+  const token = new AccessToken(key, secret, { identity: userId, name: profile?.display_name ?? "Someone", ttl: "15m" });
   token.addGrant({
     roomJoin: true,
     room: body.room,

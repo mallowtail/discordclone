@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   REPORT_NOTE_MAX, REPORT_REASONS, REPORT_SENT_MESSAGE, badgeLabel, handleReportErrorMessage, jumpLink, modDeleteErrorMessage,
   openReportCount, personName, reasonLabel, reportErrorMessage, reportTitle, snapshotAsMessage, snapshotAuthor, snapshotPlace,
-  sortReports, type MessageSnapshot,
+  reportedServer, sortReports, type MessageSnapshot, type ServerSnapshot,
 } from "@/lib/reports/reports";
 
 const snap: MessageSnapshot = {
@@ -135,5 +135,20 @@ describe("snapshotAsMessage", () => {
   });
   it("copes with an empty body", () => {
     expect(snapshotAsMessage({ ...snap, content: null }).content).toBe("");
+  });
+});
+
+describe("reportedServer", () => {
+  const srvSnap: ServerSnapshot = { server_id: "s1", name: "Old name", icon_url: null, description: null, owner_id: "o1", is_public: false };
+  it("is the server while the report still points at it, with its current name when known", () => {
+    expect(reportedServer({ kind: "server", server_id: "s1", snapshot: srvSnap }, new Map([["s1", "New name"]])))
+      .toEqual({ id: "s1", name: "New name" });
+  });
+  it("falls back to the name at report time (a private server the admin can't read)", () => {
+    expect(reportedServer({ kind: "server", server_id: "s1", snapshot: srvSnap }, new Map())).toEqual({ id: "s1", name: "Old name" });
+  });
+  it("is null once the server is deleted (server_id set to null) and for other kinds", () => {
+    expect(reportedServer({ kind: "server", server_id: null, snapshot: srvSnap }, new Map())).toBeNull();
+    expect(reportedServer({ kind: "message", server_id: "s1", snapshot: snap }, new Map())).toBeNull();
   });
 });

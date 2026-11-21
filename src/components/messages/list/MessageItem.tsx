@@ -24,6 +24,7 @@ import type { ReactionPill } from "@/lib/messages/reactions";
 import { ArrowBendUpLeft, PushPin } from "@phosphor-icons/react";
 import { toolbarRecents } from "@/lib/messages/recentEmojis";
 import { modDeleteErrorMessage } from "@/lib/reports/reports";
+import { announceMessageDeleted } from "@/lib/messages/localDeletes";
 import { BANNED_ACCOUNT_MESSAGE } from "@/lib/users/account";
 
 function snippet(m: Message): string {
@@ -124,13 +125,15 @@ export function MessageItem({
     if (!isMine) {
       // A moderator (Manage Messages) deleting someone else's message: audited by the database.
       const { error: err } = await supabase.rpc("delete_message_as_mod", { msg: msg.id });
-      if (err) setError(modDeleteErrorMessage(err.message));
+      if (err) return setError(modDeleteErrorMessage(err.message));
+      announceMessageDeleted(msg.id); // gone from my screen now, not when realtime catches up
       return;
     }
     // `.select()` returns what was deleted: nothing back means the database filtered it out (for a
     // banned account it does that silently), so don't pretend it worked.
     const { data: gone, error: err } = await supabase.from("messages").delete().eq("id", msg.id).select("id");
-    if (err || !gone?.length) setError(profile?.banned_at ? BANNED_ACCOUNT_MESSAGE : "Couldn't delete — try again");
+    if (err || !gone?.length) return setError(profile?.banned_at ? BANNED_ACCOUNT_MESSAGE : "Couldn't delete — try again");
+    announceMessageDeleted(msg.id);
   }
 
   async function togglePin() {

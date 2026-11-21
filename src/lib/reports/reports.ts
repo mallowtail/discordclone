@@ -226,3 +226,17 @@ export function snapshotAsMessage(snap: MessageSnapshot): Message {
 export function jumpLink(channelId: string | null, messageId: string | null): string | null {
   return channelId && messageId ? `/channels/${channelId}?msg=${messageId}` : null;
 }
+
+/**
+ * The server a server report is about, if it still exists: `reports.server_id` is set to null when
+ * the server is deleted (on delete set null), so the report row itself answers "is it still there".
+ * Its current name when known (servers the admin can read), else the name at report time.
+ * Null for a deleted server and for other kinds of report.
+ */
+export function reportedServer(
+  r: Pick<ReportRow, "kind" | "server_id" | "snapshot">,
+  currentNames: ReadonlyMap<string, string>,
+): { id: string; name: string } | null {
+  if (r.kind !== "server" || !r.server_id) return null;
+  return { id: r.server_id, name: currentNames.get(r.server_id) ?? (r.snapshot as ServerSnapshot).name };
+}

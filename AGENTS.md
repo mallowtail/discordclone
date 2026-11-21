@@ -23,7 +23,7 @@ Imports always use `@/…` (= `src/…`). Pure logic lives in `src/lib` and is u
   - `admin/` — /admin tabs (AdminReportsTab, AdminUsersTab, AdminServersTab), BanDialog (hand off / delete owned servers, then ban), AdminDeleteServerButton, adminActions (admin deletes + removing the files they return)
   - `reports/` — ReportDialog (report a message / user / server), ReportCard (+ MarkHandledButton; shared by Server Settings → Reports and /admin)
 - `src/lib/`
-  - `messages/` — validation, mentions, reactions, pins, polls, gifs, stickers, embeds (link → player), linkGuard, forward, grouping, messagePaging, sendAttachment, typing, unread, format, recentEmojis
+  - `messages/` — validation, mentions, reactions, pins, polls, gifs, stickers, embeds (link → player), linkGuard, forward, grouping, messagePaging, sendAttachment, typing, unread, format, recentEmojis, localDeletes (own-screen delete)
   - `media/` — upload, imageOptimize, imagePlan, url
   - `servers/` — invite, permissions, roleHierarchy, roleColor(s), moderation, auditLog, server-icon
   - `search/` — search, searchQuery, searchSuggest

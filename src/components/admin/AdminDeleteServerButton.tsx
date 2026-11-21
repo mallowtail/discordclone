@@ -6,11 +6,15 @@ import { useVoice } from "@/components/providers/VoiceProvider";
 import { TypeToConfirmDialog } from "@/components/ui/TypeToConfirmDialog";
 import { serverNameMatches } from "@/lib/servers/serverAdmin";
 import { adminDeleteServer } from "@/components/admin/adminActions";
+import type { StorageFileRow } from "@/lib/admin/admin";
 
-/** "Delete server" for the site admin: type the name to confirm, then `admin_delete_server` + its files. */
+/**
+ * "Delete server" for the site admin: type the name to confirm, then `admin_delete_server` + its
+ * files. `onDeleted` gets the files Storage kept (empty when all went) for the parent to offer a retry.
+ */
 export function AdminDeleteServerButton({ server, onDeleted, label = "Delete server" }: {
   server: { id: string; name: string };
-  onDeleted: () => void;
+  onDeleted: (filesLeft: StorageFileRow[]) => void;
   label?: string;
 }) {
   const supabase = useMemo(() => createClient(), []);
@@ -18,10 +22,10 @@ export function AdminDeleteServerButton({ server, onDeleted, label = "Delete ser
   const [confirming, setConfirming] = useState(false);
 
   async function remove(): Promise<string | null> {
-    const err = await adminDeleteServer(supabase, server.id, voice);
-    if (err) return err;
+    const result = await adminDeleteServer(supabase, server.id, voice);
+    if (result.error !== null) return result.error;
     setConfirming(false);
-    onDeleted();
+    onDeleted(result.filesLeft);
     return null;
   }
 

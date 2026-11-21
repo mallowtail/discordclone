@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   adminDeleteMessageErrorMessage, adminDeleteServerErrorMessage, adminLoadErrorMessage, adminTransferErrorMessage,
-  banErrorMessage, banResultMessage, canBanNow, filesByBucket, unbanErrorMessage, userSearchFilter,
+  banErrorMessage, banResultMessage, canBanNow, filesByBucket, filesLeftMessage, unbanErrorMessage, userSearchFilter, voiceRemovalOk,
 } from "@/lib/admin/admin";
 
 describe("filesByBucket", () => {
@@ -95,5 +95,23 @@ describe("banResultMessage", () => {
     expect(banResultMessage("Sam", { filesOk: false, voiceOk: true })).toBe("Sam is banned, but some of their files couldn't be removed.");
     expect(banResultMessage("Sam", { filesOk: false, voiceOk: false }))
       .toBe("Sam is banned, but some of their files couldn't be removed and they couldn't be removed from voice calls.");
+  });
+});
+
+describe("filesLeftMessage", () => {
+  it("says the deletion went through but files are left", () => {
+    expect(filesLeftMessage("message")).toBe("The message is gone, but its file couldn't be removed — try again.");
+    expect(filesLeftMessage("server")).toContain("The server is gone");
+    expect(filesLeftMessage("ban")).toContain("try again");
+  });
+});
+
+describe("voiceRemovalOk", () => {
+  it("is true only for a 2xx with no failed rooms", () => {
+    expect(voiceRemovalOk(200, { removed: 1, failed: 0 })).toBe(true);
+    expect(voiceRemovalOk(200, { removed: 0, failed: 0 })).toBe(true);
+    expect(voiceRemovalOk(200, { removed: 1, failed: 2 })).toBe(false);
+    expect(voiceRemovalOk(502, { error: "x" })).toBe(false);
+    expect(voiceRemovalOk(403, null)).toBe(false);
   });
 });

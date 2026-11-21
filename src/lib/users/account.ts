@@ -27,6 +27,23 @@ export function isBannedLoginError(err: { message?: string | null; code?: string
   return /\buser is banned\b/i.test(err.message ?? "");
 }
 
+/**
+ * Marks a /login?banned=1 the app itself sent someone to (AuthProvider signing a banned account
+ * out: sessionStorage; the OAuth return refused by Supabase: a short-lived cookie), so a link to
+ * /login?banned=1 alone can't tell someone their account was banned. Read once, then cleared.
+ */
+export const BANNED_NOTICE_KEY = "mallow-banned-notice";
+
+/** True when the `name` cookie is set (to anything) in a `document.cookie` string. */
+export function hasCookie(cookies: string, name: string): boolean {
+  return cookies.split(";").some((c) => c.trim().split("=")[0] === name);
+}
+
+/** /login shows the banned message only for ?banned=1 that the app itself flagged. */
+export function showBannedNotice(bannedParam: string | null, flagged: boolean): boolean {
+  return bannedParam === "1" && flagged;
+}
+
 type AccountState = { deleted_at?: string | null; banned_at?: string | null };
 
 /** True while the account is site-banned (`profiles.banned_at`, set only by the site admin). */

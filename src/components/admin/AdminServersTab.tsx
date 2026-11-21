@@ -4,7 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { ServerIcon } from "@/components/servers/layout/ServerIcon";
 import { AdminDeleteServerButton } from "@/components/admin/AdminDeleteServerButton";
-import { adminLoadErrorMessage } from "@/lib/admin/admin";
+import { FilesLeftNotice } from "@/components/admin/FilesLeftNotice";
+import { adminLoadErrorMessage, type StorageFileRow } from "@/lib/admin/admin";
 
 export type AdminServer = {
   id: string; name: string; icon_url: string | null; owner_id: string | null; is_public: boolean;
@@ -22,6 +23,8 @@ export function AdminServersTab() {
   const [owners, setOwners] = useState<Map<string, Owner>>(new Map());
   const [error, setError] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  // Files deleted servers left in Storage (their rows are gone, so the retry lives here).
+  const [filesLeft, setFilesLeft] = useState<StorageFileRow[]>([]);
 
   useEffect(() => {
     let active = true;
@@ -47,6 +50,7 @@ export function AdminServersTab() {
       <input type="search" value={query} onChange={(e) => setQuery(e.target.value)}
         placeholder="Search servers by name" aria-label="Search servers"
         className="mb-4 w-full rounded-control border border-line bg-surface-2 px-3 py-2 text-body text-ink outline-none focus:border-accent" />
+      <div className="mb-4 empty:hidden"><FilesLeftNotice files={filesLeft} what="server" onChange={setFilesLeft} /></div>
 
       {error ? (
         <p role="alert" className="text-body text-danger">{error}</p>
@@ -68,7 +72,10 @@ export function AdminServersTab() {
                     {" "}· owner {owner ? `${owner.display_name} (@${owner.username})` : "unknown"} · created {day(s.created_at)}
                   </div>
                 </div>
-                <AdminDeleteServerButton server={s} onDeleted={() => setRefreshKey((k) => k + 1)} />
+                <AdminDeleteServerButton server={s} onDeleted={(left) => {
+                  setFilesLeft((prev) => [...prev, ...left]);
+                  setRefreshKey((k) => k + 1);
+                }} />
               </li>
             );
           })}

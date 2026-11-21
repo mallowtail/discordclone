@@ -4,6 +4,7 @@ import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { MESSAGE_PAGE, mergeMessages, nextHasMore, reconcileNewestPage, refreshCachedPage } from "@/lib/messages/messagePaging";
 import { navCache } from "@/lib/cache/navCache";
+import { onMessageDeleted, withoutMessage } from "@/lib/messages/localDeletes";
 import type { Message } from "@/types/db";
 
 type Target =
@@ -88,6 +89,15 @@ export function useMessages(target: Target) {
     },
     [update, key]
   );
+
+  // A message this tab just deleted (own delete or a moderator's) leaves the list at once; the
+  // realtime DELETE that follows is then a no-op.
+  useEffect(() => onMessageDeleted((id) => {
+    setState((prev) => {
+      const messages = withoutMessage(prev.messages, id);
+      return messages === prev.messages ? prev : { ...prev, messages };
+    });
+  }), []);
 
   useEffect(() => {
     keyRef.current = key;

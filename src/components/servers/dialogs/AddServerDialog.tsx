@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { parseInviteCode } from "@/lib/servers/invite";
+import { BANNED_ACCOUNT_MESSAGE, isBannedAccountError } from "@/lib/users/account";
 import type { Server } from "@/types/db";
 import { ServerIcon } from "@/components/servers/layout/ServerIcon";
 import { Modal } from "@/components/ui/Modal";
@@ -57,6 +58,8 @@ export function AddServerDialog({ onClose }: { onClose: () => void }) {
       const m = err?.message ?? "";
       return setError(
         m.includes("expired") || m.includes("used up") ? "That invite has expired or reached its limit"
+          // The site-wide ban first: its message also contains "banned".
+          : isBannedAccountError(m) ? BANNED_ACCOUNT_MESSAGE
           : m.includes("banned") ? "You're banned from that server"
           : "Invalid invite link"
       );

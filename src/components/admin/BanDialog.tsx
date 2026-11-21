@@ -6,8 +6,10 @@ import { Modal } from "@/components/ui/Modal";
 import { ServerIcon } from "@/components/servers/layout/ServerIcon";
 import { AdminDeleteServerButton } from "@/components/admin/AdminDeleteServerButton";
 import { removeFromVoice, removeReturnedFiles } from "@/components/admin/adminActions";
+import { FilesLeftNotice } from "@/components/admin/FilesLeftNotice";
 import {
   BAN_REASON_MAX, adminLoadErrorMessage, adminTransferErrorMessage, banErrorMessage, banResultMessage, canBanNow,
+  type StorageFileRow,
 } from "@/lib/admin/admin";
 
 export type BanTarget = { id: string; display_name: string; username: string };
@@ -31,7 +33,11 @@ export function BanDialog({ person, onClose, onBanned }: {
   const [deleteMessages, setDeleteMessages] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [done, setDone] = useState<string | null>(null);
+  // After the ban: the files still in Storage and whether voice removal fully worked (both retryable).
+  const [done, setDone] = useState<{ filesLeft: StorageFileRow[]; voiceOk: boolean } | null>(null);
+  const [retryingVoice, setRetryingVoice] = useState(false);
+  // Files a server deleted from this dialog left behind (its row is gone, so they're kept here).
+  const [serverFilesLeft, setServerFilesLeft] = useState<StorageFileRow[]>([]);
 
   const loadServers = useCallback(async () => {
     const { data, error: err } = await supabase.rpc("admin_user_servers", { target: person.id });
@@ -58,17 +64,37 @@ export function BanDialog({ person, onClose, onBanned }: {
       if (err.message.includes("transfer or delete their servers first")) loadServers();
       return;
     }
-    const [filesOk, voiceOk] = await Promise.all([removeReturnedFiles(data), removeFromVoice(person.id)]);
+    const [filesLeft, voiceOk] = await Promise.all([removeReturnedFiles(data), removeFromVoice(person.id)]);
     setBusy(false);
-    setDone(banResultMessage(person.display_name, { filesOk, voiceOk }));
+    setDone({ filesLeft, voiceOk });
     onBanned();
   }
 
+  async function retryVoice() {
+    setRetryingVoice(true);
+    const voiceOk = await removeFromVoice(person.id);
+    setRetryingVoice(false);
+    setDone((d) => (d ? { ...d, voiceOk } : d));
+  }
+
   if (done) {
+    const filesOk = done.filesLeft.length === 0;
     return (
       <Modal onClose={onClose} title={`Banned ${person.display_name}`} size="sm">
         <div className="px-5 py-4">
-          <p role="status" className="text-body text-ink">{done}</p>
+          <p role="status" className="text-body text-ink">{banResultMessage(person.display_name, { filesOk, voiceOk: done.voiceOk })}</p>
+          <div className="mt-3 space-y-2">
+            <FilesLeftNotice files={done.filesLeft} what="ban" onChange={(filesLeft) => setDone((d) => (d ? { ...d, filesLeft } : d))} />
+            {!done.voiceOk && (
+              <div role="alert" className="flex flex-wrap items-center gap-2 text-meta text-danger">
+                <span>They may still be in a voice call.</span>
+                <button type="button" onClick={retryVoice} disabled={retryingVoice}
+                  className="rounded-control border border-line px-3 py-1.5 min-h-11 md:min-h-0 text-meta font-medium text-ink hover:bg-surface-2 disabled:opacity-50">
+                  {retryingVoice ? "Trying…" : "Try again"}
+                </button>
+              </div>
+            )}
+          </div>
           <div className="mt-5 flex justify-end">
             <button type="button" autoFocus onClick={onClose}
               className="rounded-control bg-accent px-4 py-2 text-body font-medium text-white hover:bg-accent-strong">
@@ -102,10 +128,14 @@ export function BanDialog({ person, onClose, onBanned }: {
             <>
               <p className="mt-1 text-meta text-muted">Give each server to someone or delete it before banning — a server can&apos;t be left without an owner.</p>
               <ul className="mt-3 space-y-3">
-                {servers.map((s) => <OwnedServerRow key={s.id} server={s} onResolved={loadServers} />)}
+                {servers.map((s) => (
+                  <OwnedServerRow key={s.id} server={s} onResolved={loadServers}
+                    onFilesLeft={(left) => setServerFilesLeft((prev) => [...prev, ...left])} />
+                ))}
               </ul>
             </>
           )}
+          <div className="mt-2"><FilesLeftNotice files={serverFilesLeft} what="server" onChange={setServerFilesLeft} /></div>
         </section>
 
         <label className="block">
@@ -142,7 +172,11 @@ export function BanDialog({ person, onClose, onBanned }: {
 }
 
 /** One server the person owns: give it to a member (`admin_transfer_server`) or delete it. */
-function OwnedServerRow({ server, onResolved }: { server: OwnedServer; onResolved: () => void }) {
+function OwnedServerRow({ server, onResolved, onFilesLeft }: {
+  server: OwnedServer;
+  onResolved: () => void;
+  onFilesLeft: (left: StorageFileRow[]) => void;
+}) {
   const supabase = useMemo(() => createClient(), []);
   const [giving, setGiving] = useState(false);
   const [members, setMembers] = useState<Member[] | null>(null);
@@ -183,7 +217,7 @@ function OwnedServerRow({ server, onResolved }: { server: OwnedServer; onResolve
             Give to…
           </button>
         )}
-        <AdminDeleteServerButton server={server} onDeleted={onResolved} />
+        <AdminDeleteServerButton server={server} onDeleted={(left) => { onFilesLeft(left); onResolved(); }} />
       </div>
       {giving && (
         <div className="mt-3 flex flex-wrap items-center gap-2">

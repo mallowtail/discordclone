@@ -5,6 +5,7 @@ import type { User } from "@supabase/supabase-js";
 import { usePathname } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import type { Profile } from "@/types/db";
+import { BANNED_NOTICE_KEY } from "@/lib/users/account";
 
 type AuthState = {
   user: User | null;
@@ -71,24 +72,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if ((!deletedAt && !bannedAt) || pathname.startsWith("/login")) return;
     const dest = deletedAt ? "/login?deleted=1" : "/login?banned=1";
+    // /login only believes ?banned=1 when this flag is set (a bare link can't claim a ban).
+    if (!deletedAt) {
+      try { sessionStorage.setItem(BANNED_NOTICE_KEY, "1"); } catch { /* storage blocked: no message, still signed out */ }
+    }
     supabase.auth.signOut({ scope: "local" }).finally(() => { window.location.href = dest; });
   }, [deletedAt, bannedAt, pathname, supabase]);
 
   // An open tab finds out about a ban (or a deletion elsewhere) on its next check: when it comes
-  // back into view, and every few minutes while it's open.
+  // back into view, and every few minutes while it's open, hidden or not (a banned person in a
+  // call in a background tab is signed out too; the check is one tiny query).
   useEffect(() => {
     if (!user) return;
     // Only the two flags, and the profile is reloaded only when one is set, so nothing re-renders
     // on a routine check.
     const recheck = async () => {
-      if (document.visibilityState !== "visible") return;
       const { data } = await supabase.from("profiles").select("deleted_at, banned_at").eq("id", user.id).maybeSingle();
       if (data?.deleted_at || data?.banned_at) refreshProfile();
     };
-    document.addEventListener("visibilitychange", recheck);
+    const onVisible = () => { if (document.visibilityState === "visible") recheck(); };
+    document.addEventListener("visibilitychange", onVisible);
     const timer = window.setInterval(recheck, 3 * 60 * 1000);
     return () => {
-      document.removeEventListener("visibilitychange", recheck);
+      document.removeEventListener("visibilitychange", onVisible);
       window.clearInterval(timer);
     };
   }, [user, refreshProfile, supabase]);

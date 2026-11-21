@@ -50,7 +50,7 @@ export function ReportDialog({
   }
 
   const audience = inServer
-    ? "This server's moderators and the Mallowchat admin can see your report."
+    ? "Usually this server's moderators and the Mallowchat admin can see your report."
     : "Only the Mallowchat admin can see your report.";
 
   return (

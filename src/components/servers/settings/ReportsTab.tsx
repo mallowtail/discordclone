@@ -12,6 +12,7 @@ import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { canModerate } from "@/lib/servers/moderation";
 import { isDeletedProfile } from "@/lib/users/account";
 import { jumpLink, modDeleteErrorMessage, openReportCount, personName, type ReportRow } from "@/lib/reports/reports";
+import { chunkIds } from "@/lib/messages/reactions";
 import type { Server } from "@/types/db";
 
 type Member = { user_id: string; timeout_until: string | null };
@@ -37,9 +38,10 @@ export function ReportsTab({ server, reports, error, reload, onClose }: {
   const [view, setView] = useState<"open" | "handled">("open");
   // message id → its channel, for messages that still exist (deleted ones aren't returned).
   // `key` is the id list the map was loaded for, so cards don't claim "deleted" / "not in the
-  // server" before the lookup has answered.
-  const [live, setLive] = useState<{ key: string; map: Map<string, string | null> }>({ key: "", map: new Map() });
-  const [members, setMembers] = useState<{ key: string; map: Map<string, Member> }>({ key: "", map: new Map() });
+  // server" before the lookup has answered; `failed` means it couldn't be checked (an empty map
+  // then proves nothing, so neither claim is made and the actions stay available).
+  const [live, setLive] = useState<{ key: string; failed: boolean; map: Map<string, string | null> }>({ key: "", failed: false, map: new Map() });
+  const [members, setMembers] = useState<{ key: string; failed: boolean; map: Map<string, Member> }>({ key: "", failed: false, map: new Map() });
   const [deleting, setDeleting] = useState<ReportRow | null>(null);
   const [actionError, setActionError] = useState<{ id: string; text: string } | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -50,19 +52,26 @@ export function ReportsTab({ server, reports, error, reload, onClose }: {
   useEffect(() => {
     if (!messageIds) return;
     let active = true;
-    supabase.from("messages").select("id, channel_id").in("id", messageIds.split(",")).then(({ data }) => {
-      if (active) setLive({ key: messageIds, map: new Map(((data ?? []) as { id: string; channel_id: string | null }[]).map((m) => [m.id, m.channel_id])) });
-    });
+    // ≤100 ids per request: `.in()` goes into the URL.
+    Promise.all(chunkIds(messageIds.split(",")).map((ids) => supabase.from("messages").select("id, channel_id").in("id", ids)))
+      .then((pages) => {
+        if (!active) return;
+        const rows = pages.flatMap((p) => (p.data ?? []) as { id: string; channel_id: string | null }[]);
+        setLive({ key: messageIds, failed: pages.some((p) => p.error), map: new Map(rows.map((m) => [m.id, m.channel_id])) });
+      }, () => { if (active) setLive({ key: messageIds, failed: true, map: new Map() }); });
     return () => { active = false; };
   }, [supabase, messageIds, refreshKey]);
 
   useEffect(() => {
     if (!targetIds) return;
     let active = true;
-    supabase.from("server_members").select("user_id, timeout_until").eq("server_id", server.id).in("user_id", targetIds.split(","))
-      .then(({ data }) => {
-        if (active) setMembers({ key: targetIds, map: new Map(((data ?? []) as Member[]).map((m) => [m.user_id, m])) });
-      });
+    Promise.all(chunkIds(targetIds.split(",")).map((ids) =>
+      supabase.from("server_members").select("user_id, timeout_until").eq("server_id", server.id).in("user_id", ids)))
+      .then((pages) => {
+        if (!active) return;
+        const rows = pages.flatMap((p) => (p.data ?? []) as Member[]);
+        setMembers({ key: targetIds, failed: pages.some((p) => p.error), map: new Map(rows.map((m) => [m.user_id, m])) });
+      }, () => { if (active) setMembers({ key: targetIds, failed: true, map: new Map() }); });
     return () => { active = false; };
   }, [supabase, server.id, targetIds, refreshKey]);
 
@@ -113,6 +122,8 @@ export function ReportsTab({ server, reports, error, reload, onClose }: {
           {shown.map((r) => {
             const liveLoaded = live.key === messageIds;
             const membersLoaded = members.key === targetIds;
+            const liveUnknown = liveLoaded && live.failed;
+            const membersUnknown = membersLoaded && members.failed;
             const channelId = r.message_id ? live.map.get(r.message_id) : undefined;
             const exists = channelId !== undefined;
             const href = exists ? jumpLink(channelId ?? null, r.message_id) : null;
@@ -122,7 +133,8 @@ export function ReportsTab({ server, reports, error, reload, onClose }: {
             const targetRank = target ? rolesFor(target).reduce((mx, role) => Math.max(mx, role.position), -1) : -1;
             const ctx = { isOwner, viewerRank: rank ?? -1, targetRank, targetIsOwner: target === server.owner_id, targetIsSelf: target === user?.id };
             const timedOut = !!member?.timeout_until && new Date(member.timeout_until) > new Date();
-            const canMod = !!target && !!member && !isDeletedProfile(r.target);
+            // Couldn't check membership: offer the menu anyway (the database refuses a non-member).
+            const canMod = !!target && (!!member || membersUnknown) && !isDeletedProfile(r.target);
             return (
               <div key={r.id}>
                 <ReportCard report={r} actions={
@@ -132,10 +144,12 @@ export function ReportsTab({ server, reports, error, reload, onClose }: {
                         className="rounded-control border border-line px-3 py-1.5 min-h-11 md:min-h-0 text-meta font-medium text-ink hover:bg-surface-2">
                         Jump to message
                       </button>
+                    ) : liveUnknown ? (
+                      <span className="text-meta text-muted">Couldn&apos;t check whether the message is still there.</span>
                     ) : liveLoaded ? (
                       <span className="text-meta text-muted">The message has been deleted.</span>
                     ) : null}
-                    {exists && canDelete && (
+                    {(exists || (liveUnknown && !!r.message_id)) && canDelete && (
                       <button type="button" onClick={() => setDeleting(r)}
                         className="rounded-control border border-danger/50 px-3 py-1.5 min-h-11 md:min-h-0 text-meta font-medium text-danger hover:bg-danger/10">
                         Delete message
@@ -148,7 +162,7 @@ export function ReportsTab({ server, reports, error, reload, onClose }: {
                         canTimeout={canModerate({ ...ctx, hasPerm: has("timeout_members") })}
                         onDone={refresh} />
                     )}
-                    {target && membersLoaded && !member && !isDeletedProfile(r.target) && (
+                    {target && membersLoaded && !membersUnknown && !member && !isDeletedProfile(r.target) && (
                       <span className="text-meta text-muted">{targetName} isn&apos;t in the server anymore.</span>
                     )}
                     {r.status === "open" && <MarkHandledButton reportId={r.id} onDone={reload} />}

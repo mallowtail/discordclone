@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
@@ -8,7 +8,18 @@ import { safeNext } from "@/lib/servers/invite";
 import { OAuthButtons, OrDivider } from "@/components/auth/OAuthButtons";
 import { BotCheckField, useBotCheck } from "@/components/auth/Turnstile";
 import { CAPTCHA_FAILED_MESSAGE, isCaptchaError } from "@/lib/users/captcha";
-import { BANNED_ACCOUNT_MESSAGE, isBannedLoginError } from "@/lib/users/account";
+import {
+  BANNED_ACCOUNT_MESSAGE, BANNED_NOTICE_KEY, hasCookie, isBannedLoginError, showBannedNotice,
+} from "@/lib/users/account";
+
+/** Did the app itself send us here as banned (see BANNED_NOTICE_KEY)? Read only; cleared after mount. */
+function bannedFlagged(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    if (sessionStorage.getItem(BANNED_NOTICE_KEY) === "1") return true;
+  } catch { /* storage blocked */ }
+  return hasCookie(document.cookie, BANNED_NOTICE_KEY);
+}
 
 function LoginPageContent() {
   const supabase = createClient();
@@ -19,10 +30,16 @@ function LoginPageContent() {
   const [password, setPassword] = useState("");
   // /auth/callback sends people back here with ?error=oauth if the provider round-trip failed, and
   // ?banned=1 when Supabase refused a banned account (the app also signs banned people out to here).
+  // ?banned=1 counts only with the app's own flag, so a shared link can't fake a ban.
   const [error, setError] = useState<string | null>(() =>
-    params.get("banned") === "1" ? BANNED_ACCOUNT_MESSAGE
+    showBannedNotice(params.get("banned"), bannedFlagged()) ? BANNED_ACCOUNT_MESSAGE
       : params.get("error") === "oauth" ? "That sign-in didn't go through — try again" : null
   );
+  // The flag is for this one arrival: clear it so a reload or a later visit doesn't show it again.
+  useEffect(() => {
+    try { sessionStorage.removeItem(BANNED_NOTICE_KEY); } catch { /* storage blocked */ }
+    document.cookie = `${BANNED_NOTICE_KEY}=; path=/login; max-age=0`;
+  }, []);
   const [busy, setBusy] = useState(false);
   const bot = useBotCheck();
   // Settings → Delete account ends here with ?deleted=1.

@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   BANNED_ACCOUNT_MESSAGE, DELETED_USER_NAME, OWNS_SERVERS_MESSAGE, deleteAccountErrorMessage, deletedUsernameFor, hasPasswordLogin,
   isBannedAccountError, isBannedLoginError, isBannedProfile, isDeletedProfile, isDeletedUsername, shownProfile, shownProfileOrNull,
-  usernameConfirmMatches, verifyPassword,
+  usernameConfirmMatches, verifyPassword, hasCookie, showBannedNotice, BANNED_NOTICE_KEY,
 } from "@/lib/users/account";
 
 describe("isDeletedProfile", () => {
@@ -156,5 +156,25 @@ describe("isBannedLoginError", () => {
     expect(isBannedLoginError({ message: "You're banned from this server." })).toBe(false);
     expect(isBannedLoginError(null)).toBe(false);
     expect(isBannedLoginError(undefined)).toBe(false);
+  });
+});
+
+describe("showBannedNotice", () => {
+  it("shows only for ?banned=1 that the app flagged", () => {
+    expect(showBannedNotice("1", true)).toBe(true);
+    expect(showBannedNotice("1", false)).toBe(false); // a bare /login?banned=1 link
+    expect(showBannedNotice(null, true)).toBe(false);
+    expect(showBannedNotice("yes", true)).toBe(false);
+  });
+});
+
+describe("hasCookie", () => {
+  it("finds a cookie by exact name", () => {
+    expect(hasCookie(`a=1; ${BANNED_NOTICE_KEY}=1; b=2`, BANNED_NOTICE_KEY)).toBe(true);
+    expect(hasCookie(`${BANNED_NOTICE_KEY}=1`, BANNED_NOTICE_KEY)).toBe(true);
+  });
+  it("ignores other names, including ones that merely contain it", () => {
+    expect(hasCookie("", BANNED_NOTICE_KEY)).toBe(false);
+    expect(hasCookie(`x${BANNED_NOTICE_KEY}=1; other=${BANNED_NOTICE_KEY}`, BANNED_NOTICE_KEY)).toBe(false);
   });
 });

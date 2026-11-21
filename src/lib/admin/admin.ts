@@ -108,3 +108,20 @@ export function banResultMessage(name: string, steps: { filesOk: boolean; voiceO
   if (problems.length === 0) return `${name} is banned.`;
   return `${name} is banned, but ${problems.join(" and ")}.`;
 }
+
+/** What the admin sees when a deletion went through but some of its files are still in Storage. */
+export function filesLeftMessage(what: "message" | "server" | "ban"): string {
+  if (what === "message") return "The message is gone, but its file couldn't be removed — try again.";
+  if (what === "server") return "The server is gone, but some of its files couldn't be removed — try again.";
+  return "Some of their files couldn't be removed — try again.";
+}
+
+/**
+ * Did /api/admin/ban-voice fully work? It answers `{ removed, failed }` (200 whenever the route
+ * itself ran); any room it couldn't remove them from counts as a partial failure.
+ */
+export function voiceRemovalOk(status: number, body: unknown): boolean {
+  if (status < 200 || status >= 300) return false;
+  const failed = (body as { failed?: unknown } | null)?.failed;
+  return failed === undefined || failed === 0;
+}

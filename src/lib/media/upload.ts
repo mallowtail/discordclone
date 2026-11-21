@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/client";
 import { optimizeImage } from "@/lib/media/imageOptimize";
 import { ATTACHMENT_MAX_DIM, ICON_MAX_DIM, extensionForType } from "@/lib/media/imagePlan";
+import { chunkIds } from "@/lib/messages/reactions";
 
 const MAX_BYTES = 5 * 1024 * 1024;
 const ALLOWED = ["image/png", "image/jpeg", "image/gif", "image/webp"];
@@ -87,11 +88,40 @@ export function removalProblem(
   return missing.length > 0 ? `not removed: ${missing.join(", ")}` : null;
 }
 
-/** Remove files, best effort: a failure is logged, never thrown (it mustn't block a deletion). */
+/** Most paths Storage accepts in one remove() call. */
+export const STORAGE_REMOVE_BATCH = 1000;
+
+/** The paths of one remove() call that are still there (all of them when the call failed). */
+export function notRemoved(
+  paths: string[],
+  result: { data: { name: string }[] | null; error: { message: string } | null },
+): string[] {
+  if (result.error) return [...paths];
+  const removed = new Set((result.data ?? []).map((f) => f.name));
+  return paths.filter((p) => !removed.has(p));
+}
+
+/**
+ * Remove files in batches of at most STORAGE_REMOVE_BATCH, best effort: a failure is logged,
+ * never thrown (it mustn't block a deletion). Returns the paths that are still there.
+ */
+export async function removeStorageFilesReporting(bucket: string, paths: string[]): Promise<string[]> {
+  const batches = chunkIds([...new Set(paths)], STORAGE_REMOVE_BATCH);
+  const left = await Promise.all(batches.map(async (batch) => {
+    try {
+      const result = await createClient().storage.from(bucket).remove(batch);
+      const problem = removalProblem(batch, result);
+      if (problem) console.error(`Couldn't remove ${bucket} files (${problem})`);
+      return notRemoved(batch, result);
+    } catch (e) {
+      console.error(`Couldn't remove ${bucket} files (${e instanceof Error ? e.message : "network"})`);
+      return batch;
+    }
+  }));
+  return left.flat();
+}
+
+/** Remove files, best effort (see removeStorageFilesReporting). True when every file went. */
 export async function removeStorageFiles(bucket: string, paths: string[]): Promise<boolean> {
-  if (paths.length === 0) return true;
-  const result = await createClient().storage.from(bucket).remove(paths);
-  const problem = removalProblem(paths, result);
-  if (problem) console.error(`Couldn't remove ${bucket} files (${problem})`);
-  return !problem;
+  return (await removeStorageFilesReporting(bucket, paths)).length === 0;
 }

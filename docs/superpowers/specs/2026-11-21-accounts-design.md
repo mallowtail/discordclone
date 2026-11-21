@@ -1,4 +1,4 @@
-# Accounts — design (delete my account, bot check, server transfer)
+# Accounts — design (delete my account, bot check, server transfer & delete, 1-letter usernames)
 
 ## Intent
 
@@ -16,7 +16,13 @@ configuring SMTP in Supabase.
   is erased; personal data (name, avatar, bio, status, friends, blocks, favorites, settings) is gone.
 - **Transfer server ownership** (Server Settings → Overview, owner only), needed so owners can hand
   servers off before deleting their account — and useful on its own.
+- **Delete server** (Server Settings → Overview, owner only). Nobody can delete a server today (no
+  delete policy, no UI); owners who are the only member of a server would otherwise be unable to
+  delete their account.
 - **Bot check** (Cloudflare Turnstile) on the email sign-up and email login forms.
+- **Usernames may be 1–20 characters** (was 3–20), same allowed characters.
+- **Deleted usernames are freed**: someone else can later sign up with that name (owner's choice;
+  old `@name` text in messages then points at the new person — accepted).
 
 ## Non-goals
 
@@ -30,6 +36,24 @@ configuring SMTP in Supabase.
 - Deleting an account fails half-way and leaves a broken, un-loginable but un-deleted account.
 - Turning the bot check on locks everyone out (enabling it before the app sends tokens).
 - A deleted user's name, avatar or profile card still shows anywhere.
+
+## Decisions after review (owner)
+
+- Delete server is added (option b), rather than auto-deleting solo servers during account deletion.
+- Deleted usernames are freed for reuse.
+- Username minimum length is 1.
+
+## Calls made after review (owner to check)
+
+- **Password checks in Settings get the bot check too.** Once Supabase CAPTCHA is on, every
+  `signInWithPassword` without a token is rejected — including the change-password re-auth in
+  `AccountSection.tsx` and the delete-account password confirmation — so those dialogs show the
+  Turnstile widget as well.
+- **Any deletion of a login tombstones the profile**, not just the button: a trigger on `auth.users`
+  delete does the cleanup + tombstone, so deleting a user from the Supabase dashboard or the admin
+  API (as test cleanup does) never leaves a real name/avatar behind.
+- Test accounts for e2e are created with the admin API (service role, `email_confirm: true`) instead
+  of the sign-up API once CAPTCHA is on.
 
 ## Approaches (decided with the owner)
 
@@ -71,9 +95,12 @@ verifies it with the secret key the owner enters in the dashboard).
   to `auth.users` so deleting the auth user does **not** delete the profile (drop the FK, or make it
   non-cascading — builder's call; a dangling id is acceptable for tombstones). 
 - **`bans.banned_by`** → `on delete set null`.
-- **`delete_my_account()`** — SECURITY DEFINER RPC, callable by authenticated, acting on
-  `auth.uid()` only:
-  1. Refuse with `'transfer or delete your servers first'` if the caller owns any server.
+- **Cleanup lives in a trigger on `auth.users` delete** (SECURITY DEFINER), so every deletion path
+  tombstones. `delete_my_account()` — SECURITY DEFINER RPC, callable by authenticated, acting on
+  `auth.uid()` only — refuses with `'transfer or delete your servers first'` if the caller owns any
+  server, then deletes the caller's `auth.users` row, which fires the trigger. If a login is deleted
+  some other way (dashboard) while it still owns servers, each server goes to a random member, or is
+  deleted if it has none (never ownerless). The trigger:
   2. For each group chat the caller is in: leave it (reusing the existing leave logic, so an owner's
      group passes to a random member; an owner alone in a group → the group is deleted, as today).
   3. Delete the caller's: server memberships (+ member roles), friendships (both directions),
@@ -83,12 +110,19 @@ verifies it with the secret key the owner enters in the dashboard).
      of id>`, `avatar_url = null`, `bio = null`, `status = null`, `recent_emojis = '{}'`,
      `trusted_domains = '{}'`, `dm_policy = 'none'`, friend-request settings all false,
      `deleted_at = now()`.
-  5. Delete the `auth.users` row (sessions, identities and OAuth links cascade away).
+  5. (The `auth.users` row itself is being deleted; sessions, identities and OAuth links cascade.)
   All in one transaction, so it either fully happens or not at all.
 - **Tombstones are inert:** nobody can DM, friend, add to groups, mention-autocomplete, or invite a
   profile with `deleted_at` set (check the existing `can_reach` / friend-request / group-add paths;
   `dm_policy='none'` and the friend settings already block most). New usernames starting with
-  `deleted_` are refused (format check or welcome-page rule).
+  `deleted_` are refused (those are the tombstones' placeholders); every other old username is free.
+- **Username length:** change `profiles_username_format` (0032) to `^[A-Za-z0-9_]{1,20}$`, and every
+  client-side check (welcome page, settings, mention parsing/autocomplete in
+  `src/lib/messages/mentions.ts`, anywhere a 3-character minimum is assumed) to match.
+- **`delete_server(srv uuid)`** — SECURITY DEFINER: owner only; deletes the server (channels,
+  categories, messages, roles, invites, stickers etc. cascade). The app first removes the server's
+  sticker files and icon from storage (while the caller still has permission); anyone in its voice
+  channels is dropped (the app leaves the call when the server disappears; new tokens are refused).
 - **`transfer_server_ownership(srv uuid, new_owner uuid)`** — SECURITY DEFINER: caller must own
   `srv`; `new_owner` must be a current member and not a tombstone; sets `servers.owner_id`. Logged to
   the audit log as `ownership_transfer` (widen the action check).
@@ -102,7 +136,11 @@ verifies it with the secret key the owner enters in the dashboard).
   change-password); Discord/GitHub-only users type their username. Then: leave any voice call, call
   `delete_my_account`, sign out, go to `/login` with a short "Your account was deleted" note.
 - **Server Settings → Overview → "Transfer ownership"** (owner only): pick a member, confirm
-  ("You'll stop being the owner"), call the RPC; the settings reflect the new owner.
+  ("You'll stop being the owner"), call the RPC; the settings reflect the new owner. The existing
+  `protect_server_owner` trigger must let this RPC through.
+- **Server Settings → Overview → "Delete server"** (owner only, danger zone): confirm by typing the
+  server's name; remove its storage files, call `delete_server`, close settings, go to `/dms`. Other
+  members' sidebars drop it live; anyone viewing it lands on "Server not found".
 - **"Deleted User" display:** profiles with `deleted_at` show the name "Deleted User", a plain grey
   avatar, and no profile card details (the card says "This account was deleted"); no DM/friend
   buttons. Most of this follows from the tombstoned fields; the profile card/popover and friend

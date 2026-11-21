@@ -20,7 +20,7 @@ import { useFriends } from "@/components/providers/FriendsProvider";
 import { openDmWith } from "@/lib/users/dm";
 import { Modal } from "@/components/ui/Modal";
 import { X } from "@phosphor-icons/react";
-import { DELETED_USER_NAME, isDeletedProfile, isDeletedUsername } from "@/lib/users/account";
+import { DELETED_USER_NAME, isBannedProfile, isDeletedProfile, isDeletedUsername } from "@/lib/users/account";
 
 const TABS = ["Board", "Activity", "Mutual Friends", "Mutual Servers"] as const;
 type Tab = (typeof TABS)[number];
@@ -75,7 +75,8 @@ export function FullProfileModal({
     if (isSelf || !user) return;
     let active = true;
     supabase.rpc("mutual_friends", { other: userId }).then(({ data }) => {
-      if (active) setMutualFriends((data as Profile[] | null) ?? []);
+      // Banned people are shown like deleted accounts, which have no friends left.
+      if (active) setMutualFriends(((data as Profile[] | null) ?? []).filter((f) => !isBannedProfile(f)));
     });
     return () => { active = false; };
   }, [supabase, userId, isSelf, user, friendIds]);

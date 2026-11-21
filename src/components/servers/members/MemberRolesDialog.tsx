@@ -41,13 +41,14 @@ export function MemberRolesDialog({
     setError(null);
     const isAssigned = assigned.has(role.id);
     if (isAssigned) {
-      const { error: err } = await supabase
+      const { data: gone, error: err } = await supabase
         .from("member_roles")
         .delete()
         .eq("server_id", serverId)
         .eq("user_id", userId)
-        .eq("role_id", role.id);
-      if (err) return setError("Couldn't update — you may not have permission");
+        .eq("role_id", role.id)
+        .select("role_id");
+      if (err || !gone?.length) return setError("Couldn't update — you may not have permission");
     } else {
       const { error: err } = await supabase
         .from("member_roles")

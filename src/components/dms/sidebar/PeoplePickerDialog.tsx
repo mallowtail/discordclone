@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { isDeletedUsername } from "@/lib/users/account";
+import { isDeletedProfile, isDeletedUsername } from "@/lib/users/account";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/components/providers/AuthProvider";
@@ -35,7 +35,7 @@ export function PeoplePickerDialog({ onClose, ...ctx }: Mode & { onClose: () => 
     supabase.rpc("reachable_people").then(({ data }) => {
       if (!active) return;
       const already = new Set(memberKey ? memberKey.split(",") : []);
-      setPeople(((data as Profile[] | null) ?? []).filter((p) => !already.has(p.id)));
+      setPeople(((data as Profile[] | null) ?? []).filter((p) => !already.has(p.id) && !isDeletedProfile(p)));
     });
     return () => { active = false; };
   }, [supabase, memberKey]);

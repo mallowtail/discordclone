@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { isDeletedUsername } from "@/lib/users/account";
+import { isDeletedProfile, isDeletedUsername } from "@/lib/users/account";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/components/providers/AuthProvider";
@@ -103,11 +103,14 @@ export function GroupMembersPanel({ conv }: { conv: ConversationSummary }) {
                     </button>
                   ) : (
                     <span className="flex flex-none items-center md:opacity-0 md:group-hover/row:opacity-100 md:group-focus-within/row:opacity-100">
-                      <button type="button" onClick={() => setArmed(`owner:${m.id}`)} title="Make owner"
-                        aria-label={`Make ${m.display_name} the owner`}
-                        className="flex items-center justify-center w-11 h-11 md:w-7 md:h-7 rounded-row text-muted hover:text-amber">
-                        <Crown size={15} aria-hidden="true" />
-                      </button>
+                      {/* A deleted or banned account can't take the group over. */}
+                      {!isDeletedProfile(m) && (
+                        <button type="button" onClick={() => setArmed(`owner:${m.id}`)} title="Make owner"
+                          aria-label={`Make ${m.display_name} the owner`}
+                          className="flex items-center justify-center w-11 h-11 md:w-7 md:h-7 rounded-row text-muted hover:text-amber">
+                          <Crown size={15} aria-hidden="true" />
+                        </button>
+                      )}
                       <button type="button" onClick={() => setArmed(`kick:${m.id}`)} title="Remove from group"
                         aria-label={`Remove ${m.display_name} from the group`}
                         className="flex items-center justify-center w-11 h-11 md:w-7 md:h-7 rounded-row text-muted hover:text-danger">

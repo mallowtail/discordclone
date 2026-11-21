@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { createClient } from "@/lib/supabase/client";
 import { stickerPreview } from "@/lib/messages/stickers";
 import type { Message, Profile } from "@/types/db";
+import { shownProfile } from "@/lib/users/account";
 import { PushPin, X } from "@phosphor-icons/react";
 
 function snippet(m: Message): string {
@@ -70,7 +71,7 @@ export function PinnedPanel({
         return;
       }
       const next: Record<string, string> = {};
-      (data as Profile[] | null)?.forEach((p) => (next[p.id] = p.display_name));
+      (data as Profile[] | null)?.forEach((p) => (next[p.id] = shownProfile(p).display_name));
       setNames((prev) => ({ ...prev, ...next }));
     });
   }, [supabase, pins]);

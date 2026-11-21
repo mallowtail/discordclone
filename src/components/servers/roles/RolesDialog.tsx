@@ -73,8 +73,8 @@ export function RolesPanel({ serverId }: { serverId: string }) {
 
   async function remove(role: Role) {
     setError(null);
-    const { error: err } = await supabase.from("roles").delete().eq("id", role.id);
-    if (err) return setError("Couldn't delete — try again");
+    const { data: gone, error: err } = await supabase.from("roles").delete().eq("id", role.id).select("id");
+    if (err || !gone?.length) return setError("Couldn't delete — try again"); // no rows = not allowed
     reload();
     refresh();
   }

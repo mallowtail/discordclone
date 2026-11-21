@@ -8,7 +8,7 @@ import { fitGif, isKlipyMediaUrl } from "@/lib/messages/gifs";
 import { StickerImage } from "@/components/messages/list/StickerImage";
 import type { ForwardSnapshot, Profile } from "@/types/db";
 import { ArrowBendUpRight } from "@phosphor-icons/react";
-import { isDeletedProfile } from "@/lib/users/account";
+import { isDeletedProfile, shownProfileOrNull } from "@/lib/users/account";
 
 export function ForwardedBlock({ snapshot }: { snapshot: ForwardSnapshot }) {
   const supabase = createClient();
@@ -18,7 +18,7 @@ export function ForwardedBlock({ snapshot }: { snapshot: ForwardSnapshot }) {
     let active = true;
     (async () => {
       const { data } = await supabase.from("profiles").select("*").eq("id", snapshot.author_id).single();
-      if (active) setAuthor((data as Profile) ?? null);
+      if (active) setAuthor(shownProfileOrNull(data as Profile | null));
     })();
     return () => { active = false; };
   }, [supabase, snapshot.author_id]);

@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
-  DELETED_USER_NAME, OWNS_SERVERS_MESSAGE, deleteAccountErrorMessage, hasPasswordLogin, isDeletedProfile, isDeletedUsername,
+  BANNED_ACCOUNT_MESSAGE, DELETED_USER_NAME, OWNS_SERVERS_MESSAGE, deleteAccountErrorMessage, deletedUsernameFor, hasPasswordLogin,
+  isBannedAccountError, isBannedProfile, isDeletedProfile, isDeletedUsername, shownProfile, shownProfileOrNull,
   usernameConfirmMatches, verifyPassword,
 } from "@/lib/users/account";
 
@@ -11,6 +12,10 @@ describe("isDeletedProfile", () => {
     expect(isDeletedProfile({})).toBe(false);
     expect(isDeletedProfile(null)).toBe(false);
     expect(isDeletedProfile(undefined)).toBe(false);
+  });
+  it("treats a site-banned account like a deleted one", () => {
+    expect(isDeletedProfile({ deleted_at: null, banned_at: "2026-11-21T10:00:00Z" })).toBe(true);
+    expect(isDeletedProfile({ deleted_at: null, banned_at: null })).toBe(false);
   });
   it("names tombstones Deleted User", () => {
     expect(DELETED_USER_NAME).toBe("Deleted User");
@@ -69,6 +74,9 @@ describe("deleteAccountErrorMessage", () => {
   it("explains an already-deleted account", () => {
     expect(deleteAccountErrorMessage("this account was deleted")).toBe("This account was already deleted.");
   });
+  it("explains a banned account", () => {
+    expect(deleteAccountErrorMessage("this account has been banned")).toBe(BANNED_ACCOUNT_MESSAGE);
+  });
   it("falls back to a generic message", () => {
     expect(deleteAccountErrorMessage("network down")).toBe("Couldn't delete your account — try again.");
     expect(deleteAccountErrorMessage(undefined)).toBe("Couldn't delete your account — try again.");
@@ -94,5 +102,45 @@ describe("verifyPassword", () => {
     const { supabase, calls } = fakeAuth({ error: null });
     await verifyPassword(supabase, "a@b.co", "pw", "tok");
     expect(calls).toEqual([{ email: "a@b.co", password: "pw", options: { captchaToken: "tok" } }]);
+  });
+});
+
+describe("banned accounts", () => {
+  const id = "a1b2c3d4-e5f6-0000-0000-000000000000";
+  const live = { id, username: "sam", display_name: "Sam", avatar_url: "https://x/a.png", bio: "hi", status: "busy", deleted_at: null, banned_at: null };
+  const banned = { ...live, banned_at: "2026-11-21T10:00:00Z" };
+
+  it("isBannedProfile reads banned_at", () => {
+    expect(isBannedProfile(banned)).toBe(true);
+    expect(isBannedProfile(live)).toBe(false);
+    expect(isBannedProfile(null)).toBe(false);
+  });
+  it("spots the database's banned refusal and has the agreed copy", () => {
+    expect(isBannedAccountError("this account has been banned")).toBe(true);
+    expect(isBannedAccountError("you are banned from this server")).toBe(false);
+    expect(isBannedAccountError(undefined)).toBe(false);
+    expect(BANNED_ACCOUNT_MESSAGE).toBe("This account has been banned from Mallowchat.");
+  });
+  it("deletedUsernameFor matches the tombstone format", () => {
+    expect(deletedUsernameFor(id)).toBe("deleted_a1b2c3d4");
+    expect(isDeletedUsername(deletedUsernameFor(id))).toBe(true);
+  });
+  it("shownProfile dresses a banned profile as Deleted User", () => {
+    const shown = shownProfile(banned);
+    expect(shown).toEqual({ ...banned, username: "deleted_a1b2c3d4", display_name: DELETED_USER_NAME, avatar_url: null, bio: null, status: null });
+    expect(isDeletedProfile(shown)).toBe(true);
+    expect(isDeletedUsername(shown.username)).toBe(true);
+    expect(banned.display_name).toBe("Sam"); // the input isn't changed
+  });
+  it("shownProfile leaves live and deleted profiles alone, and only masks fields that are there", () => {
+    expect(shownProfile(live)).toBe(live);
+    const tomb = { ...live, deleted_at: "2026-11-01T00:00:00Z", banned_at: "2026-11-02T00:00:00Z" };
+    expect(shownProfile(tomb)).toBe(tomb);
+    expect(shownProfile({ id, display_name: "Sam", banned_at: "x" })).toEqual({ id, display_name: DELETED_USER_NAME, banned_at: "x" });
+  });
+  it("shownProfileOrNull passes nothing through", () => {
+    expect(shownProfileOrNull(null)).toBeNull();
+    expect(shownProfileOrNull(undefined)).toBeNull();
+    expect(shownProfileOrNull(banned)?.display_name).toBe(DELETED_USER_NAME);
   });
 });

@@ -1,4 +1,5 @@
 import type { Profile } from "@/types/db";
+import { BANNED_ACCOUNT_MESSAGE, isBannedAccountError, shownProfile } from "@/lib/users/account";
 
 /** Most people in one group, including you (enforced by the database too). */
 export const MAX_GROUP_SIZE = 10;
@@ -39,7 +40,8 @@ export function conversationLabel(isGroup: boolean, name: string | null, others:
 }
 
 export function summarizeConversation(row: ConversationRow, myId: string): ConversationSummary {
-  const members = row.conversation_members.map((m) => m.profiles).filter((x): x is Profile => !!x);
+  // Banned members are shown as "Deleted User" (shownProfile), like deleted accounts.
+  const members = row.conversation_members.map((m) => m.profiles).filter((x): x is Profile => !!x).map(shownProfile);
   const others = members.filter((m) => m.id !== myId).sort(byName);
   return {
     id: row.id,
@@ -76,6 +78,7 @@ export function pickerAction(
 /** Plain-words versions of the database's group errors. */
 export function groupErrorMessage(message: string): string {
   if (message.includes("group is full")) return `That would make the group bigger than ${MAX_GROUP_SIZE} people.`;
+  if (isBannedAccountError(message)) return BANNED_ACCOUNT_MESSAGE;
   if (message.includes("not reachable")) return "Some of these people can't be added — they may only accept group chats from friends.";
   return "Something went wrong — try again.";
 }

@@ -22,12 +22,20 @@ describe("transferCandidates", () => {
     ];
     expect(transferCandidates(rows, "o").map((r) => r.user_id)).toEqual(["a", "b"]);
   });
+  it("leaves out site-banned members", () => {
+    const rows = [
+      { user_id: "b", profile: { ...p("b", "Bea"), banned_at: "2026-11-21T10:00:00Z" } },
+      { user_id: "a", profile: { ...p("a", "Al"), banned_at: null } },
+    ];
+    expect(transferCandidates(rows, "o").map((r) => r.user_id)).toEqual(["a"]);
+  });
 });
 
 describe("transferErrorMessage", () => {
   it("maps the database errors", () => {
     expect(transferErrorMessage("only the owner can do that")).toBe("Only the owner can pass on ownership.");
     expect(transferErrorMessage("you already own this server")).toBe("You already own this server.");
+    expect(transferErrorMessage("this account has been banned")).toBe("This account has been banned from Mallowchat.");
     expect(transferErrorMessage("not a member")).toBe("That person isn't in this server anymore.");
   });
   it("falls back to a generic message", () => {

@@ -1,3 +1,5 @@
+import { BANNED_ACCOUNT_MESSAGE, isBannedAccountError } from "@/lib/users/account";
+
 export type Validated = { ok: true; value: string } | { ok: false; error: string };
 
 export function validateMessage(input: string): Validated {
@@ -27,6 +29,7 @@ export function usernameErrorMessage(message: string | undefined): string {
   if (message?.includes("profiles_username_reserved")) return USERNAME_RESERVED_ERROR;
   if (message?.includes("profiles_username_format")) return USERNAME_FORMAT_ERROR;
   if (message?.includes("this account was deleted")) return "This account was deleted.";
+  if (isBannedAccountError(message)) return BANNED_ACCOUNT_MESSAGE;
   return "Couldn't save — try again";
 }
 
@@ -35,5 +38,6 @@ export function sendErrorMessage(message: string | undefined): string {
   if (message?.includes("slow down")) return "You're sending messages too fast — wait a few seconds.";
   if (message?.includes("cannot message this person")) return "Your message couldn't be delivered. They may only accept messages from some people.";
   if (message?.includes("cannot use that sticker")) return "You can't use that sticker anymore.";
+  if (isBannedAccountError(message)) return BANNED_ACCOUNT_MESSAGE;
   return "Failed to send — try again";
 }

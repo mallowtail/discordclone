@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { pollErrorMessage, pollTimeLabel, tallyPoll, type PollOption, type PollVote } from "@/lib/messages/polls";
 import type { Message } from "@/types/db";
+import { shownProfile } from "@/lib/users/account";
 import { ChartBar, Check, Crown } from "@phosphor-icons/react";
 
 type Loaded = {
@@ -38,7 +39,7 @@ export function PollCard({ msg }: { msg: Message }) {
     const [{ data: poll }, { data: options }, { data: votes }, { data: count }] = await Promise.all([
       supabase.from("polls").select("allow_multiple, ends_at").eq("message_id", msg.id).maybeSingle(),
       supabase.from("poll_options").select("id, position, label").eq("message_id", msg.id).order("position"),
-      supabase.from("poll_votes").select("option_id, user_id, profiles(display_name)").eq("message_id", msg.id),
+      supabase.from("poll_votes").select("option_id, user_id, profiles(id, display_name, banned_at)").eq("message_id", msg.id),
       supabase.rpc("poll_voter_count", { msg: msg.id }),
     ]);
     if (!poll) return setMissing(true);
@@ -47,7 +48,7 @@ export function PollCard({ msg }: { msg: Message }) {
       endsAt: poll.ends_at,
       options: (options as PollOption[] | null) ?? [],
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      votes: ((votes ?? []) as any[]).map((v) => ({ option_id: v.option_id, user_id: v.user_id, name: v.profiles?.display_name ?? "Someone" })),
+      votes: ((votes ?? []) as any[]).map((v) => ({ option_id: v.option_id, user_id: v.user_id, name: v.profiles ? shownProfile(v.profiles).display_name : "Someone" })),
       voterCount: (count as number | null) ?? 0,
     });
     setNow(new Date());

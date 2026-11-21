@@ -41,3 +41,28 @@ describe("searchMessages", () => {
     ).rejects.toEqual({ message: "boom" });
   });
 });
+
+describe("banned authors in search results", () => {
+  const row = (id: string, author_id: string) => ({
+    id, channel_id: "c", channel_name: "general", author_id, author_username: "sam", author_display_name: "Sam",
+    author_avatar_url: "https://x/a.png", content: "hi", image_url: null, file_url: null, file_name: null, pinned: false,
+    created_at: "2026-11-21T00:00:00Z", total_count: 2,
+  });
+
+  it("maskBannedAuthors shows banned authors as Deleted User", async () => {
+    const { maskBannedAuthors } = await import("@/lib/search/search");
+    const out = maskBannedAuthors([row("m1", "a1b2c3d4-0000"), row("m2", "live")], new Set(["a1b2c3d4-0000"]));
+    expect(out[0]).toMatchObject({ author_display_name: "Deleted User", author_username: "deleted_a1b2c3d4", author_avatar_url: null });
+    expect(out[1].author_display_name).toBe("Sam");
+  });
+
+  it("searchMessages looks up banned authors and masks them", async () => {
+    const { supabase, calls } = fakeSupabase((c) => {
+      if (c.table === "rpc:search_messages") return { data: [row("m1", "bad"), row("m2", "ok")] };
+      if (c.table === "profiles") return { data: [{ id: "bad", banned_at: "2026-11-21T00:00:00Z" }, { id: "ok", banned_at: null }] };
+    });
+    const rows = await searchMessages(supabase, "srv", parseSearchQuery("hi"), { lim: 25, off: 0 });
+    expect(rows.map((r) => r.author_display_name)).toEqual(["Deleted User", "Sam"]);
+    expect(calls.find((c) => c.table === "profiles")?.filters).toEqual({ "in:id": ["bad", "ok"] });
+  });
+});

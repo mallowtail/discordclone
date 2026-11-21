@@ -19,7 +19,9 @@ export type SendResult = "requested" | "accepted" | "already_friends" | "already
 export const FRIENDSHIP_SELECT =
   "*, requester_profile:profiles!friendships_requester_fkey(*), addressee_profile:profiles!friendships_addressee_fkey(*)";
 
-/** My friendships seen from my side: the other person in each row, grouped and sorted for display. */
+/** My friendships seen from my side: the other person in each row, grouped and sorted for display.
+ *  Site-banned people are left out (shown like deleted accounts, whose friendships are gone); the
+ *  rows stay, so they come back if unbanned. */
 export function sortFriendships(rows: FriendshipRow[], myId: string) {
   const friends: Profile[] = [];
   const incoming: { profile: Profile; at: string }[] = [];
@@ -27,7 +29,7 @@ export function sortFriendships(rows: FriendshipRow[], myId: string) {
   for (const r of rows) {
     const mine = r.requester === myId;
     const other = mine ? r.addressee_profile : r.requester_profile;
-    if (!other) continue;
+    if (!other || other.banned_at) continue;
     if (r.status === "accepted") friends.push(other);
     else (mine ? outgoing : incoming).push({ profile: other, at: r.created_at });
   }

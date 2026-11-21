@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { isDeletedUsername } from "@/lib/users/account";
+import { isDeletedUsername, shownProfile } from "@/lib/users/account";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { useSafety } from "@/components/providers/SafetyProvider";
@@ -103,7 +103,7 @@ function BlockList({ kind, title, empty, undo }: { kind: HiddenKind; title: stri
     if (!idsKey) return;
     let active = true;
     supabase.from("profiles").select("*").in("id", idsKey.split(",")).then(({ data }) => {
-      if (active) setPeople((data as Profile[] | null) ?? []);
+      if (active) setPeople(((data as Profile[] | null) ?? []).map(shownProfile));
     });
     return () => { active = false; };
   }, [supabase, idsKey]);

@@ -8,9 +8,64 @@ export const DELETED_USER_NAME = "Deleted User";
 export const OWNS_SERVERS_MESSAGE =
   "You own these servers. Pass on ownership to someone else (or delete the server) before deleting your account.";
 
-/** True for a tombstone: a profile whose account was deleted. */
-export function isDeletedProfile(p: { deleted_at?: string | null } | null | undefined): boolean {
-  return !!p?.deleted_at;
+/** Shown when the database refuses because the signed-in account is site-banned (migration 0052). */
+export const BANNED_ACCOUNT_MESSAGE = "This account has been banned from Mallowchat.";
+
+/** True for the database's `this account has been banned` refusal. */
+export function isBannedAccountError(message: string | null | undefined): boolean {
+  return !!message?.includes("this account has been banned");
+}
+
+type AccountState = { deleted_at?: string | null; banned_at?: string | null };
+
+/** True while the account is site-banned (`profiles.banned_at`, set only by the site admin). */
+export function isBannedProfile(p: AccountState | null | undefined): boolean {
+  return !!p?.banned_at;
+}
+
+/**
+ * True when the profile is shown as "Deleted User": a tombstone (deleted account) or a site-banned
+ * account. Banned people look exactly like deleted ones to everyone but the site admin (nothing about
+ * them is erased, so they come back as they were if unbanned).
+ */
+export function isDeletedProfile(p: AccountState | null | undefined): boolean {
+  return !!p?.deleted_at || !!p?.banned_at;
+}
+
+/** The tombstone-style username (`deleted_` + the id's first 8 hex digits), as migration 0046 writes it. */
+export function deletedUsernameFor(id: string): string {
+  return `deleted_${id.replace(/-/g, "").slice(0, 8)}`;
+}
+
+type ShowableProfile = AccountState & {
+  id: string;
+  username?: string;
+  display_name?: string;
+  avatar_url?: string | null;
+  bio?: string | null;
+  status?: string | null;
+};
+
+/**
+ * The profile as everyone (but the site admin) should see it: a banned account is dressed as a
+ * "Deleted User" tombstone (name, @username, avatar, bio and status hidden), so every check that
+ * works for deleted accounts (`isDeletedProfile`, `isDeletedUsername`) works for it too. Anything else
+ * comes back unchanged (same object).
+ */
+export function shownProfile<T extends ShowableProfile>(p: T): T {
+  if (!p.banned_at || p.deleted_at) return p;
+  const masked: Record<string, unknown> = { ...p };
+  if ("display_name" in p) masked.display_name = DELETED_USER_NAME;
+  if ("username" in p) masked.username = deletedUsernameFor(p.id);
+  if ("avatar_url" in p) masked.avatar_url = null;
+  if ("bio" in p) masked.bio = null;
+  if ("status" in p) masked.status = null;
+  return masked as T;
+}
+
+/** `shownProfile` for a possibly-missing profile. */
+export function shownProfileOrNull<T extends ShowableProfile>(p: T | null | undefined): T | null {
+  return p ? shownProfile(p) : null;
 }
 
 /** True for a tombstone's username (`deleted_…`). Live accounts can't have one (the database's
@@ -72,5 +127,6 @@ export function usernameConfirmMatches(typed: string, username: string): boolean
 export function deleteAccountErrorMessage(message: string | undefined): string {
   if (message?.includes("transfer or delete your servers first")) return OWNS_SERVERS_MESSAGE;
   if (message?.includes("this account was deleted")) return "This account was already deleted.";
+  if (isBannedAccountError(message)) return BANNED_ACCOUNT_MESSAGE;
   return "Couldn't delete your account — try again.";
 }

@@ -19,6 +19,9 @@ export type Profile = {
   created_at: string;
   /** Set when the account was deleted (migration 0046): the row is then a "Deleted User" tombstone. */
   deleted_at: string | null;
+  /** Set while the account is site-banned (migration 0052; only the site admin sets/clears it). Everyone
+   *  else sees the person as "Deleted User" — see shownProfile in lib/users/account. */
+  banned_at: string | null;
 };
 
 export type Server = {

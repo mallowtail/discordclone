@@ -36,6 +36,7 @@ export function MentionAutocomplete({
       .select("*")
       .ilike("username", `${query}%`)
       .is("deleted_at", null) // deleted accounts can't be mentioned
+      .is("banned_at", null) // nor banned ones (shown as deleted)
       .limit(6)
       .then(({ data }) => {
         if (!active) return;

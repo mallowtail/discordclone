@@ -42,9 +42,9 @@ export function useMessageSearch(serverId: string) {
     let active = true;
     (async () => {
       const { data: m } = await supabase
-        .from("server_members").select("profiles(id, username, display_name, avatar_url)").eq("server_id", serverId);
+        .from("server_members").select("profiles(id, username, display_name, avatar_url, banned_at)").eq("server_id", serverId);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      if (active) setMembers(((m ?? []) as any[]).map((r) => r.profiles).filter(Boolean));
+      if (active) setMembers(((m ?? []) as any[]).map((r) => r.profiles).filter((p) => p && !p.banned_at)); // banned = shown as deleted
       const { data: c } = await supabase.from("channels").select("id, name").eq("server_id", serverId).order("position");
       if (active) setChannels((c as Channel[]) ?? []);
     })();

@@ -3,7 +3,7 @@ import { summarizeConversation, conversationLabel, pickerAction, groupErrorMessa
 import type { Profile } from "@/types/db";
 
 const p = (id: string, display_name = id): Profile => ({
-  id, username: id, display_name, avatar_url: null, bio: null, status: null, recent_emojis: [], trusted_domains: [], dm_policy: "reachable", fr_everyone: true, fr_friends_of_friends: true, fr_server_members: true, created_at: "2026-01-01T00:00:00Z", deleted_at: null,
+  id, username: id, display_name, avatar_url: null, bio: null, status: null, recent_emojis: [], trusted_domains: [], dm_policy: "reachable", fr_everyone: true, fr_friends_of_friends: true, fr_server_members: true, created_at: "2026-01-01T00:00:00Z", deleted_at: null, banned_at: null,
 });
 const row = (over: Partial<ConversationRow>, people: Profile[]): ConversationRow => ({
   id: "c1", is_group: true, name: null, owner_id: "me", created_at: "2026-01-01T00:00:00Z",
@@ -59,7 +59,19 @@ describe("pickerAction", () => {
 describe("groupErrorMessage", () => {
   it("turns server errors into plain words", () => {
     expect(groupErrorMessage("group is full")).toBe("That would make the group bigger than 10 people.");
+    expect(groupErrorMessage("this account has been banned")).toBe("This account has been banned from Mallowchat.");
     expect(groupErrorMessage("not reachable")).toBe("Some of these people can't be added — they may only accept group chats from friends.");
     expect(groupErrorMessage("anything else")).toBe("Something went wrong — try again.");
+  });
+});
+
+describe("summarizeConversation with banned members", () => {
+  it("shows a site-banned member as Deleted User, in the label too", () => {
+    const banned = { ...p("a1b2c3d4-0000-0000-0000-000000000000", "Real Name"), avatar_url: "https://x/a.png", banned_at: "2026-11-21T00:00:00Z" };
+    const s = summarizeConversation(row({ is_group: false }, [p("me"), banned]), "me");
+    expect(s.others[0].display_name).toBe("Deleted User");
+    expect(s.others[0].username).toBe("deleted_a1b2c3d4");
+    expect(s.others[0].avatar_url).toBeNull();
+    expect(s.label).toBe("Deleted User");
   });
 });

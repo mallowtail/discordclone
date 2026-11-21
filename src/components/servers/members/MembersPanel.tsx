@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
-import { isDeletedUsername } from "@/lib/users/account";
+import { isDeletedUsername, shownProfileOrNull } from "@/lib/users/account";
 import { createClient } from "@/lib/supabase/client";
 import type { Profile } from "@/types/db";
 import { Avatar } from "@/components/user/profile/Avatar";
@@ -53,7 +53,7 @@ export function MembersPanel({ serverId }: { serverId: string }) {
     const { data: rows } = await supabase.from("server_members").select("user_id, timeout_until, profiles(*)").eq("server_id", serverId);
     setMembers(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (rows ?? []).map((r: any) => ({ user_id: r.user_id, timeout_until: r.timeout_until, profile: r.profiles }))
+      (rows ?? []).map((r: any) => ({ user_id: r.user_id, timeout_until: r.timeout_until, profile: shownProfileOrNull(r.profiles) }))
     );
     setLoaded(true);
   }, [supabase, serverId]);

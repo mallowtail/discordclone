@@ -57,6 +57,7 @@ describe("sendErrorMessage", () => {
   });
   it("explains a sticker that is no longer usable", () => {
     expect(sendErrorMessage("cannot use that sticker")).toBe("You can't use that sticker anymore.");
+    expect(sendErrorMessage("this account has been banned")).toBe("This account has been banned from Mallowchat.");
   });
   it("falls back to a generic message", () => {
     expect(sendErrorMessage("network down")).toBe("Failed to send — try again");
@@ -76,6 +77,7 @@ describe("usernameErrorMessage", () => {
   });
   it("explains a deleted account", () => {
     expect(usernameErrorMessage("this account was deleted")).toBe("This account was deleted.");
+    expect(usernameErrorMessage("this account has been banned")).toBe("This account has been banned from Mallowchat.");
   });
   it("falls back to a generic message", () => {
     expect(usernameErrorMessage("network down")).toBe("Couldn't save — try again");

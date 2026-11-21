@@ -9,12 +9,14 @@ import { ServerIcon } from "@/components/servers/layout/ServerIcon";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { LinkBreak } from "@phosphor-icons/react";
+import { BANNED_ACCOUNT_MESSAGE, isBannedAccountError } from "@/lib/users/account";
 
 type Preview = { id: string; name: string; icon_url: string | null; member_count: number; status: "ok" | "expired" | "used_up" };
 
 /** What a failed join_via_invite means, from its exception text. */
 function joinErrorMessage(message: string): string {
   if (message.includes("expired") || message.includes("used up")) return "This invite has expired or reached its limit.";
+  if (isBannedAccountError(message)) return BANNED_ACCOUNT_MESSAGE; // before the server-ban check below
   if (message.includes("banned")) return "You're banned from this server.";
   if (message.includes("invalid invite")) return "This invite doesn't exist anymore.";
   if (message.includes("finish setting up your account first")) return "Finish setting up your account (pick a username) first, then open this invite again.";

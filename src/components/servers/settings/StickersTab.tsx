@@ -198,8 +198,10 @@ export function StickersTab({ serverId }: { serverId: string }) {
     setDeleting(null);
     setBusy(true);
     setError(null);
-    const { error: err } = await supabase.from("stickers").delete().eq("id", s.id);
-    if (err) {
+    // `.select()` returns the deleted rows: none means the database filtered it out (no permission,
+    // or a banned account), so the file must stay too.
+    const { data: gone, error: err } = await supabase.from("stickers").delete().eq("id", s.id).select("id");
+    if (err || !gone?.length) {
       setBusy(false);
       return setError("Couldn't delete the sticker — try again");
     }

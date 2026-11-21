@@ -200,18 +200,20 @@ export function useMessages(target: Target) {
       const fetched = ((recent.data ?? []) as Message[]).reverse();
       const ok = !recent.error && !!recent.data;
       const preferLive = liveSnapshot(startSeq);
+      // Ids that arrived/changed live during this load (not deletes): newer remembered rows with these ids are kept.
+      const liveIds = new Set([...touchedSince(startSeq)].filter((id) => !deletedIds.has(id)));
       update(key, (s) => {
         const page = preferLive(fetched, s.messages);
         if (s.fromCache && ok) {
           // Reopened chat: the fresh page replaces the remembered one for its time range.
-          const r = refreshCachedPage(s.messages, page, MESSAGE_PAGE);
+          const r = refreshCachedPage(s.messages, page, MESSAGE_PAGE, liveIds);
           return { ...s, messages: r.messages, hasMore: r.replaced ? true : s.hasMore, anchorFound: false, loaded: true, fromCache: false, olderFailed: false };
         }
         // Reconnect after a long outage: a full newest page disjoint from what we hold means a
         // hole loadOlder could never fill → reconcileNewestPage replaces the list and we reset
         // hasMore so scrolling up pages back through the missed messages.
         const r = s.loaded && ok
-          ? reconcileNewestPage(s.messages, page, MESSAGE_PAGE)
+          ? reconcileNewestPage(s.messages, page, MESSAGE_PAGE, liveIds)
           : { messages: mergeMessages(s.messages, page), replaced: false };
         return {
           ...s,

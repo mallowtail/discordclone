@@ -124,9 +124,10 @@ describe("reconcileNewestPage", () => {
   it("replace branch keeps a confirmed row newer than the page's newest", () => {
     const prev = [...range(0, 3), msg("live", at(300))];
     const page = range(100, 4);
-    const { messages, replaced } = reconcileNewestPage(prev, page, 4);
+    const { messages, replaced } = reconcileNewestPage(prev, page, 4, new Set(["live"]));
     expect(replaced).toBe(true);
     expect(messages.map((m) => m.id)).toEqual(["r100", "r101", "r102", "r103", "live"]);
+    expect(reconcileNewestPage(prev, page, 4).messages.map((m) => m.id)).toEqual(["r100", "r101", "r102", "r103"]);
   });
 
   it("full page with no overlap → replaces confirmed rows, keeps pending", () => {
@@ -173,20 +174,24 @@ describe("reconcileNewestPage", () => {
 
 describe("refreshCachedPage (remembered messages + a fresh newest page)", () => {
   it("takes the fresh page as the truth for its time range: edits applied, deletions dropped", () => {
-    const edited = { ...m4, content: "edited" };
+    const edited = { ...m3, content: "edited" };
     const r = refreshCachedPage([m1, m2, m3, m4], [m2, edited], 10);
-    // m3 was deleted while away (inside the page's range, missing from it); m1 is older than the page: kept
-    expect(r.messages.map((m) => [m.id, m.content])).toEqual([["m1", "content m1"], ["m2", "content m2"], ["m4", "edited"]]);
+    // m4 was deleted while away (newer than the page start, missing from it); m1 is older than the page: kept
+    expect(r.messages.map((m) => [m.id, m.content])).toEqual([["m1", "content m1"], ["m2", "content m2"], ["m3", "edited"]]);
     expect(r.replaced).toBe(false);
   });
-  it("keeps a confirmed remembered row newer than the page (arrived live while it loaded), once, in order", () => {
+  it("drops a newer remembered row that was NOT seen live (may have been deleted while away)", () => {
+    expect(refreshCachedPage([m1, m2, m3, m4], [m1, m2], 10, new Set(["m3"])).messages.map((m) => m.id)).toEqual(["m1", "m2", "m3"]);
+    expect(refreshCachedPage([m1, m2, m3, m4], [m1, m2], 10).messages.map((m) => m.id)).toEqual(["m1", "m2"]);
+  });
+  it("keeps a confirmed remembered row newer than the page that arrived live, once, in order", () => {
     const pending = msg("p1", "2026-10-30T10:09:00Z", { pending: true });
-    const r = refreshCachedPage([m1, m2, m3, m4, pending], [m1, m2], 10);
+    const r = refreshCachedPage([m1, m2, m3, m4, pending], [m1, m2], 10, new Set(["m3", "m4"]));
     expect(r.messages.map((m) => m.id)).toEqual(["m1", "m2", "m3", "m4", "p1"]);
     expect(r.replaced).toBe(false);
   });
   it("a gap replace still keeps a confirmed row newer than the page", () => {
-    const r = refreshCachedPage([m1, m4], [m2, m3], 2);
+    const r = refreshCachedPage([m1, m4], [m2, m3], 2, new Set(["m4"]));
     expect(r.messages.map((m) => m.id)).toEqual(["m2", "m3", "m4"]);
     expect(r.replaced).toBe(true);
   });

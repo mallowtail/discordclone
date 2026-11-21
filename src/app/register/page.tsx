@@ -8,6 +8,8 @@ import { usernameErrorMessage, validateUsername } from "@/lib/messages/validatio
 import { safeNext } from "@/lib/servers/invite";
 import { OAuthButtons, OrDivider } from "@/components/auth/OAuthButtons";
 import { useAuth } from "@/components/providers/AuthProvider";
+import { BotCheckField, useBotCheck } from "@/components/auth/Turnstile";
+import { CAPTCHA_FAILED_MESSAGE, isCaptchaError } from "@/lib/users/captcha";
 
 function RegisterPageContent() {
   const supabase = createClient();
@@ -20,6 +22,7 @@ function RegisterPageContent() {
   const [username, setUsername] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const bot = useBotCheck();
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -28,10 +31,13 @@ function RegisterPageContent() {
     if (!u.ok) return setError(u.error);
     setBusy(true);
 
-    const { data, error: signErr } = await supabase.auth.signUp({ email, password });
+    const { data, error: signErr } = await supabase.auth.signUp({
+      email, password, ...(bot.token ? { options: { captchaToken: bot.token } } : {}),
+    });
+    bot.reset(); // tokens are single-use
     if (signErr || !data.user) {
       setBusy(false);
-      return setError(signErr?.message ?? "Sign up failed");
+      return setError(isCaptchaError(signErr?.message) ? CAPTCHA_FAILED_MESSAGE : signErr?.message ?? "Sign up failed");
     }
     const { error: profErr } = await supabase.from("profiles").insert({
       id: data.user.id,
@@ -83,7 +89,8 @@ function RegisterPageContent() {
               value={password} onChange={(e) => setPassword(e.target.value)}
               aria-invalid={error ? true : undefined} aria-describedby={error ? "form-error" : undefined} />
           </div>
-          <button disabled={busy} className="w-full px-3 py-2 rounded-control bg-accent hover:bg-accent-strong text-white text-body font-medium disabled:opacity-50">
+          <BotCheckField check={bot} />
+          <button disabled={busy || !bot.ready} className="w-full px-3 py-2 rounded-control bg-accent hover:bg-accent-strong text-white text-body font-medium disabled:opacity-50">
             {busy ? "Creating…" : "Register"}
           </button>
           <p className="text-body text-muted">

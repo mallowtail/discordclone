@@ -5,6 +5,8 @@ import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { TrustedSitesSection } from "@/components/user/settings/TrustedSitesSection";
 import { DeleteAccountSection } from "@/components/user/settings/DeleteAccountSection";
+import { BotCheckField, useBotCheck } from "@/components/auth/Turnstile";
+import { CAPTCHA_FAILED_MESSAGE, isCaptchaError } from "@/lib/users/captcha";
 import { hasPasswordLogin, verifyPassword } from "@/lib/users/account";
 
 const PASSWORD_MIN = 8;
@@ -18,6 +20,7 @@ export function AccountSection() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
+  const bot = useBotCheck();
 
   async function changePassword() {
     setDone(false);
@@ -28,10 +31,11 @@ export function AccountSection() {
 
     setBusy(true);
     // Verify the current password by re-authenticating.
-    const reauth = await verifyPassword(supabase, user.email, current);
+    const reauth = await verifyPassword(supabase, user.email, current, bot.token);
+    bot.reset(); // tokens are single-use
     if (!reauth.ok) {
       setBusy(false);
-      return setError("Current password is incorrect");
+      return setError(isCaptchaError(reauth.error) ? CAPTCHA_FAILED_MESSAGE : "Current password is incorrect");
     }
     const { error: updErr } = await supabase.auth.updateUser({ password: next });
     setBusy(false);
@@ -91,9 +95,10 @@ export function AccountSection() {
             className="w-full p-2 rounded-control bg-surface-2 text-ink text-body mt-1"
           />
         </div>
+        <BotCheckField check={bot} />
         <button
           onClick={changePassword}
-          disabled={busy}
+          disabled={busy || !bot.ready}
           className="bg-accent hover:bg-accent-strong text-white font-medium rounded-control px-5 py-2 disabled:opacity-50"
         >
           {busy ? "Updating…" : "Update password"}

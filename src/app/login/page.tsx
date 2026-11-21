@@ -6,6 +6,8 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { safeNext } from "@/lib/servers/invite";
 import { OAuthButtons, OrDivider } from "@/components/auth/OAuthButtons";
+import { BotCheckField, useBotCheck } from "@/components/auth/Turnstile";
+import { CAPTCHA_FAILED_MESSAGE, isCaptchaError } from "@/lib/users/captcha";
 
 function LoginPageContent() {
   const supabase = createClient();
@@ -19,6 +21,7 @@ function LoginPageContent() {
     params.get("error") === "oauth" ? "That sign-in didn't go through — try again" : null
   );
   const [busy, setBusy] = useState(false);
+  const bot = useBotCheck();
   // Settings → Delete account ends here with ?deleted=1.
   const deleted = params.get("deleted") === "1";
 
@@ -26,9 +29,12 @@ function LoginPageContent() {
     e.preventDefault();
     setError(null);
     setBusy(true);
-    const { error: err } = await supabase.auth.signInWithPassword({ email, password });
+    const { error: err } = await supabase.auth.signInWithPassword({
+      email, password, ...(bot.token ? { options: { captchaToken: bot.token } } : {}),
+    });
     setBusy(false);
-    if (err) return setError("Wrong email or password");
+    bot.reset(); // tokens are single-use
+    if (err) return setError(isCaptchaError(err.message) ? CAPTCHA_FAILED_MESSAGE : "Wrong email or password");
     router.push(next);
   }
 
@@ -62,7 +68,8 @@ function LoginPageContent() {
               value={password} onChange={(e) => setPassword(e.target.value)}
               aria-invalid={error ? true : undefined} aria-describedby={error ? "form-error" : undefined} />
           </div>
-          <button disabled={busy} className="w-full px-3 py-2 rounded-control bg-accent hover:bg-accent-strong text-white text-body font-medium disabled:opacity-50">
+          <BotCheckField check={bot} />
+          <button disabled={busy || !bot.ready} className="w-full px-3 py-2 rounded-control bg-accent hover:bg-accent-strong text-white text-body font-medium disabled:opacity-50">
             {busy ? "Logging in…" : "Log in"}
           </button>
           <p className="text-body text-muted">

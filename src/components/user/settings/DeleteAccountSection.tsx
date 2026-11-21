@@ -9,6 +9,8 @@ import { useServers } from "@/hooks/useServers";
 import { ServerIcon } from "@/components/servers/layout/ServerIcon";
 import { ServerSettings } from "@/components/servers/settings/ServerSettings";
 import { TypeToConfirmDialog } from "@/components/ui/TypeToConfirmDialog";
+import { BotCheckField, useBotCheck } from "@/components/auth/Turnstile";
+import { CAPTCHA_FAILED_MESSAGE, isCaptchaError } from "@/lib/users/captcha";
 import { storagePathFromPublicUrl } from "@/lib/media/url";
 import { removeStorageFiles } from "@/lib/media/upload";
 import {
@@ -27,6 +29,7 @@ export function DeleteAccountSection() {
   const { servers, reload } = useServers();
   const [confirming, setConfirming] = useState(false);
   const [openServerId, setOpenServerId] = useState<string | null>(null);
+  const bot = useBotCheck();
 
   if (!user || !profile) return null;
   const owned = servers.filter((s) => s.owner_id === user.id);
@@ -39,8 +42,9 @@ export function DeleteAccountSection() {
   async function deleteAccount(typed: string): Promise<string | null> {
     if (!user) return "You're signed out.";
     if (withPassword) {
-      const check = await verifyPassword(supabase, user.email!, typed);
-      if (!check.ok) return "Wrong password";
+      const check = await verifyPassword(supabase, user.email!, typed, bot.token);
+      bot.reset(); // tokens are single-use
+      if (!check.ok) return isCaptchaError(check.error) ? CAPTCHA_FAILED_MESSAGE : "Wrong password";
     } else if (!usernameConfirmMatches(typed, username)) {
       return "That's not your username";
     }
@@ -111,7 +115,8 @@ export function DeleteAccountSection() {
           autoComplete={withPassword ? "current-password" : "off"}
           confirmLabel="Delete account"
           busyLabel="Deleting…"
-          canConfirm={(v) => (withPassword ? v.length > 0 : usernameConfirmMatches(v, username))}
+          canConfirm={(v) => (withPassword ? v.length > 0 && bot.ready : usernameConfirmMatches(v, username))}
+          extra={withPassword ? <BotCheckField check={bot} /> : undefined}
           onConfirm={deleteAccount}
           onClose={() => setConfirming(false)}
         />

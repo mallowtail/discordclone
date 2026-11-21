@@ -19,6 +19,7 @@ export function TypeToConfirmDialog({
   canConfirm,
   onConfirm,
   onClose,
+  extra,
 }: {
   title: ReactNode;
   message: ReactNode;
@@ -30,6 +31,8 @@ export function TypeToConfirmDialog({
   canConfirm: (value: string) => boolean;
   onConfirm: (value: string) => Promise<string | null>;
   onClose: () => void;
+  /** Extra content under the input (e.g. a bot check). */
+  extra?: ReactNode;
 }) {
   const [value, setValue] = useState("");
   const [busy, setBusy] = useState(false);
@@ -72,6 +75,7 @@ export function TypeToConfirmDialog({
             className="w-full rounded-control bg-surface-2 border border-line px-3 py-2 text-body text-ink outline-none focus:border-accent aria-[invalid=true]:border-danger disabled:opacity-60"
           />
         </label>
+        {extra && <div className="mt-3">{extra}</div>}
         {error && <p role="alert" className="mt-2 text-meta text-danger">{error}</p>}
         <div className="mt-5 flex justify-end gap-2">
           <button type="button" onClick={onClose} disabled={busy}

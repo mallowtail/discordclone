@@ -385,6 +385,11 @@ deno_version = 2
 # [edge_runtime.secrets]
 # secret_key = "env(SECRET_VALUE)"
 
+# The daily clean-up (migration 0054). It checks its callers itself (the cron job's secret, or a
+# site admin's login), so the gateway's JWT check is off: the cron call has no JWT.
+[functions.expire-uploads]
+verify_jwt = false
+
 [analytics]
 enabled = true
 port = 54327

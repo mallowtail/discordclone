@@ -47,6 +47,8 @@ export default function FirstChannel() {
           (a.servers?.created_at ?? "").localeCompare(b.servers?.created_at ?? ""));
         serverId = sorted[0]?.server_id ?? null;
       }
+      // Gone meanwhile (e.g. the app sent a person without a profile to /welcome): don't navigate.
+      if (!active) return;
       if (!serverId) return router.replace("/dms");
       const { data: chans } = await supabase
         .from("channels").select("id").eq("server_id", serverId).neq("kind", "voice").order("position").limit(1);

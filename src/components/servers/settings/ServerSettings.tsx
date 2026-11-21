@@ -45,6 +45,7 @@ export function ServerSettings({
 }) {
   const { has, isOwner, refresh: refreshPerms } = useServerPermissions(server.id);
   const canManageServer = isOwner || has("manage_server");
+  const canChangeIcon = isOwner || has("manage_server_icon");
   const canManageRoles = isOwner || has("manage_roles");
   const canModerateAny = isOwner || has("kick_members") || has("ban_members") || has("timeout_members");
   const canBan = isOwner || has("ban_members");
@@ -81,7 +82,7 @@ export function ServerSettings({
         </button>
         <div className="p-5 md:p-8 max-w-2xl">
           {tab === "overview" && (
-            <OverviewTab server={server} canManage={canManageServer} isOwner={isOwner} onSaved={onSaved} onClose={onClose}
+            <OverviewTab server={server} canManage={canManageServer} canChangeIcon={canChangeIcon} isOwner={isOwner} onSaved={onSaved} onClose={onClose}
               onOwnerChanged={() => { refreshPerms(); onSaved(); }} />
           )}
           {tab === "roles" && (<><Heading title="Roles" hint="Higher roles can manage people with lower ones." /><RolesPanel serverId={server.id} /></>)}
@@ -107,8 +108,8 @@ function Heading({ title, hint }: { title: string; hint?: string }) {
 
 const field = "w-full rounded-control bg-surface-2 border border-line px-3 py-2 text-body text-ink outline-none focus:border-accent disabled:opacity-60";
 
-function OverviewTab({ server, canManage, isOwner, onSaved, onClose, onOwnerChanged }: {
-  server: Server; canManage: boolean; isOwner: boolean; onSaved: () => void; onClose: () => void; onOwnerChanged: () => void;
+function OverviewTab({ server, canManage, canChangeIcon, isOwner, onSaved, onClose, onOwnerChanged }: {
+  server: Server; canManage: boolean; canChangeIcon: boolean; isOwner: boolean; onSaved: () => void; onClose: () => void; onOwnerChanged: () => void;
 }) {
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
@@ -141,14 +142,23 @@ function OverviewTab({ server, canManage, isOwner, onSaved, onClose, onOwnerChan
     if (!file) return;
     setBusy(true);
     setStatus(null);
-    const res = await uploadServerIcon(file);
+    const previousPath = storagePathFromPublicUrl(server.icon_url, "server-icons");
+    const res = await uploadServerIcon(server.id, file);
     if ("error" in res) {
       setBusy(false);
       return setStatus({ ok: false, text: res.error });
     }
     const { error } = await supabase.from("servers").update({ icon_url: res.url }).eq("id", server.id);
+    if (error) {
+      // The new file isn't used by anything; don't leave it behind.
+      const newPath = storagePathFromPublicUrl(res.url, "server-icons");
+      if (newPath) await removeStorageFiles("server-icons", [newPath]);
+      setBusy(false);
+      return setStatus({ ok: false, text: "Couldn't save the icon — try again" });
+    }
+    // The old icon is no longer used. Best effort: a file that won't go is only logged.
+    if (previousPath) await removeStorageFiles("server-icons", [previousPath]);
     setBusy(false);
-    if (error) return setStatus({ ok: false, text: "Couldn't save the icon — try again" });
     setStatus({ ok: true, text: "Icon updated" });
     onSaved();
   }
@@ -165,7 +175,7 @@ function OverviewTab({ server, canManage, isOwner, onSaved, onClose, onOwnerChan
       <Heading title="Overview" />
       <div className="flex items-center gap-4">
         <ServerIcon iconUrl={server.icon_url} name={server.name} size="lg" />
-        {canManage && (
+        {canChangeIcon && (
           <>
             <button type="button" onClick={() => fileRef.current?.click()} disabled={busy}
               className="rounded-control border border-line px-3 py-1.5 text-body text-ink hover:bg-surface-2 disabled:opacity-50">
@@ -173,6 +183,10 @@ function OverviewTab({ server, canManage, isOwner, onSaved, onClose, onOwnerChan
             </button>
             <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onPickIcon} />
           </>
+        )}
+        {/* Without manage_server there's no Save row below, so the icon's result shows here. */}
+        {canChangeIcon && !canManage && status && (
+          <span role={status.ok ? "status" : "alert"} className={`text-meta ${status.ok ? "text-online" : "text-danger"}`}>{status.text}</span>
         )}
       </div>
 

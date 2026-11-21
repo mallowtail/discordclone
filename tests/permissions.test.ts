@@ -2,9 +2,9 @@ import { describe, it, expect } from "vitest";
 import { PERMISSIONS, PERMISSION_LABELS, isPermission } from "@/lib/servers/permissions";
 
 describe("permissions", () => {
-  it("exposes the eight permission keys", () => {
+  it("exposes the nine permission keys", () => {
     expect(PERMISSIONS).toEqual([
-      "manage_channels", "manage_server", "manage_roles",
+      "manage_channels", "manage_server", "manage_server_icon", "manage_roles",
       "kick_members", "ban_members", "timeout_members", "manage_messages", "manage_stickers",
     ]);
   });

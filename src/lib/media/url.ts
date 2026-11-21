@@ -19,7 +19,8 @@ export function withDownloadName(url: string, name: string | null): string {
 /**
  * The file name inside `bucket` for one of this app's public Storage URLs
  * (`…/storage/v1/object/public/<bucket>/<name>`), or null for anything else (an outside avatar
- * from Discord/GitHub, another bucket, a nested path). Used to remove a file before its owner goes.
+ * from Discord/GitHub, another bucket, a path more than one folder deep). Server icons sit in one
+ * folder (`<server_id>/<file>`). Used to remove a file before its owner goes.
  */
 export function storagePathFromPublicUrl(url: string | null | undefined, bucket: string): string | null {
   if (!url) return null;
@@ -32,5 +33,5 @@ export function storagePathFromPublicUrl(url: string | null | undefined, bucket:
   const prefix = `/storage/v1/object/public/${bucket}/`;
   if (!path.startsWith(prefix)) return null;
   const name = path.slice(prefix.length);
-  return /^[A-Za-z0-9_-]+(\.[A-Za-z0-9]+)?$/.test(name) ? name : null;
+  return /^([A-Za-z0-9_-]+\/)?[A-Za-z0-9_-]+(\.[A-Za-z0-9]+)?$/.test(name) ? name : null;
 }

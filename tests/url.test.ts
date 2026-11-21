@@ -43,10 +43,15 @@ describe("storagePathFromPublicUrl", () => {
     expect(storagePathFromPublicUrl(`${base}/avatars/0b1c-2d.webp`, "avatars")).toBe("0b1c-2d.webp");
     expect(storagePathFromPublicUrl(`${base}/server-icons/abc.png`, "server-icons")).toBe("abc.png");
   });
-  it("is null for another bucket, an outside URL, nested paths or nothing", () => {
+  it("keeps one folder (server icons live in <server_id>/<file>)", () => {
+    const id = "384e1623-bd60-4157-91a1-b55c69bc0353";
+    expect(storagePathFromPublicUrl(`${base}/server-icons/${id}/abc.png`, "server-icons")).toBe(`${id}/abc.png`);
+  });
+  it("is null for another bucket, an outside URL, deeper paths or nothing", () => {
     expect(storagePathFromPublicUrl(`${base}/attachments/x.png`, "avatars")).toBeNull();
     expect(storagePathFromPublicUrl("https://cdn.discordapp.com/avatars/1/2.png", "avatars")).toBeNull();
-    expect(storagePathFromPublicUrl(`${base}/avatars/a/b.png`, "avatars")).toBeNull();
+    expect(storagePathFromPublicUrl(`${base}/avatars/a/b/c.png`, "avatars")).toBeNull();
+    expect(storagePathFromPublicUrl(`${base}/avatars/../b.png`, "avatars")).toBeNull();
     expect(storagePathFromPublicUrl(`${base}/avatars/`, "avatars")).toBeNull();
     expect(storagePathFromPublicUrl("not a url", "avatars")).toBeNull();
     expect(storagePathFromPublicUrl(null, "avatars")).toBeNull();

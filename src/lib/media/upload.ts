@@ -23,13 +23,16 @@ export function validateImage(file: { type: string; size: number }): UploadCheck
  * (optimizeImage — strips EXIF/GPS too), and only then apply the 5 MB limit, so a large phone photo
  * that shrinks below it is accepted.
  */
-async function uploadImageTo(bucket: string, file: File, maxDim: number): Promise<{ url: string } | { error: string }> {
+async function uploadImageTo(
+  bucket: string, file: File, maxDim: number, folder?: string,
+): Promise<{ url: string } | { error: string }> {
   if (!ALLOWED.includes(file.type)) return { error: "Only PNG, JPEG, GIF, or WebP images" };
   const prepared = await optimizeImage(file, maxDim);
   const check = validateImage(prepared);
   if (!check.ok) return { error: check.error };
   const supabase = createClient();
-  const path = `${crypto.randomUUID()}.${extensionForType(prepared.type)}`;
+  const name = `${crypto.randomUUID()}.${extensionForType(prepared.type)}`;
+  const path = folder ? `${folder}/${name}` : name;
   const { error } = await supabase.storage.from(bucket).upload(path, prepared, { contentType: prepared.type });
   if (error) return { error: `Upload failed: ${error.message}` };
   const { data } = supabase.storage.from(bucket).getPublicUrl(path);
@@ -44,8 +47,9 @@ export function uploadAvatar(file: File) {
   return uploadImageTo("avatars", file, ICON_MAX_DIM);
 }
 
-export function uploadServerIcon(file: File) {
-  return uploadImageTo("server-icons", file, ICON_MAX_DIM);
+/** A server's icon goes in that server's folder; storage only lets icon managers of it upload there. */
+export function uploadServerIcon(serverId: string, file: File) {
+  return uploadImageTo("server-icons", file, ICON_MAX_DIM, serverId);
 }
 
 /** True if a MIME type is one of the inline-rendered image types. */

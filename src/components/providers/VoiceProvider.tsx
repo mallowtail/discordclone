@@ -3,6 +3,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { Room, RoomEvent, Track, type Participant, type RemoteTrack } from "livekit-client";
 import { useAuth } from "@/components/providers/AuthProvider";
+import { createClient } from "@/lib/supabase/client";
+import { parseRoom } from "@/lib/voice/rooms";
 
 export type VoiceParticipant = { id: string; name: string; speaking: boolean; muted: boolean; isLocal: boolean };
 
@@ -83,8 +85,13 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
 
   const leave = useCallback(async () => {
     const room = roomRef.current;
+    // Last one out of a DM / group call marks the call over (so nobody gets "Join call" for an
+    // empty room).
+    const ref = room ? parseRoom(room.name) : null;
+    const lastOut = !!room && ref?.type === "conversation" && room.remoteParticipants.size === 0;
     reset();
     await room?.disconnect();
+    if (lastOut && ref) await createClient().rpc("end_call", { conv: ref.id });
   }, [reset]);
 
   const join = useCallback(async (name: string, newLabel: string, newHref: string) => {

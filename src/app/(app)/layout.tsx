@@ -15,6 +15,7 @@ import { LinkGuardProvider } from "@/components/providers/LinkGuardProvider";
 import { FavoriteGifsProvider } from "@/components/providers/FavoriteGifsProvider";
 import { SafetyProvider } from "@/components/providers/SafetyProvider";
 import { VoiceProvider } from "@/components/providers/VoiceProvider";
+import { IncomingCall } from "@/components/voice/IncomingCall";
 import { DrawerProvider, useDrawer } from "@/components/providers/DrawerProvider";
 import { Drawer } from "@/components/ui/Drawer";
 import { navCache } from "@/lib/cache/navCache";
@@ -87,6 +88,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 <FavoriteGifsProvider>
                   <ProfilePopoverProvider>
                     <AppShell activeServer={activeServer}>{children}</AppShell>
+                    <IncomingCall />
                   </ProfilePopoverProvider>
                 </FavoriteGifsProvider>
               </LinkGuardProvider>

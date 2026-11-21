@@ -6,6 +6,7 @@ import Link from "next/link";
 import type { Message } from "@/types/db";
 import { useConversation } from "@/hooks/useConversations";
 import { useSafety } from "@/components/providers/SafetyProvider";
+import { CallButton } from "@/components/voice/CallButton";
 import { GroupIcon } from "@/components/dms/groups/GroupIcon";
 import { GroupMembersPanel } from "@/components/dms/groups/GroupMembersPanel";
 import { HeaderButton, SidePanelOverlay, useOverlayMode } from "@/components/ui/SidePanel";
@@ -122,7 +123,8 @@ function DmView({ conversationId }: { conversationId: string }) {
             <span className="truncate">@ {conv.label}</span>
           )}
         </span>
-        <span className="flex items-center flex-none">
+        <span className="flex items-center flex-none gap-1">
+          {conv && <CallButton conversationId={conversationId} label={conv.label} disabled={!!blockedOther} />}
           <button
             onClick={() => setShowPins((s) => !s)}
             data-trigger="pins"

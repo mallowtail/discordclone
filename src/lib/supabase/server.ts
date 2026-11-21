@@ -9,10 +9,17 @@ export async function createServerSupabase() {
     {
       cookies: {
         getAll: () => cookieStore.getAll(),
-        setAll: (toSet) =>
-          toSet.forEach(({ name, value, options }) =>
-            cookieStore.set(name, value, options)
-          ),
+        setAll: (toSet) => {
+          // Server Components can't set cookies (only Route Handlers and Server Actions can). A
+          // page that only reads the session (the front page) may land here when a token refresh
+          // is due; the proxy (src/proxy.ts) already refreshes the cookies on every request, so
+          // skipping it is safe.
+          try {
+            toSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options));
+          } catch {
+            /* called from a Server Component */
+          }
+        },
       },
     }
   );

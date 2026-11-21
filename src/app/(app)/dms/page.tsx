@@ -244,7 +244,7 @@ function AddFriend() {
     setBusy(true);
     setResult(null);
     // Usernames are matched ignoring case; prefer an exact-case match if two differ only by case.
-    const { data } = await supabase.from("profiles").select("id, username").ilike("username", escapeLike(wanted)).limit(5);
+    const { data } = await supabase.from("profiles").select("id, username").ilike("username", escapeLike(wanted)).is("deleted_at", null).limit(5);
     const matches = (data ?? []) as { id: string; username: string }[];
     const target = matches.find((m) => m.username === wanted) ?? matches[0];
     if (!target) {

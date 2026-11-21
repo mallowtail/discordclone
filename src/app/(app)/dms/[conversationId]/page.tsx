@@ -25,6 +25,7 @@ import { useDrawer } from "@/components/providers/DrawerProvider";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PushPin, List, Users, WarningCircle } from "@phosphor-icons/react";
+import { isDeletedProfile } from "@/lib/users/account";
 
 /** Shown while the search-params-reading view suspends; mirrors the DM header + message area. */
 function DmSkeleton() {
@@ -66,6 +67,8 @@ function DmView({ conversationId }: { conversationId: string }) {
   const { kindOf, clear } = useSafety();
   const dmOther = conv && !conv.isGroup ? conv.others[0] ?? null : null;
   const blockedOther = dmOther && kindOf(dmOther.id) === "block" ? dmOther : null;
+  // The other person deleted their account: the history stays, but nobody can message or call them.
+  const otherDeleted = isDeletedProfile(dmOther);
   const voice = useVoice();
   const inThisCall = voice.status === "connected" && voice.room === roomForConversation(conversationId);
   const [replyTo, setReplyTo] = useState<Message | null>(null);
@@ -129,7 +132,7 @@ function DmView({ conversationId }: { conversationId: string }) {
           )}
         </span>
         <span className="flex items-center flex-none gap-1">
-          {conv && <CallButton conversationId={conversationId} label={conv.label} disabled={!!blockedOther} />}
+          {conv && !otherDeleted && <CallButton conversationId={conversationId} label={conv.label} disabled={!!blockedOther} />}
           <button
             onClick={() => setShowPins((s) => !s)}
             data-trigger="pins"
@@ -181,7 +184,11 @@ function DmView({ conversationId }: { conversationId: string }) {
             </button>
           )}
           <TypingIndicator names={typing.names} />
-          {blockedOther ? (
+          {otherDeleted ? (
+            <div className="m-3 rounded-card border border-line bg-surface px-4 py-3">
+              <p className="text-body text-muted">This account was deleted. You can&apos;t send them messages anymore.</p>
+            </div>
+          ) : blockedOther ? (
             // You can't message someone you've blocked (the database refuses it too).
             <div className="m-3 flex flex-wrap items-center justify-between gap-2 rounded-card border border-line bg-surface px-4 py-3">
               <p className="text-body text-muted">You&apos;ve blocked {blockedOther.display_name}. Unblock them to send messages.</p>

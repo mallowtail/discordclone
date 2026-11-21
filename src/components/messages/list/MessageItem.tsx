@@ -38,6 +38,7 @@ export function MessageItem({
   authorName,
   authorPending = false,
   authorAvatar,
+  authorDeleted = false,
   showHeader,
   pills,
   repliedTo,
@@ -52,6 +53,8 @@ export function MessageItem({
   /** Profile still loading: show a name-width skeleton instead of the name. */
   authorPending?: boolean;
   authorAvatar: string | null;
+  /** The author deleted their account: grey placeholder avatar. */
+  authorDeleted?: boolean;
   showHeader: boolean;
   pills: ReactionPill[];
   repliedTo: Message | null;
@@ -163,7 +166,7 @@ export function MessageItem({
         <div className="w-8 md:w-10 flex-none">
           {showHeader && (
             <button onClick={openProfile} className="hover:opacity-80" aria-label={`View ${authorName || "user"}'s profile`}>
-              <Avatar url={authorAvatar} name={authorName} size="md" />
+              <Avatar url={authorAvatar} name={authorName} size="md" deleted={authorDeleted} />
             </button>
           )}
         </div>

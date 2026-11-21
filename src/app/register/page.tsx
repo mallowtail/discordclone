@@ -4,7 +4,7 @@ import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
-import { validateUsername } from "@/lib/messages/validation";
+import { usernameErrorMessage, validateUsername } from "@/lib/messages/validation";
 import { safeNext } from "@/lib/servers/invite";
 import { OAuthButtons, OrDivider } from "@/components/auth/OAuthButtons";
 import { useAuth } from "@/components/providers/AuthProvider";
@@ -40,7 +40,7 @@ function RegisterPageContent() {
     });
     if (profErr) {
       setBusy(false);
-      return setError(profErr.message.includes("duplicate") ? "Username taken" : profErr.message);
+      return setError(usernameErrorMessage(profErr.message));
     }
     // Signing up signs in, and the app looks up the profile at that moment — before the insert
     // above lands. Refresh it, or the app thinks there's no profile and sends them to /welcome.

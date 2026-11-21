@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { safeNext } from "@/lib/servers/invite";
-import { validateUsername } from "@/lib/messages/validation";
+import { usernameErrorMessage, validateUsername } from "@/lib/messages/validation";
 import { avatarFrom, displayNameFrom, suggestUsername } from "@/lib/users/oauthProfile";
 
 // First stop after a Google/GitHub/Discord sign-in for anyone without a profile row yet. Email
@@ -49,7 +49,7 @@ function WelcomeContent() {
         return router.replace(next);
       }
       setBusy(false);
-      return setError(insErr.message.includes("duplicate") ? "That username's taken — try another" : insErr.message);
+      return setError(usernameErrorMessage(insErr.message));
     }
     await refreshProfile();
     router.replace(next);
@@ -96,7 +96,7 @@ function WelcomeContent() {
               aria-describedby={error ? "form-error" : "username-hint"}
               className="w-full px-3 py-2 rounded-control bg-surface-2 text-ink text-body border border-line focus:outline-none focus:border-accent aria-[invalid=true]:border-danger"
             />
-            <p id="username-hint" className="text-meta text-muted mt-1">3–20 letters, numbers, or underscores.</p>
+            <p id="username-hint" className="text-meta text-muted mt-1">1–20 letters, numbers, or underscores.</p>
           </div>
           <button
             disabled={busy}

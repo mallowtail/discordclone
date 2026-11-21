@@ -8,6 +8,7 @@ import { fitGif, isKlipyMediaUrl } from "@/lib/messages/gifs";
 import { StickerImage } from "@/components/messages/list/StickerImage";
 import type { ForwardSnapshot, Profile } from "@/types/db";
 import { ArrowBendUpRight } from "@phosphor-icons/react";
+import { isDeletedProfile } from "@/lib/users/account";
 
 export function ForwardedBlock({ snapshot }: { snapshot: ForwardSnapshot }) {
   const supabase = createClient();
@@ -32,7 +33,7 @@ export function ForwardedBlock({ snapshot }: { snapshot: ForwardSnapshot }) {
       </div>
       <div className="border-l-2 border-line pl-3">
         <div className="flex items-center gap-2 mb-1">
-          <Avatar url={author?.avatar_url ?? null} name={author?.display_name} size="sm" />
+          <Avatar url={author?.avatar_url ?? null} name={author?.display_name} size="sm" deleted={isDeletedProfile(author)} />
           <span className="text-ink text-body font-medium">{author?.display_name ?? "Someone"}</span>
           <span className="text-muted text-meta">from {snapshot.source}</span>
         </div>

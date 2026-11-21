@@ -15,6 +15,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { ChatCircleDots, Users } from "@phosphor-icons/react";
 import { useFriends } from "@/components/providers/FriendsProvider";
 import { RequestBadge } from "@/components/dms/sidebar/RequestBadge";
+import { isDeletedProfile } from "@/lib/users/account";
 
 /** Placeholder for a single DM row: avatar (sm, matching `Avatar size="sm"`) + one name line. */
 function DmRowSkeleton() {
@@ -113,6 +114,7 @@ export function DmSidebar() {
                       seed={other?.id}
                       presence={online ? "online" : "offline"}
                       size="sm"
+                      deleted={isDeletedProfile(other)}
                     />
                   </span>
                 )}

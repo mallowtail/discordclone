@@ -17,6 +17,8 @@ function joinErrorMessage(message: string): string {
   if (message.includes("expired") || message.includes("used up")) return "This invite has expired or reached its limit.";
   if (message.includes("banned")) return "You're banned from this server.";
   if (message.includes("invalid invite")) return "This invite doesn't exist anymore.";
+  if (message.includes("finish setting up your account first")) return "Finish setting up your account (pick a username) first, then open this invite again.";
+  if (message.includes("this account was deleted")) return "This account was deleted.";
   return "Couldn't join — check your connection and try again.";
 }
 

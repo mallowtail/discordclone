@@ -20,6 +20,7 @@ import { useFriends } from "@/components/providers/FriendsProvider";
 import { openDmWith } from "@/lib/users/dm";
 import { Modal } from "@/components/ui/Modal";
 import { X } from "@phosphor-icons/react";
+import { DELETED_USER_NAME, isDeletedProfile } from "@/lib/users/account";
 
 const TABS = ["Board", "Activity", "Mutual Friends", "Mutual Servers"] as const;
 type Tab = (typeof TABS)[number];
@@ -130,6 +131,12 @@ export function FullProfileModal({
             <div className="p-8 text-muted">User not found.</div>
           ) : !profile ? (
             <div className="p-8 text-muted">Loading…</div>
+          ) : isDeletedProfile(profile) ? (
+            <div className="flex flex-1 flex-col items-center justify-center gap-3 p-8 text-center">
+              <Avatar url={null} name={DELETED_USER_NAME} deleted size="xl" />
+              <h1 className="text-2xl font-bold tracking-tight text-ink">{DELETED_USER_NAME}</h1>
+              <p className="text-body text-muted">This account was deleted.</p>
+            </div>
           ) : (
             <>
               {/* Left: profile details */}

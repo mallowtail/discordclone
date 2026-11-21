@@ -18,6 +18,7 @@ import { RolePill } from "@/components/servers/roles/RolePill";
 import { FriendButton } from "@/components/user/profile/FriendButton";
 import { SafetyMenu } from "@/components/user/profile/SafetyMenu";
 import { useSafety } from "@/components/providers/SafetyProvider";
+import { DELETED_USER_NAME, isDeletedProfile } from "@/lib/users/account";
 
 const CARD_WIDTH = 256; // w-64
 
@@ -54,6 +55,7 @@ export function ProfileCard({
   const isSelf = user?.id === userId;
   const blocked = useSafety().kindOf(userId) === "block";
   const online = isOnline(userId);
+  const deleted = isDeletedProfile(profile);
 
   useEffect(() => {
     let active = true;
@@ -120,7 +122,7 @@ export function ProfileCard({
     <div
       ref={cardRef}
       role="dialog"
-      aria-label={`${profile?.display_name ?? "User"}'s profile`}
+      aria-label={deleted ? DELETED_USER_NAME : `${profile?.display_name ?? "User"}'s profile`}
       style={{
         position: "fixed",
         top: pos?.top ?? -9999,
@@ -130,6 +132,13 @@ export function ProfileCard({
       }}
       className="z-50 bg-surface border border-line rounded-card shadow-xl overflow-hidden"
     >
+      {deleted ? (
+        <div className="p-4">
+          <Avatar url={null} name={DELETED_USER_NAME} deleted size="lg" />
+          <div className="mt-2 text-ink font-semibold truncate">{DELETED_USER_NAME}</div>
+          <p className="mt-1 text-muted text-body">This account was deleted.</p>
+        </div>
+      ) : (<>
       <div className="p-4">
         <div className="flex items-center gap-2">
           <button
@@ -193,6 +202,7 @@ export function ProfileCard({
           {sendError && <p className="text-danger text-meta mt-1">{sendError}</p>}
         </div>
       )}
+      </>)}
     </div>,
     document.body
   );

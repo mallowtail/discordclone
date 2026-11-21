@@ -1,5 +1,6 @@
 "use client";
 
+import { isDeletedProfile } from "@/lib/users/account";
 import { useSafety } from "@/components/providers/SafetyProvider";
 import { groupHiddenRuns, hiddenLabel } from "@/lib/users/safety";
 import { navCache } from "@/lib/cache/navCache";
@@ -280,6 +281,7 @@ export const MessageList = memo(function MessageList({
               authorName={author?.display_name ?? (authorPending ? "" : "Unknown user")}
               authorPending={authorPending}
               authorAvatar={author?.avatar_url ?? null}
+              authorDeleted={isDeletedProfile(author)}
               showHeader={showHeader}
               pills={reactionsByMessage[m.id] ?? []}
               repliedTo={repliedTo}

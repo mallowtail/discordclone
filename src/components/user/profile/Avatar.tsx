@@ -1,11 +1,15 @@
 "use client";
 
 import { useState } from "react";
+import { User } from "@phosphor-icons/react";
 import { avatarColor, initials } from "@/lib/users/avatarColor";
 
 const SIZES = { sm: "w-6 h-6", md: "w-10 h-10", lg: "w-[72px] h-[72px]", xl: "w-[96px] h-[96px]" } as const;
 const INITIALS_TEXT = { sm: "text-micro", md: "text-meta", lg: "text-title", xl: "text-display" } as const;
 const DOT_SIZE = { sm: "w-2 h-2", md: "w-2.5 h-2.5", lg: "w-3.5 h-3.5", xl: "w-4 h-4" } as const;
+const GLYPH_SIZE = { sm: 14, md: 22, lg: 40, xl: 52 } as const;
+/** A deleted account's avatar: plain grey with a generic person, the same for everyone. */
+const DELETED = { bg: "#3f4147", fg: "#9aa0a8" } as const;
 
 export function Avatar({
   url,
@@ -14,6 +18,7 @@ export function Avatar({
   seed,
   presence,
   presenceRing = "ring-sidebar",
+  deleted = false,
 }: {
   url: string | null;
   name?: string;
@@ -24,10 +29,12 @@ export function Avatar({
   presence?: "online" | "offline";
   /** Ring colour class for the presence dot's cutout, matching the caller's background. Defaults to the sidebar surface. */
   presenceRing?: string;
+  /** A deleted account ("Deleted User"): always the plain grey placeholder. */
+  deleted?: boolean;
 }) {
   const [failed, setFailed] = useState(false);
-  const showImage = !!url && !failed;
-  const { bg, fg } = avatarColor(seed ?? name ?? "");
+  const showImage = !deleted && !!url && !failed;
+  const { bg, fg } = deleted ? DELETED : avatarColor(seed ?? name ?? "");
   return (
     <div className={`${SIZES[size]} relative flex-none`}>
       <div
@@ -42,13 +49,15 @@ export function Avatar({
             className="w-full h-full object-cover"
             onError={() => setFailed(true)}
           />
+        ) : deleted ? (
+          <User size={GLYPH_SIZE[size]} weight="fill" aria-hidden="true" />
         ) : (
           <span className={`${INITIALS_TEXT[size]} font-semibold leading-none select-none`}>
             {initials(name)}
           </span>
         )}
       </div>
-      {presence && (
+      {presence && !deleted && (
         <span
           aria-hidden="true"
           className={`${DOT_SIZE[size]} absolute bottom-0 right-0 rounded-pill ring-2 ${presenceRing} ${

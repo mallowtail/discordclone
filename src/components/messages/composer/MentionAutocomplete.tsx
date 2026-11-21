@@ -35,6 +35,7 @@ export function MentionAutocomplete({
       .from("profiles")
       .select("*")
       .ilike("username", `${query}%`)
+      .is("deleted_at", null) // deleted accounts can't be mentioned
       .limit(6)
       .then(({ data }) => {
         if (!active) return;

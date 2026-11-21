@@ -8,7 +8,9 @@ import { sendErrorMessage, validateMessage } from "@/lib/messages/validation";
 import { uploadAndPostFiles } from "@/lib/messages/sendAttachment";
 import { PollComposerDialog } from "@/components/messages/polls/PollComposerDialog";
 import { GifPicker } from "@/components/messages/composer/GifPicker";
+import { StickerPicker } from "@/components/messages/composer/StickerPicker";
 import type { Gif } from "@/lib/messages/gifs";
+import { stickerPublicUrl, type Sticker } from "@/lib/messages/stickers";
 import type { Message } from "@/types/db";
 import { MentionAutocomplete } from "@/components/messages/composer/MentionAutocomplete";
 import EmojiPicker, { Theme } from "emoji-picker-react";
@@ -149,6 +151,40 @@ export function MessageInput({
     const { error: err } = await supabase
       .from("messages")
       .insert({ id, author_id: user.id, content: "", gif, ...replyFields(), ...target });
+    if (err) {
+      removePending(id);
+      return setError(sendErrorMessage(err.message));
+    }
+    onClearReply?.();
+  }
+
+  /** Send a sticker straight away, as a reply if one is set up. The database rebuilds the snapshot. */
+  async function sendSticker(s: Sticker) {
+    if (timedOutUntil || !user) return;
+    setError(null);
+    const id = crypto.randomUUID();
+    addPending({
+      id,
+      author_id: user.id,
+      channel_id: "channel_id" in target ? target.channel_id : null,
+      conversation_id: "conversation_id" in target ? target.conversation_id : null,
+      content: "",
+      image_url: null,
+      file_url: null,
+      file_name: null,
+      sticker: { id: s.id, name: s.name, url: stickerPublicUrl(s.path), width: s.width, height: s.height },
+      created_at: new Date().toISOString(),
+      updated_at: null,
+      reply_to_id: replyTo?.id ?? null,
+      mention_author: replyTo ? pingAuthor : false,
+      pinned: false,
+      pinned_at: null,
+      forward_snapshot: null,
+      pending: true,
+    });
+    const { error: err } = await supabase
+      .from("messages")
+      .insert({ id, author_id: user.id, content: "", sticker: { id: s.id }, ...replyFields(), ...target });
     if (err) {
       removePending(id);
       return setError(sendErrorMessage(err.message));
@@ -388,6 +424,7 @@ export function MessageInput({
             className="flex-1 bg-transparent text-ink outline-none resize-none min-h-[44px] max-h-48 py-2"
           />
           <GifPicker onPick={sendGif} disabled={!!timedOutUntil} />
+          <StickerPicker onPick={sendSticker} disabled={!!timedOutUntil} />
           <div className="relative" ref={emojiRef}>
             <button
               type="button"

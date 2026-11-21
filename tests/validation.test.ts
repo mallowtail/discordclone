@@ -47,6 +47,9 @@ describe("sendErrorMessage", () => {
   it("explains a refused DM without saying why (a block mustn't be detectable)", () => {
     expect(sendErrorMessage("cannot message this person")).toBe("Your message couldn't be delivered. They may only accept messages from some people.");
   });
+  it("explains a sticker that is no longer usable", () => {
+    expect(sendErrorMessage("cannot use that sticker")).toBe("You can't use that sticker anymore.");
+  });
   it("falls back to a generic message", () => {
     expect(sendErrorMessage("network down")).toBe("Failed to send — try again");
     expect(sendErrorMessage(undefined)).toBe("Failed to send — try again");

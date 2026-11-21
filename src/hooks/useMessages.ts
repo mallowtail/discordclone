@@ -128,8 +128,14 @@ export function useMessages(target: Target) {
     };
     const touchedSince = (startSeq: number) =>
       new Set([...touchedAt].filter(([, at]) => at > startSeq).map(([id]) => id));
-    const preferLive = (page: Message[], current: Message[], startSeq: number) =>
-      preferLiveRows(page, current, touchedSince(startSeq), deletedIds, latestRows);
+    // Snapshot taken when the fetch lands, BEFORE update(): the state updater may run later (React
+    // runs it lazily), after the maps were cleared by the load's `finally`.
+    const liveSnapshot = (startSeq: number) => {
+      const touched = touchedSince(startSeq);
+      const deleted = new Set(deletedIds);
+      const latest = new Map(latestRows);
+      return (page: Message[], current: Message[]) => preferLiveRows(page, current, touched, deleted, latest);
+    };
     const offLocalDelete = onMessageDeleted(markDeleted);
     // Missed-message catch-up (see the subscribe callback and catchUp below).
     let catchUpTimer: ReturnType<typeof setTimeout> | null = null;
@@ -168,9 +174,10 @@ export function useMessages(target: Target) {
           // A failed "before" fetch says nothing about older history: keep hasMore and leave
           // `loaded` unset so the next successful load (e.g. realtime re-SUBSCRIBED) decides it.
           const beforeOk = !before.error && !!before.data;
+          const preferLive = liveSnapshot(startSeq);
           update(key, (s) => ({
             ...s,
-            messages: mergeMessages(s.messages, preferLive([...beforeRows, ...afterRows], s.messages, startSeq)),
+            messages: mergeMessages(s.messages, preferLive([...beforeRows, ...afterRows], s.messages)),
             hasMore: s.loaded ? s.hasMore : nextHasMore(s.hasMore, before, MESSAGE_PAGE),
             anchorFound: true,
             loaded: s.loaded || beforeOk,
@@ -190,8 +197,9 @@ export function useMessages(target: Target) {
       if (!active) return;
       const fetched = ((recent.data ?? []) as Message[]).reverse();
       const ok = !recent.error && !!recent.data;
+      const preferLive = liveSnapshot(startSeq);
       update(key, (s) => {
-        const page = preferLive(fetched, s.messages, startSeq);
+        const page = preferLive(fetched, s.messages);
         if (s.fromCache && ok) {
           // Reopened chat: the fresh page replaces the remembered one for its time range.
           const r = refreshCachedPage(s.messages, page, MESSAGE_PAGE);

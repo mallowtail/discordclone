@@ -43,7 +43,7 @@ export function DmSidebar() {
 
   return (
     <aside className="w-[clamp(12.5rem,18vw,16.25rem)] bg-sidebar flex flex-col">
-      <div className="p-3 font-semibold text-ink tracking-tight border-b border-line">Direct Messages</div>
+      <div className="p-3 font-semibold text-ink tracking-tight border-b border-line">Home</div>
       <nav className="flex-1 overflow-y-auto p-2 text-muted" aria-busy={!loaded || undefined}>
         <Link href="/dms" onClick={closeDrawer} aria-current={onFriendsPage ? "page" : undefined}
           className={`relative flex items-center gap-2 px-2 py-1.5 min-h-11 md:min-h-0 rounded-row text-body ${

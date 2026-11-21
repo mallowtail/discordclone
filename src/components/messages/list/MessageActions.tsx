@@ -115,7 +115,7 @@ export function MessageActions({
         aria-label="More actions"
         aria-haspopup="true"
         aria-expanded={mobileOpen}
-        className={`md:hidden ${mobileOpen ? "hidden" : "flex"} items-center justify-center w-11 h-11 rounded-control border border-line bg-surface text-muted hover:text-ink`}
+        className={`md:hidden ${mobileOpen ? "hidden" : "flex"} items-center justify-center w-11 h-11 rounded-control text-muted/70 hover:text-ink hover:bg-surface-2`}
       >
         <DotsThreeVertical size={20} weight="bold" aria-hidden="true" />
       </button>

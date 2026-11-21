@@ -16,8 +16,9 @@ export function SearchBox({ search }: { search: MessageSearch }) {
     inputRef, raw, onChange, onKeyDown, onKeyUp, onClick, onBlur,
     dropdownVisible, suggestions, activeIdx, setActiveIdx, acceptSuggestion,
   } = search;
+  // Narrow on phones (widens while typing) so the channel name beside it stays visible.
   return (
-    <div className="relative ml-3 w-48">
+    <div className="relative ml-2 w-24 focus-within:w-40 sm:ml-3 sm:w-48 sm:focus-within:w-48 transition-[width] duration-150">
       <MagnifyingGlass size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
       <input
         ref={inputRef}

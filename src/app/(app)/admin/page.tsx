@@ -8,15 +8,16 @@ import { AdminReportsTab } from "@/components/admin/AdminReportsTab";
 import { AdminUsersTab } from "@/components/admin/AdminUsersTab";
 import { AdminServersTab } from "@/components/admin/AdminServersTab";
 import { AdminUsageTab } from "@/components/admin/AdminUsageTab";
+import { AdminErrorsTab } from "@/components/admin/AdminErrorsTab";
 import { ADMIN_NOT_FOUND } from "@/lib/admin/admin";
 import { badgeLabel } from "@/lib/reports/reports";
 import { List, ShieldCheck } from "@phosphor-icons/react";
 
-const TABS = ["Reports", "Users", "Servers", "Usage"] as const;
+const TABS = ["Reports", "Users", "Servers", "Usage", "Errors"] as const;
 type Tab = (typeof TABS)[number];
 
 /**
- * The site admin's page: reports from everywhere, site-wide bans, deleting servers, free-plan usage. Anyone else
+ * The site admin's page: reports from everywhere, site-wide bans, deleting servers, free-plan usage, errors from people's browsers. Anyone else
  * gets a plain "Not found" (the database refuses every admin call for them anyway).
  */
 export default function AdminPage() {
@@ -70,6 +71,7 @@ export default function AdminPage() {
           {tab === "Users" && <AdminUsersTab />}
           {tab === "Servers" && <AdminServersTab />}
           {tab === "Usage" && <AdminUsageTab />}
+          {tab === "Errors" && <AdminErrorsTab />}
         </div>
       </div>
     </>

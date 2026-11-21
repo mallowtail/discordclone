@@ -97,19 +97,29 @@ export function refreshCachedPage(
 /**
  * A page fetched while realtime events were arriving can be older than what the list already
  * shows: a message edited or deleted live after the fetch started would come back stale (or come
- * back at all). For every id in `touched` (realtime/local events since the fetch began) the page
- * uses the list's current row, or drops the row when the list no longer has it (deleted). Other
- * rows pass through. Returns `page` itself when nothing was touched.
+ * back at all). For every id in `touched` (realtime/local events since the fetch began):
+ * - in `deleted` (a realtime DELETE or this tab's own delete) → dropped;
+ * - otherwise the list's current row, else the newest live payload in `latest` (an UPDATE/INSERT
+ *   for a row the list doesn't hold yet — e.g. edited during the first load), else the fetched row.
+ * Only a delete removes a row: "touched but not in the list" is not a delete. Other rows pass
+ * through. Returns `page` itself when nothing was touched.
  */
-export function preferLiveRows(page: Message[], current: Message[], touched: ReadonlySet<string>): Message[] {
+export function preferLiveRows(
+  page: Message[],
+  current: Message[],
+  touched: ReadonlySet<string>,
+  deleted: ReadonlySet<string> = new Set(),
+  latest: ReadonlyMap<string, Message> = new Map()
+): Message[] {
   if (touched.size === 0 || !page.some((m) => touched.has(m.id))) return page;
   const byId = new Map(current.map((m) => [m.id, m]));
   const out: Message[] = [];
   for (const m of page) {
     if (!touched.has(m.id)) out.push(m);
+    else if (deleted.has(m.id)) continue;
     else {
       const live = byId.get(m.id);
-      if (live && !live.pending) out.push(live);
+      out.push(live && !live.pending ? live : latest.get(m.id) ?? m);
     }
   }
   return out;

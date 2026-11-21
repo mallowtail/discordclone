@@ -200,7 +200,39 @@ describe("preferLiveRows", () => {
   });
 
   it("drops a row deleted live while the fetch was in flight", () => {
-    expect(preferLiveRows([m1, m2, m3], [m1, m3], new Set(["m2"])).map((m) => m.id)).toEqual(["m1", "m3"]);
+    expect(preferLiveRows([m1, m2, m3], [m1, m3], new Set(["m2"]), new Set(["m2"])).map((m) => m.id))
+      .toEqual(["m1", "m3"]);
+  });
+
+  it("keeps a row edited during the first load that the list doesn't hold yet", () => {
+    // UPDATE arrived while the initial fetch was in flight: the list was still empty.
+    const out = preferLiveRows([m1, m2], [], new Set(["m2"]));
+    expect(out.map((m) => m.id)).toEqual(["m1", "m2"]);
+    expect(out[1]).toBe(m2);
+  });
+
+  it("uses the newer UPDATE payload for a touched row missing from the list", () => {
+    const edited = { ...m2, content: "edited live", updated_at: "2026-10-30T11:00:00Z" };
+    const out = preferLiveRows([m1, m2], [], new Set(["m2"]), new Set(), new Map([["m2", edited]]));
+    expect(out.map((m) => m.content)).toEqual(["content m1", "edited live"]);
+  });
+
+  it("prefers the list's row over a stored payload, and a delete over both", () => {
+    const listRow = { ...m2, content: "in list" };
+    const payload = { ...m2, content: "payload" };
+    const latest = new Map([["m2", payload]]);
+    expect(preferLiveRows([m2], [listRow], new Set(["m2"]), new Set(), latest)[0].content).toBe("in list");
+    expect(preferLiveRows([m2], [listRow], new Set(["m2"]), new Set(["m2"]), latest)).toEqual([]);
+  });
+
+  it("an untouched deleted id is not consulted (deletes only apply to touched ids)", () => {
+    const page = [m1, m2];
+    expect(preferLiveRows(page, [], new Set(["m9"]), new Set(["m2"]))).toBe(page);
+  });
+
+  it("keeps the fetched row when the list holds only a pending copy", () => {
+    const pending = { ...m2, pending: true };
+    expect(preferLiveRows([m2], [pending], new Set(["m2"]))[0]).toBe(m2);
   });
 
   it("a catch-up merge adds the missed message once and keeps paged-in history", () => {

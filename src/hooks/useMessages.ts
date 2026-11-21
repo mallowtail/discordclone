@@ -112,11 +112,25 @@ export function useMessages(target: Target) {
     // an edit. Cleared whenever no load is in flight.
     let eventSeq = 0;
     let loadsInFlight = 0;
+    // Deletes are tracked apart from edits/inserts: only a deleted id may be dropped from a page
+    // (an edit during the first load touches a row the list doesn't hold yet — it must stay).
     const touchedAt = new Map<string, number>();
-    const touch = (id: string) => touchedAt.set(id, ++eventSeq);
+    const deletedIds = new Set<string>();
+    const latestRows = new Map<string, Message>();
+    const touch = (id: string, row?: Message) => {
+      touchedAt.set(id, ++eventSeq);
+      if (row) latestRows.set(id, row);
+    };
+    const markDeleted = (id: string) => {
+      touch(id);
+      deletedIds.add(id);
+      latestRows.delete(id);
+    };
     const touchedSince = (startSeq: number) =>
       new Set([...touchedAt].filter(([, at]) => at > startSeq).map(([id]) => id));
-    const offLocalDelete = onMessageDeleted(touch);
+    const preferLive = (page: Message[], current: Message[], startSeq: number) =>
+      preferLiveRows(page, current, touchedSince(startSeq), deletedIds, latestRows);
+    const offLocalDelete = onMessageDeleted(markDeleted);
     // Missed-message catch-up (see the subscribe callback and catchUp below).
     let catchUpTimer: ReturnType<typeof setTimeout> | null = null;
     let lastCatchUp = 0;
@@ -128,7 +142,11 @@ export function useMessages(target: Target) {
       try {
         await fetchAndMerge(eventSeq);
       } finally {
-        if (--loadsInFlight === 0) touchedAt.clear();
+        if (--loadsInFlight === 0) {
+          touchedAt.clear();
+          deletedIds.clear();
+          latestRows.clear();
+        }
       }
     }
 
@@ -150,10 +168,9 @@ export function useMessages(target: Target) {
           // A failed "before" fetch says nothing about older history: keep hasMore and leave
           // `loaded` unset so the next successful load (e.g. realtime re-SUBSCRIBED) decides it.
           const beforeOk = !before.error && !!before.data;
-          const touched = touchedSince(startSeq);
           update(key, (s) => ({
             ...s,
-            messages: mergeMessages(s.messages, preferLiveRows([...beforeRows, ...afterRows], s.messages, touched)),
+            messages: mergeMessages(s.messages, preferLive([...beforeRows, ...afterRows], s.messages, startSeq)),
             hasMore: s.loaded ? s.hasMore : nextHasMore(s.hasMore, before, MESSAGE_PAGE),
             anchorFound: true,
             loaded: s.loaded || beforeOk,
@@ -173,9 +190,8 @@ export function useMessages(target: Target) {
       if (!active) return;
       const fetched = ((recent.data ?? []) as Message[]).reverse();
       const ok = !recent.error && !!recent.data;
-      const touched = touchedSince(startSeq);
       update(key, (s) => {
-        const page = preferLiveRows(fetched, s.messages, touched);
+        const page = preferLive(fetched, s.messages, startSeq);
         if (s.fromCache && ok) {
           // Reopened chat: the fresh page replaces the remembered one for its time range.
           const r = refreshCachedPage(s.messages, page, MESSAGE_PAGE);
@@ -208,7 +224,7 @@ export function useMessages(target: Target) {
           if (!active) return;
           // replaces an existing id (clears an optimistic `pending` row) or inserts in order
           const row = payload.new as Message;
-          touch(row.id);
+          touch(row.id, row);
           update(key, (s) => ({ ...s, messages: mergeMessages(s.messages, [row]) }));
         }
       )
@@ -218,7 +234,7 @@ export function useMessages(target: Target) {
         (payload) => {
           if (!active) return;
           const row = payload.new as Message;
-          touch(row.id);
+          touch(row.id, row);
           update(key, (s) => ({ ...s, messages: s.messages.map((m) => (m.id === row.id ? row : m)) }));
         }
       )
@@ -228,7 +244,7 @@ export function useMessages(target: Target) {
         (payload) => {
           if (!active) return;
           const id = (payload.old as { id: string }).id;
-          touch(id);
+          markDeleted(id);
           update(key, (s) => ({ ...s, messages: s.messages.filter((m) => m.id !== id) }));
         }
       )

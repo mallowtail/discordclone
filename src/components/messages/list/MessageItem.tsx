@@ -18,10 +18,13 @@ import { LinkPreviews } from "@/components/messages/list/LinkPreviews";
 import { Avatar } from "@/components/user/profile/Avatar";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { ReportDialog } from "@/components/reports/ReportDialog";
 import { useProfilePopover } from "@/components/providers/ProfilePopoverProvider";
 import type { ReactionPill } from "@/lib/messages/reactions";
 import { ArrowBendUpLeft, PushPin } from "@phosphor-icons/react";
 import { toolbarRecents } from "@/lib/messages/recentEmojis";
+import { modDeleteErrorMessage } from "@/lib/reports/reports";
+import { BANNED_ACCOUNT_MESSAGE } from "@/lib/users/account";
 
 function snippet(m: Message): string {
   if (m.poll) return `📊 ${m.content}`;
@@ -47,6 +50,7 @@ export function MessageItem({
   serverId,
   authorColor,
   flash,
+  canModDelete = false,
 }: {
   msg: Message;
   authorName: string;
@@ -63,6 +67,8 @@ export function MessageItem({
   serverId?: string;
   authorColor?: string | null;
   flash?: boolean;
+  /** I hold Manage Messages in this server: Delete shows on other people's messages too. */
+  canModDelete?: boolean;
 }) {
   const { user, profile, refreshProfile } = useAuth();
   const supabase = useMemo(() => createClient(), []);
@@ -73,6 +79,7 @@ export function MessageItem({
   const [error, setError] = useState<string | null>(null);
   const [forwarding, setForwarding] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [reporting, setReporting] = useState(false);
 
   const highlighted = mentionsMe({
     content: msg.content,
@@ -114,8 +121,16 @@ export function MessageItem({
   }
 
   async function remove() {
-    const { error: err } = await supabase.from("messages").delete().eq("id", msg.id);
-    if (err) setError("Couldn't delete — try again");
+    if (!isMine) {
+      // A moderator (Manage Messages) deleting someone else's message: audited by the database.
+      const { error: err } = await supabase.rpc("delete_message_as_mod", { msg: msg.id });
+      if (err) setError(modDeleteErrorMessage(err.message));
+      return;
+    }
+    // `.select()` returns what was deleted: nothing back means the database filtered it out (for a
+    // banned account it does that silently), so don't pretend it worked.
+    const { data: gone, error: err } = await supabase.from("messages").delete().eq("id", msg.id).select("id");
+    if (err || !gone?.length) setError(profile?.banned_at ? BANNED_ACCOUNT_MESSAGE : "Couldn't delete — try again");
   }
 
   async function togglePin() {
@@ -256,6 +271,9 @@ export function MessageItem({
           pinned={msg.pinned}
           canEdit={isMine}
           editable={!msg.poll && !msg.sticker}
+          canDelete={isMine || (canModDelete && !!msg.channel_id)}
+          canReport={!isMine && !msg.pending}
+          onReport={() => setReporting(true)}
           onEdit={() => {
             setDraft(msg.content);
             setEditing(true);
@@ -264,10 +282,13 @@ export function MessageItem({
         />
       )}
       {forwarding && <ForwardDialog message={msg} onClose={() => setForwarding(false)} />}
+      {reporting && (
+        <ReportDialog kind="message" targetId={msg.id} inServer={!!msg.channel_id} onClose={() => setReporting(false)} />
+      )}
       {confirmingDelete && (
         <ConfirmDialog
           title="Delete message"
-          message="Delete this message?"
+          message={isMine ? "Delete this message?" : `Delete this message by ${authorName || "this person"}? It's recorded in the server's audit log.`}
           confirmLabel="Delete"
           destructive
           onConfirm={() => {

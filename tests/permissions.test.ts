@@ -2,11 +2,14 @@ import { describe, it, expect } from "vitest";
 import { PERMISSIONS, PERMISSION_LABELS, isPermission } from "@/lib/servers/permissions";
 
 describe("permissions", () => {
-  it("exposes the nine permission keys", () => {
+  it("exposes the ten permission keys", () => {
     expect(PERMISSIONS).toEqual([
       "manage_channels", "manage_server", "manage_server_icon", "manage_roles",
-      "kick_members", "ban_members", "timeout_members", "manage_messages", "manage_stickers",
+      "kick_members", "ban_members", "timeout_members", "manage_messages", "manage_stickers", "view_reports",
     ]);
+  });
+  it("labels View Reports", () => {
+    expect(PERMISSION_LABELS.view_reports).toBe("View Reports");
   });
   it("has a label for every permission", () => {
     for (const p of PERMISSIONS) {

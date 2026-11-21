@@ -15,18 +15,20 @@ Imports always use `@/…` (= `src/…`). Pure logic lives in `src/lib` and is u
   - `messages/list/` — MessageList, MessageItem, MessageContent (markdown, images, files, GIFs), StickerImage, MessageActions, ReactionBar, TypingIndicator, LinkPreviews
   - `messages/composer/` — MessageInput (+ menu, uploads queue, GIF/emoji), MentionAutocomplete, MessageDropZone, GifPicker, StickerPicker
   - `messages/polls/`, `messages/forwarding/`, `messages/pins/`
-  - `servers/layout/` — ServerRail, ServerSidebar, ServerIcon · `servers/settings/` — ServerSettings (full-screen tabs: Overview, Roles, Members, Invites, Bans, Stickers (StickersTab), Audit Log) · `servers/dialogs/` — add/create/invite · `servers/members/` · `servers/roles/` (RolesPanel) · `servers/search/`
+  - `servers/layout/` — ServerRail, ServerSidebar, ServerIcon · `servers/settings/` — ServerSettings (full-screen tabs: Overview, Roles, Members, Invites, Bans, Stickers (StickersTab), Reports (ReportsTab), Audit Log) · `servers/dialogs/` — add/create/invite · `servers/members/` · `servers/roles/` (RolesPanel) · `servers/search/`
   - `dms/sidebar/` — DmSidebar, NewDmDialog, PeoplePickerDialog, RequestBadge · `dms/groups/` — GroupIcon, GroupMembersPanel
   - `user/profile/` — Avatar, ProfileCard, FullProfileModal, FriendButton, StatusBubble, UserPanel · `user/settings/` — UserSettings + sections
   - `voice/` — VoiceBar, VoiceChannelRow, VoiceChannelView, CallButton, IncomingCall, ScreenShares (watch-to-download streams), micGate (voice activity / push-to-talk gate)
   - `auth/` — OAuthButtons
+  - `reports/` — ReportDialog (report a message / user / server), ReportCard (+ MarkHandledButton; shared by Server Settings → Reports and /admin)
 - `src/lib/`
   - `messages/` — validation, mentions, reactions, pins, polls, gifs, stickers, embeds (link → player), linkGuard, forward, grouping, messagePaging, sendAttachment, typing, unread, format, recentEmojis
   - `media/` — upload, imageOptimize, imagePlan, url
   - `servers/` — invite, permissions, roleHierarchy, roleColor(s), moderation, auditLog, server-icon
   - `search/` — search, searchQuery, searchSuggest
-  - `users/` — profile, oauthProfile, friends, conversations, dm, avatarColor, popover
+  - `users/` — profile, oauthProfile, friends, conversations, dm, avatarColor, popover, account (deleted + site-banned accounts: `shownProfile` dresses a banned profile as "Deleted User" — use it wherever other people's profiles are fetched)
   - `voice/` — rooms (LiveKit room names ↔ channel / conversation), settings (Settings → Voice, saved in localStorage), calls (stale-call rule)
+  - `reports/` — reports (reasons, error copy, snapshot display helpers)
   - `server/` — server-only: safeFetch (SSRF-safe fetch), linkPreview, linkMeta
   - `supabase/` — browser and server clients
 - `src/hooks/` — data hooks (useMessages, useConversations, useServers, useServerPermissions, useReactions, useTyping, …)

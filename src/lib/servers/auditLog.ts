@@ -2,12 +2,15 @@
 
 export type AuditEntry = {
   id: string;
-  action: "kick" | "ban" | "unban" | "timeout" | "timeout_removed" | "sticker_create" | "sticker_delete" | "ownership_transfer";
+  action:
+    | "kick" | "ban" | "unban" | "timeout" | "timeout_removed" | "sticker_create" | "sticker_delete" | "ownership_transfer"
+    | "message_delete";
   reason: string | null;
   until: string | null;
   created_at: string;
-  actor: { display_name: string } | null;
-  target: { display_name: string } | null;
+  /** `id` / `banned_at` are selected so banned people can be shown as "Deleted User" (shownProfile). */
+  actor: { id: string; display_name: string; banned_at?: string | null } | null;
+  target: { id: string; display_name: string; banned_at?: string | null } | null;
 };
 
 function duration(fromIso: string, toIso: string): string {
@@ -28,6 +31,7 @@ export function describeAuditEntry(e: AuditEntry): string {
     case "sticker_create": return `${actor} added the sticker “${e.reason ?? ""}”`;
     case "sticker_delete": return `${actor} deleted the sticker “${e.reason ?? ""}”`;
     case "ownership_transfer": return `${actor} made ${target} the owner`;
+    case "message_delete": return `${actor} deleted a message by ${target}`;
     case "timeout_removed": return `${actor} removed ${target}'s timeout`;
     case "timeout": return e.until ? `${actor} timed out ${target} for ${duration(e.created_at, e.until)}` : `${actor} timed out ${target}`;
   }

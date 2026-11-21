@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { isDeletedUsername } from "@/lib/users/account";
+import { BANNED_ACCOUNT_MESSAGE, isDeletedUsername, shownProfileOrNull } from "@/lib/users/account";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/components/providers/AuthProvider";
@@ -19,6 +19,10 @@ import { MemberRolesDialog } from "@/components/servers/members/MemberRolesDialo
 import { RolePill } from "@/components/servers/roles/RolePill";
 import { Avatar } from "@/components/user/profile/Avatar";
 import { StickersTab } from "@/components/servers/settings/StickersTab";
+import { ReportsTab } from "@/components/servers/settings/ReportsTab";
+import { ReportDialog } from "@/components/reports/ReportDialog";
+import { useServerReports } from "@/hooks/useServerReports";
+import { badgeLabel, openReportCount } from "@/lib/reports/reports";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { TypeToConfirmDialog } from "@/components/ui/TypeToConfirmDialog";
 import { useVoice } from "@/components/providers/VoiceProvider";
@@ -28,7 +32,7 @@ import { deleteServerErrorMessage, serverNameMatches, transferCandidates, transf
 import type { Profile, Server } from "@/types/db";
 import { Clock, MagnifyingGlass, ShieldStar, X } from "@phosphor-icons/react";
 
-type Tab = "overview" | "roles" | "members" | "invites" | "bans" | "stickers" | "audit";
+type Tab = "overview" | "roles" | "members" | "invites" | "bans" | "stickers" | "reports" | "audit";
 
 /**
  * Full-screen server settings with tabs down the side (like User Settings). Each tab only appears
@@ -49,6 +53,10 @@ export function ServerSettings({
   const canManageRoles = isOwner || has("manage_roles");
   const canModerateAny = isOwner || has("kick_members") || has("ban_members") || has("timeout_members");
   const canBan = isOwner || has("ban_members");
+  const canViewReports = isOwner || has("view_reports");
+  // Loaded here (not in the tab) so the tab's open-count badge shows from the start.
+  const { reports, error: reportsError, reload: reloadReports } = useServerReports(server.id, canViewReports);
+  const openReports = badgeLabel(reports ? openReportCount(reports) : 0);
 
   const tabs: { id: Tab; label: string; show: boolean }[] = [
     { id: "overview", label: "Overview", show: true },
@@ -57,6 +65,7 @@ export function ServerSettings({
     { id: "invites", label: "Invites", show: true },
     { id: "bans", label: "Bans", show: canBan },
     { id: "stickers", label: "Stickers", show: isOwner || has("manage_stickers") },
+    { id: "reports", label: "Reports", show: canViewReports },
     { id: "audit", label: "Audit Log", show: canModerateAny || canManageServer },
   ];
   const [tab, setTab] = useState<Tab>("overview");
@@ -71,7 +80,13 @@ export function ServerSettings({
             className={`w-full text-left text-body rounded-row px-3 py-1.5 min-h-11 md:min-h-0 ${
               tab === t.id ? "bg-surface-2 text-ink" : "text-muted hover:text-ink"
             }`}>
-            {t.label}
+            {t.id === "reports" && openReports ? (
+              <span className="flex items-center justify-between gap-2">
+                {t.label}
+                <span className="min-w-5 rounded-pill bg-danger px-1.5 text-center text-micro font-semibold leading-5 text-white"
+                  aria-label={`${openReports} open`}>{openReports}</span>
+              </span>
+            ) : t.label}
           </button>
         ))}
       </nav>
@@ -90,6 +105,9 @@ export function ServerSettings({
           {tab === "invites" && (<><Heading title="Invites" /><InvitesPanel server={server} isManager={canManageServer} /></>)}
           {tab === "bans" && <BansTab serverId={server.id} />}
           {tab === "stickers" && <StickersTab serverId={server.id} />}
+          {tab === "reports" && canViewReports && (
+            <ReportsTab server={server} reports={reports} error={reportsError} reload={reloadReports} onClose={onClose} />
+          )}
           {tab === "audit" && <AuditTab serverId={server.id} />}
         </div>
       </div>
@@ -113,7 +131,7 @@ function OverviewTab({ server, canManage, canChangeIcon, isOwner, onSaved, onClo
 }) {
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const fileRef = useRef<HTMLInputElement>(null);
   const [name, setName] = useState(server.name);
   const [description, setDescription] = useState(server.description ?? "");
@@ -121,6 +139,8 @@ function OverviewTab({ server, canManage, canChangeIcon, isOwner, onSaved, onClo
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState<{ ok: boolean; text: string } | null>(null);
   const [confirmLeave, setConfirmLeave] = useState(false);
+  const [leaveError, setLeaveError] = useState<string | null>(null);
+  const [reporting, setReporting] = useState(false);
   // Set by OwnerZone after a transfer; shown here because OwnerZone disappears once we're not the owner.
   const [ownerNotice, setOwnerNotice] = useState<string | null>(null);
   const dirty = name.trim() !== server.name || description.trim() !== (server.description ?? "") || isPublic !== server.is_public;
@@ -165,7 +185,11 @@ function OverviewTab({ server, canManage, canChangeIcon, isOwner, onSaved, onClo
 
   async function leave() {
     if (!user) return;
-    await supabase.from("server_members").delete().eq("server_id", server.id).eq("user_id", user.id);
+    setLeaveError(null);
+    // No row back means the database didn't remove it (e.g. a banned account): say so, don't pretend.
+    const { data: gone, error } = await supabase.from("server_members").delete()
+      .eq("server_id", server.id).eq("user_id", user.id).select("user_id");
+    if (error || !gone?.length) return setLeaveError(profile?.banned_at ? BANNED_ACCOUNT_MESSAGE : "Couldn't leave the server — try again.");
     onClose();
     router.replace("/channels/first");
   }
@@ -222,12 +246,20 @@ function OverviewTab({ server, canManage, canChangeIcon, isOwner, onSaved, onClo
       {!isOwner && (
         <section className="mt-10 border-t border-line pt-6">
           {ownerNotice && <p role="status" className="mb-3 text-meta text-online">{ownerNotice}</p>}
-          <button type="button" onClick={() => setConfirmLeave(true)}
-            className="rounded-control border border-danger/50 px-4 py-2 text-body font-medium text-danger hover:bg-danger/10">
-            Leave server
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <button type="button" onClick={() => setConfirmLeave(true)}
+              className="rounded-control border border-danger/50 px-4 py-2 text-body font-medium text-danger hover:bg-danger/10">
+              Leave server
+            </button>
+            <button type="button" onClick={() => setReporting(true)}
+              className="rounded-control border border-line px-4 py-2 text-body font-medium text-ink hover:bg-surface-2">
+              Report server
+            </button>
+          </div>
+          {leaveError && <p role="alert" className="mt-2 text-meta text-danger">{leaveError}</p>}
         </section>
       )}
+      {reporting && <ReportDialog kind="server" targetId={server.id} onClose={() => setReporting(false)} />}
       {confirmLeave && (
         <ConfirmDialog title="Leave server" message={`Leave ${server.name}?`} confirmLabel="Leave" destructive
           onConfirm={() => { setConfirmLeave(false); leave(); }} onClose={() => setConfirmLeave(false)} />
@@ -361,7 +393,7 @@ function MembersTab({ server }: { server: Server }) {
   const load = useCallback(async () => {
     const { data } = await supabase.from("server_members").select("user_id, joined_at, timeout_until, profiles(*)").eq("server_id", server.id);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    setMembers(((data ?? []) as any[]).map((m) => ({ user_id: m.user_id, joined_at: m.joined_at, timeout_until: m.timeout_until, profile: m.profiles }))
+    setMembers(((data ?? []) as any[]).map((m) => ({ user_id: m.user_id, joined_at: m.joined_at, timeout_until: m.timeout_until, profile: shownProfileOrNull(m.profiles as Profile | null) }))
       .sort((a, b) => (a.profile?.display_name ?? "").localeCompare(b.profile?.display_name ?? "", undefined, { sensitivity: "base" })));
   }, [supabase, server.id]);
 
@@ -443,7 +475,7 @@ function BansTab({ serverId }: { serverId: string }) {
     const { data } = await supabase.from("bans")
       .select("user_id, reason, created_at, profile:profiles!bans_user_id_fkey(*), by:profiles!bans_banned_by_fkey(*)")
       .eq("server_id", serverId).order("created_at", { ascending: false });
-    setBans((data as unknown as BanRow[] | null) ?? []);
+    setBans(((data as unknown as BanRow[] | null) ?? []).map((b) => ({ ...b, profile: shownProfileOrNull(b.profile), by: shownProfileOrNull(b.by) })));
   }, [supabase, serverId]);
 
   useEffect(() => {
@@ -496,15 +528,20 @@ function AuditTab({ serverId }: { serverId: string }) {
   useEffect(() => {
     let active = true;
     supabase.from("audit_log")
-      .select("id, action, reason, until, created_at, actor:profiles!audit_log_actor_id_fkey(display_name), target:profiles!audit_log_target_id_fkey(display_name)")
+      .select("id, action, reason, until, created_at, actor:profiles!audit_log_actor_id_fkey(id, display_name, banned_at), target:profiles!audit_log_target_id_fkey(id, display_name, banned_at)")
       .eq("server_id", serverId).order("created_at", { ascending: false }).limit(100)
-      .then(({ data }) => { if (active) setEntries((data as unknown as AuditEntry[] | null) ?? []); });
+      .then(({ data }) => {
+        if (!active) return;
+        // Banned people are named "Deleted User" here too.
+        const rows = ((data as unknown as AuditEntry[] | null) ?? []).map((e) => ({ ...e, actor: shownProfileOrNull(e.actor), target: shownProfileOrNull(e.target) }));
+        setEntries(rows);
+      });
     return () => { active = false; };
   }, [supabase, serverId]);
 
   return (
     <>
-      <Heading title="Audit Log" hint="Kicks, bans, unbans and timeouts — newest first (last 100)." />
+      <Heading title="Audit Log" hint="Kicks, bans, unbans, timeouts and deleted messages — newest first (last 100)." />
       {entries === null ? (
         <p className="text-body text-muted">Loading…</p>
       ) : entries.length === 0 ? (

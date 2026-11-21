@@ -5,14 +5,17 @@ import { createPortal } from "react-dom";
 import { useSafety } from "@/components/providers/SafetyProvider";
 import { useTopmostEscape } from "@/components/ui/overlayStack";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { ReportDialog } from "@/components/reports/ReportDialog";
 import { DotsThree } from "@phosphor-icons/react";
 
-/** The "⋯" menu on someone's profile: Ignore / Block, or undo them. */
+/** The "⋯" menu on someone's profile: Ignore / Block (or undo them) and Report user. Only shown for
+ *  other people's live accounts (the profile views hide it for yourself and deleted/banned accounts). */
 export function SafetyMenu({ userId, name }: { userId: string; name: string }) {
   const { kindOf, setKind, clear } = useSafety();
   const kind = kindOf(userId);
   const [open, setOpen] = useState(false);
   const [confirmBlock, setConfirmBlock] = useState(false);
+  const [reporting, setReporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const ref = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -63,10 +66,12 @@ export function SafetyMenu({ userId, name }: { userId: string; name: string }) {
               <button type="button" role="menuitem" className={`${item} text-danger`} onClick={() => { setOpen(false); setConfirmBlock(true); }}>Block</button>
             </>
           )}
+          <button type="button" role="menuitem" className={`${item} text-danger`} onClick={() => { setOpen(false); setReporting(true); }}>Report user</button>
         </div>,
         document.body
       )}
       {error && <p role="alert" className="absolute right-0 top-full mt-1 w-44 text-meta text-danger">{error}</p>}
+      {reporting && <ReportDialog kind="user" targetId={userId} onClose={() => setReporting(false)} />}
       {confirmBlock && (
         <ConfirmDialog
           title={`Block ${name}?`}

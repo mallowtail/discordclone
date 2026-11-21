@@ -1,6 +1,6 @@
 "use client";
 
-import { isDeletedProfile } from "@/lib/users/account";
+import { isDeletedProfile, shownProfile } from "@/lib/users/account";
 import { useSafety } from "@/components/providers/SafetyProvider";
 import { groupHiddenRuns, hiddenLabel } from "@/lib/users/safety";
 import { navCache } from "@/lib/cache/navCache";
@@ -12,6 +12,7 @@ import { startsNewGroup } from "@/lib/messages/grouping";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { useReactions } from "@/hooks/useReactions";
 import { useMemberRoleColors } from "@/hooks/useMemberRoleColors";
+import { useServerPermissions } from "@/hooks/useServerPermissions";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ChatCircleDots, EyeSlash } from "@phosphor-icons/react";
@@ -109,6 +110,9 @@ export const MessageList = memo(function MessageList({
   const reactionsByMessage = useReactions(messages.map((m) => m.id), user?.id ?? "");
   const byId = new Map(messages.map((m) => [m.id, m]));
   const { colorFor } = useMemberRoleColors(serverId);
+  // Manage Messages (owners always): Delete on anyone's message in this server's channels.
+  const { has: hasPerm, isOwner: ownsServer } = useServerPermissions(serverId ?? null);
+  const canModDelete = !!serverId && (ownsServer || hasPerm("manage_messages"));
   // `useMessages` always hands us the exact same `[]` instance on mount, and only ever replaces
   // it with a freshly built array (never mutates in place) once a real fetch or realtime event
   // lands — even when that result is itself zero messages. So comparing against that first
@@ -126,9 +130,11 @@ export const MessageList = memo(function MessageList({
     const missing = authors.filter((id) => !profiles[id] && !navCache.getProfile(id) && !attempted[id]);
     if (missing.length === 0) return;
     supabase.from("profiles").select("*").in("id", missing).then(({ data }) => {
+      // Site-banned authors show as "Deleted User", like deleted accounts.
+      const list = ((data as Profile[] | null) ?? []).map(shownProfile);
       const next: Record<string, Profile> = {};
-      (data as Profile[] | null)?.forEach((p) => (next[p.id] = p));
-      navCache.rememberProfiles((data as Profile[] | null) ?? []);
+      list.forEach((p) => (next[p.id] = p));
+      navCache.rememberProfiles(list);
       setProfiles((prev) => ({ ...prev, ...next }));
       setAttempted((prev) => ({ ...prev, ...Object.fromEntries(missing.map((id) => [id, true as const])) }));
     });
@@ -290,6 +296,7 @@ export const MessageList = memo(function MessageList({
               serverId={serverId}
               authorColor={colorFor(m.author_id)}
               flash={m.id === flashId}
+              canModDelete={canModDelete}
             />
           );
         })

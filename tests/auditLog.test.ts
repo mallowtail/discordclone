@@ -3,7 +3,7 @@ import { describeAuditEntry, type AuditEntry } from "@/lib/servers/auditLog";
 
 const e = (action: AuditEntry["action"], extra: Partial<AuditEntry> = {}): AuditEntry => ({
   id: "1", action, reason: null, until: null, created_at: "2026-11-21T10:00:00Z",
-  actor: { display_name: "Sam" }, target: { display_name: "Alex" }, ...extra,
+  actor: { id: "u1", display_name: "Sam" }, target: { id: "u2", display_name: "Alex" }, ...extra,
 });
 
 describe("describeAuditEntry", () => {
@@ -21,6 +21,9 @@ describe("describeAuditEntry", () => {
   it("names stickers by their reason", () => {
     expect(describeAuditEntry(e("sticker_create", { reason: "sad cat", target: null }))).toBe("Sam added the sticker “sad cat”");
     expect(describeAuditEntry(e("sticker_delete", { reason: "sad cat", target: null }))).toBe("Sam deleted the sticker “sad cat”");
+  });
+  it("describes a moderator deleting someone's message", () => {
+    expect(describeAuditEntry(e("message_delete"))).toBe("Sam deleted a message by Alex");
   });
   it("describes an ownership transfer", () => {
     expect(describeAuditEntry(e("ownership_transfer"))).toBe("Sam made Alex the owner");

@@ -8,7 +8,7 @@ import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { DotsThree, Clock, Prohibit, UserMinus } from "@phosphor-icons/react";
 
 export function MemberModMenu({
-  serverId, targetId, targetName, timedOut, canKick, canBan, canTimeout, onDone,
+  serverId, targetId, targetName, timedOut, canKick, canBan, canTimeout, onDone, label,
 }: {
   serverId: string;
   targetId: string;
@@ -18,6 +18,8 @@ export function MemberModMenu({
   canBan: boolean;
   canTimeout: boolean;
   onDone: () => void;
+  /** Show a labelled button (e.g. "Moderate user" on a report) instead of the bare ⋯ icon. */
+  label?: string;
 }) {
   const supabase = createClient();
   const [open, setOpen] = useState(false);
@@ -63,12 +65,19 @@ export function MemberModMenu({
 
   return (
     <div className="relative flex-none" ref={ref}>
-      <button onClick={() => setOpen((o) => !o)} title="Moderate" aria-label="Moderate"
-        className="text-muted hover:text-ink flex-none">
-        <DotsThree size={18} weight="bold" />
-      </button>
+      {label ? (
+        <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open}
+          className="rounded-control border border-line px-3 py-1.5 min-h-11 md:min-h-0 text-meta font-medium text-ink hover:bg-surface-2">
+          {label}
+        </button>
+      ) : (
+        <button onClick={() => setOpen((o) => !o)} title="Moderate" aria-label="Moderate"
+          className="text-muted hover:text-ink flex-none">
+          <DotsThree size={18} weight="bold" />
+        </button>
+      )}
       {open && (
-        <div className="absolute right-0 top-full mt-1 z-30 w-44 rounded-control border border-line bg-surface shadow-lg py-1 text-body">
+        <div className={`absolute ${label ? "left-0" : "right-0"} top-full mt-1 z-30 w-44 rounded-control border border-line bg-surface shadow-lg py-1 text-body`}>
           {banning ? (
             <div className="px-3 py-2">
               <p className="text-ink mb-1">Ban {targetName}?</p>

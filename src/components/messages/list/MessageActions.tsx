@@ -13,6 +13,7 @@ import {
   Smiley,
   DotsThree,
   DotsThreeVertical,
+  Flag,
 } from "@phosphor-icons/react";
 
 export function MessageActions({
@@ -25,7 +26,10 @@ export function MessageActions({
   canEdit,
   editable = true,
   onEdit,
+  canDelete = canEdit,
   onDelete,
+  canReport = false,
+  onReport,
 }: {
   recents: string[];
   onReact: (emoji: string) => void;
@@ -37,7 +41,12 @@ export function MessageActions({
   /** False for messages that can be deleted but not edited (polls). */
   editable?: boolean;
   onEdit: () => void;
+  /** Your own message, or someone else's when you have Manage Messages in this server. */
+  canDelete?: boolean;
   onDelete: () => void;
+  /** Someone else's message: "Report message". */
+  canReport?: boolean;
+  onReport?: () => void;
 }) {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerUp, setPickerUp] = useState(false);
@@ -219,30 +228,36 @@ export function MessageActions({
             <DotsThree size={18} weight="bold" />
           </button>
           {menuOpen && (
-            <div className="absolute top-full right-0 mt-2 z-20 w-40 rounded-xl border border-line bg-surface shadow-lg py-1">
+            <div className="absolute top-full right-0 mt-2 z-20 w-44 rounded-xl border border-line bg-surface shadow-lg py-1">
               <button
                 onClick={() => { setMenuOpen(false); setMobileOpen(false); onPin(); }}
                 className="w-full min-h-11 md:min-h-0 flex items-center gap-2 px-3 py-1.5 text-sm text-ink hover:bg-surface-2 text-left"
               >
                 <PushPin size={15} /> {pinned ? "Unpin" : "Pin"}
               </button>
-              {canEdit && (
-                <>
-                  {editable && (
-                    <button
-                      onClick={() => { setMenuOpen(false); setMobileOpen(false); onEdit(); }}
-                      className="w-full min-h-11 md:min-h-0 flex items-center gap-2 px-3 py-1.5 text-sm text-ink hover:bg-surface-2 text-left"
-                    >
-                      <PencilSimple size={15} /> Edit
-                    </button>
-                  )}
-                  <button
-                    onClick={() => { setMenuOpen(false); setMobileOpen(false); onDelete(); }}
-                    className="w-full min-h-11 md:min-h-0 flex items-center gap-2 px-3 py-1.5 text-sm text-danger hover:bg-surface-2 text-left"
-                  >
-                    <Trash size={15} /> Delete
-                  </button>
-                </>
+              {canEdit && editable && (
+                <button
+                  onClick={() => { setMenuOpen(false); setMobileOpen(false); onEdit(); }}
+                  className="w-full min-h-11 md:min-h-0 flex items-center gap-2 px-3 py-1.5 text-sm text-ink hover:bg-surface-2 text-left"
+                >
+                  <PencilSimple size={15} /> Edit
+                </button>
+              )}
+              {canReport && onReport && (
+                <button
+                  onClick={() => { setMenuOpen(false); setMobileOpen(false); onReport(); }}
+                  className="w-full min-h-11 md:min-h-0 flex items-center gap-2 px-3 py-1.5 text-sm text-ink hover:bg-surface-2 text-left"
+                >
+                  <Flag size={15} /> Report message
+                </button>
+              )}
+              {canDelete && (
+                <button
+                  onClick={() => { setMenuOpen(false); setMobileOpen(false); onDelete(); }}
+                  className="w-full min-h-11 md:min-h-0 flex items-center gap-2 px-3 py-1.5 text-sm text-danger hover:bg-surface-2 text-left"
+                >
+                  <Trash size={15} /> Delete
+                </button>
               )}
             </div>
           )}

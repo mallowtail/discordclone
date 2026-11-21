@@ -8,9 +8,11 @@
 //   Anyone else gets 401 / 403. Deployed with JWT verification off, since the cron call has no JWT.
 //
 // What it does (each step is an RPC in the database, service role only):
-//   cleanup_start → expire_uploads('age') → expire_uploads('pressure') → expire_messages,
-//   removing the files each step hands back (attachments bucket only, batches of up to 1000,
-//   then cleanup_files_done) → cleanup_finish (with the error, if any).
+//   cleanup_start → expire_uploads('age') → expire_uploads('pressure') → expire_messages
+//   → expire_orphans (0055), removing the files each step hands back (attachments bucket only,
+//   batches of up to 1000, then cleanup_files_done) → cleanup_finish. Every step runs even if an
+//   earlier one failed; the errors are joined into the run's error. If the run can't even start
+//   (other than "already running"), a failed run is recorded with cleanup_record_failure.
 //
 // Response: 200 {ok: true, run, files_deleted, ...} or {ok: false, error}.
 
@@ -86,38 +88,45 @@ Deno.serve(async (req) => {
   const who = await caller(req);
   if (!who) return reply(401, { ok: false, error: "not permitted" });
 
-  const { data: run, error: startError } = await admin.rpc("cleanup_start", {
-    trigger: who === "cron" ? "cron" : "admin",
-    actor: who === "cron" ? null : who.admin,
-  });
+  const trigger = who === "cron" ? "cron" : "admin";
+  const actor = who === "cron" ? null : who.admin;
+  const { data: run, error: startError } = await admin.rpc("cleanup_start", { trigger, actor });
   if (startError || !run) {
-    return reply(409, { ok: false, error: startError?.message ?? "could not start" });
+    const message = startError?.message ?? "could not start";
+    if (message.includes("already running")) {
+      return reply(409, { ok: false, error: message });
+    }
+    // Keep a record so /admin shows it (best effort: the database may be what failed).
+    await admin.rpc("cleanup_record_failure", { trigger, actor, error: `could not start: ${message}` });
+    return reply(500, { ok: false, error: `could not start: ${message}` });
   }
 
   let filesDeleted = 0;
-  let failure: string | null = null;
-  try {
-    const steps: [string, Record<string, unknown>][] = [
-      ["expire_uploads", { mode: "age", run }],
-      ["expire_uploads", { mode: "pressure", run }],
-      ["expire_messages", { run }],
-    ];
-    for (const [fn, args] of steps) {
+  const errors: string[] = [];
+  const steps: [string, string, Record<string, unknown>][] = [
+    ["age", "expire_uploads", { mode: "age", run }],
+    ["pressure", "expire_uploads", { mode: "pressure", run }],
+    ["messages", "expire_messages", { run }],
+    ["orphans", "expire_orphans", { run }],
+  ];
+  for (const [label, fn, args] of steps) {
+    try {
       const { data, error } = await admin.rpc(fn, args);
-      if (error) throw new Error(`${fn} failed: ${error.message}`);
+      if (error) throw new Error(error.message);
       filesDeleted += await removeFiles(run as string, (data ?? []) as Pending[]);
+    } catch (e) {
+      errors.push(`${label}: ${e instanceof Error ? e.message : String(e)}`);
     }
-  } catch (e) {
-    failure = e instanceof Error ? e.message : String(e);
   }
 
+  let failure: string | null = errors.length > 0 ? errors.join("; ") : null;
   const { error: finishError } = await admin.rpc("cleanup_finish", { run, error: failure });
-  if (finishError && !failure) failure = `cleanup_finish failed: ${finishError.message}`;
+  if (finishError) failure = [failure, `finish: ${finishError.message}`].filter(Boolean).join("; ");
 
   return reply(failure ? 500 : 200, {
     ok: !failure,
     run,
-    trigger: who === "cron" ? "cron" : "admin",
+    trigger,
     files_deleted: filesDeleted,
     error: failure,
   });

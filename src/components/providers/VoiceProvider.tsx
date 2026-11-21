@@ -7,7 +7,7 @@ import {
 } from "livekit-client";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { createClient } from "@/lib/supabase/client";
-import { parseRoom } from "@/lib/voice/rooms";
+import { parseRoom, roomForChannel } from "@/lib/voice/rooms";
 import { DEFAULT_SETTINGS, STORAGE_KEY, parseVoiceSettings, type VoiceSettings } from "@/lib/voice/settings";
 import { createMicGate, type MicGate } from "@/components/voice/micGate";
 
@@ -407,6 +407,28 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- signing out must end the call
     if (!user) void leave();
   }, [user, leave]);
+  // In a server's voice channel: if the channel goes away (the server was deleted, or we were
+  // removed from it), leave the call. Membership/server changes trigger a re-check that the channel
+  // is still visible to us; RLS hides it once we're out.
+  const channelId = (() => {
+    const ref = roomName ? parseRoom(roomName) : null;
+    return ref?.type === "channel" ? ref.id : null;
+  })();
+  useEffect(() => {
+    if (!channelId || !user) return;
+    const supabase = createClient();
+    const check = async () => {
+      const { data, error } = await supabase.from("channels").select("id").eq("id", channelId).maybeSingle();
+      if (!error && !data && roomRef.current?.name === roomForChannel(channelId)) void leave();
+    };
+    const sub = supabase
+      .channel(`voice-channel-watch:${channelId}`)
+      .on("postgres_changes", { event: "DELETE", schema: "public", table: "server_members" }, () => void check())
+      .on("postgres_changes", { event: "DELETE", schema: "public", table: "servers" }, () => void check())
+      .subscribe();
+    return () => { void supabase.removeChannel(sub); };
+  }, [channelId, user, leave]);
+
   useEffect(() => {
     const onUnload = () => { void roomRef.current?.disconnect(); };
     window.addEventListener("beforeunload", onUnload);

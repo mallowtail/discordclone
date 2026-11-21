@@ -19,6 +19,11 @@ import { RolePill } from "@/components/servers/roles/RolePill";
 import { Avatar } from "@/components/user/profile/Avatar";
 import { StickersTab } from "@/components/servers/settings/StickersTab";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { TypeToConfirmDialog } from "@/components/ui/TypeToConfirmDialog";
+import { useVoice } from "@/components/providers/VoiceProvider";
+import { storagePathFromPublicUrl } from "@/lib/media/url";
+import { roomForChannel } from "@/lib/voice/rooms";
+import { deleteServerErrorMessage, serverNameMatches, transferCandidates, transferErrorMessage } from "@/lib/servers/serverAdmin";
 import type { Profile, Server } from "@/types/db";
 import { Clock, MagnifyingGlass, ShieldStar, X } from "@phosphor-icons/react";
 
@@ -37,7 +42,7 @@ export function ServerSettings({
   onSaved: () => void;
   onClose: () => void;
 }) {
-  const { has, isOwner } = useServerPermissions(server.id);
+  const { has, isOwner, refresh: refreshPerms } = useServerPermissions(server.id);
   const canManageServer = isOwner || has("manage_server");
   const canManageRoles = isOwner || has("manage_roles");
   const canModerateAny = isOwner || has("kick_members") || has("ban_members") || has("timeout_members");
@@ -74,7 +79,10 @@ export function ServerSettings({
           <X size={18} weight="bold" />
         </button>
         <div className="p-5 md:p-8 max-w-2xl">
-          {tab === "overview" && <OverviewTab server={server} canManage={canManageServer} isOwner={isOwner} onSaved={onSaved} onClose={onClose} />}
+          {tab === "overview" && (
+            <OverviewTab server={server} canManage={canManageServer} isOwner={isOwner} onSaved={onSaved} onClose={onClose}
+              onOwnerChanged={() => { refreshPerms(); onSaved(); }} />
+          )}
           {tab === "roles" && (<><Heading title="Roles" hint="Higher roles can manage people with lower ones." /><RolesPanel serverId={server.id} /></>)}
           {tab === "members" && <MembersTab server={server} />}
           {tab === "invites" && (<><Heading title="Invites" /><InvitesPanel server={server} isManager={canManageServer} /></>)}
@@ -98,8 +106,8 @@ function Heading({ title, hint }: { title: string; hint?: string }) {
 
 const field = "w-full rounded-control bg-surface-2 border border-line px-3 py-2 text-body text-ink outline-none focus:border-accent disabled:opacity-60";
 
-function OverviewTab({ server, canManage, isOwner, onSaved, onClose }: {
-  server: Server; canManage: boolean; isOwner: boolean; onSaved: () => void; onClose: () => void;
+function OverviewTab({ server, canManage, isOwner, onSaved, onClose, onOwnerChanged }: {
+  server: Server; canManage: boolean; isOwner: boolean; onSaved: () => void; onClose: () => void; onOwnerChanged: () => void;
 }) {
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
@@ -205,6 +213,118 @@ function OverviewTab({ server, canManage, isOwner, onSaved, onClose }: {
       {confirmLeave && (
         <ConfirmDialog title="Leave server" message={`Leave ${server.name}?`} confirmLabel="Leave" destructive
           onConfirm={() => { setConfirmLeave(false); leave(); }} onClose={() => setConfirmLeave(false)} />
+      )}
+      {isOwner && <OwnerZone server={server} onOwnerChanged={onOwnerChanged} onClose={onClose} />}
+    </>
+  );
+}
+
+type Candidate = { user_id: string; profile: Profile | null };
+
+/** Owner only: pass the server on to another member, or delete it. */
+function OwnerZone({ server, onOwnerChanged, onClose }: { server: Server; onOwnerChanged: () => void; onClose: () => void }) {
+  const supabase = useMemo(() => createClient(), []);
+  const router = useRouter();
+  const voice = useVoice();
+  const [members, setMembers] = useState<Candidate[] | null>(null);
+  const [newOwner, setNewOwner] = useState("");
+  const [confirmTransfer, setConfirmTransfer] = useState(false);
+  const [transferBusy, setTransferBusy] = useState(false);
+  const [transferStatus, setTransferStatus] = useState<{ ok: boolean; text: string } | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    supabase.from("server_members").select("user_id, profiles(*)").eq("server_id", server.id).then(({ data }) => {
+      if (!active) return;
+      const rows = ((data ?? []) as unknown as { user_id: string; profiles: Profile | null }[])
+        .map((r) => ({ user_id: r.user_id, profile: r.profiles }));
+      setMembers(transferCandidates(rows, server.owner_id));
+    });
+    return () => { active = false; };
+  }, [supabase, server.id, server.owner_id]);
+
+  const chosen = members?.find((m) => m.user_id === newOwner) ?? null;
+
+  async function transfer() {
+    if (!chosen) return;
+    setConfirmTransfer(false);
+    setTransferBusy(true);
+    setTransferStatus(null);
+    const { error } = await supabase.rpc("transfer_server_ownership", { srv: server.id, new_owner: chosen.user_id });
+    setTransferBusy(false);
+    if (error) return setTransferStatus({ ok: false, text: transferErrorMessage(error.message) });
+    setTransferStatus({ ok: true, text: `${chosen.profile?.display_name ?? "They"} now owns ${server.name}.` });
+    setNewOwner("");
+    onOwnerChanged();
+  }
+
+  async function deleteServer(): Promise<string | null> {
+    // Files first, while we still have permission to remove them (it goes with the server).
+    const { data: stickers } = await supabase.from("stickers").select("path").eq("server_id", server.id);
+    const stickerPaths = ((stickers ?? []) as { path: string }[]).map((s) => s.path);
+    if (stickerPaths.length > 0) await supabase.storage.from("stickers").remove(stickerPaths);
+    const iconPath = storagePathFromPublicUrl(server.icon_url, "server-icons");
+    if (iconPath) await supabase.storage.from("server-icons").remove([iconPath]);
+    // In one of its voice channels? Leave before the channel disappears.
+    const { data: channels } = await supabase.from("channels").select("id").eq("server_id", server.id);
+    const rooms = new Set(((channels ?? []) as { id: string }[]).map((c) => roomForChannel(c.id)));
+    if (voice.room && rooms.has(voice.room)) await voice.leave();
+
+    const { error } = await supabase.rpc("delete_server", { srv: server.id });
+    if (error) return deleteServerErrorMessage(error.message);
+    onClose();
+    router.replace("/dms");
+    return null;
+  }
+
+  return (
+    <>
+      <section className="mt-10 border-t border-line pt-6">
+        <h3 className="text-body font-semibold text-ink">Transfer ownership</h3>
+        <p className="mt-1 text-meta text-muted">Make another member the owner. You&apos;ll stay in the server with your roles, but stop being the owner.</p>
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <select value={newOwner} onChange={(e) => { setNewOwner(e.target.value); setTransferStatus(null); }}
+            disabled={transferBusy || !members || members.length === 0} aria-label="New owner"
+            className="min-w-0 flex-1 rounded-control bg-surface-2 border border-line px-3 py-2 text-body text-ink outline-none focus:border-accent disabled:opacity-60">
+            <option value="">{members === null ? "Loading members…" : members.length === 0 ? "No one else is in this server" : "Choose a member…"}</option>
+            {(members ?? []).map((m) => (
+              <option key={m.user_id} value={m.user_id}>{m.profile?.display_name} (@{m.profile?.username})</option>
+            ))}
+          </select>
+          <button type="button" onClick={() => setConfirmTransfer(true)} disabled={!chosen || transferBusy}
+            className="rounded-control border border-line px-4 py-2 text-body font-medium text-ink hover:bg-surface-2 disabled:opacity-50">
+            {transferBusy ? "Transferring…" : "Transfer"}
+          </button>
+        </div>
+        {transferStatus && (
+          <p role={transferStatus.ok ? "status" : "alert"} className={`mt-2 text-meta ${transferStatus.ok ? "text-online" : "text-danger"}`}>
+            {transferStatus.text}
+          </p>
+        )}
+      </section>
+
+      <section className="mt-8 rounded-card border border-danger/40 p-4">
+        <h3 className="text-body font-semibold text-danger">Delete server</h3>
+        <p className="mt-1 text-meta text-muted">
+          Deletes {server.name} for everyone: its channels, messages, roles, invites and stickers. This can&apos;t be undone.
+        </p>
+        <button type="button" onClick={() => setConfirmDelete(true)}
+          className="mt-3 rounded-control bg-danger px-4 py-2 text-body font-medium text-white hover:bg-danger/90">
+          Delete server
+        </button>
+      </section>
+
+      {confirmTransfer && chosen && (
+        <ConfirmDialog title="Transfer ownership"
+          message={`Make ${chosen.profile?.display_name ?? "them"} the owner of ${server.name}? You'll stop being the owner, and only they can give it back.`}
+          confirmLabel="Transfer" destructive onConfirm={transfer} onClose={() => setConfirmTransfer(false)} />
+      )}
+      {confirmDelete && (
+        <TypeToConfirmDialog title="Delete server"
+          message={<>This deletes <strong className="text-ink">{server.name}</strong> and everything in it for everyone. It can&apos;t be undone.</>}
+          label="Type the server's name to confirm" confirmLabel="Delete server" busyLabel="Deleting…"
+          canConfirm={(v) => serverNameMatches(v, server.name)} onConfirm={deleteServer} onClose={() => setConfirmDelete(false)} />
       )}
     </>
   );

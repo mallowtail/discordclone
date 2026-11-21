@@ -45,7 +45,7 @@ export function ServerSidebar({ serverId }: { serverId: string }) {
   const [addingCategory, setAddingCategory] = useState(false);
   const [settings, setSettings] = useState(false);
   const [inviting, setInviting] = useState(false);
-  const { has } = useServerPermissions(serverId);
+  const { has, refresh: refreshPerms } = useServerPermissions(serverId);
   const { isUnread } = useUnread(serverId);
   const { closeDrawer } = useDrawer();
   const canManageChannels = has("manage_channels");
@@ -254,7 +254,7 @@ export function ServerSidebar({ serverId }: { serverId: string }) {
         />
       )}
       {settings && server && (
-        createPortal(<ServerSettings server={server} onSaved={load} onClose={() => setSettings(false)} />, document.body)
+        createPortal(<ServerSettings server={server} onSaved={() => { load(); refreshPerms(); }} onClose={() => setSettings(false)} />, document.body)
       )}
       {inviting && server && (
         <InviteDialog server={server} isManager={canManageServer} onClose={() => setInviting(false)} />

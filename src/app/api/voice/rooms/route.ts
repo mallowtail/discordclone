@@ -1,9 +1,9 @@
 import type { NextRequest } from "next/server";
-import { RoomServiceClient, TrackType } from "livekit-server-sdk";
+import { RoomServiceClient, TrackSource } from "livekit-server-sdk";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { roomForChannel } from "@/lib/voice/rooms";
 
-export type VoiceOccupant = { id: string; name: string; muted: boolean };
+export type VoiceOccupant = { id: string; name: string; muted: boolean; sharing: boolean };
 
 /**
  * Who is in each voice channel of a server (for the sidebar), straight from LiveKit so it can't be
@@ -36,7 +36,8 @@ export async function GET(request: NextRequest) {
     rooms[r.name.slice(3)] = people.map((p) => ({
       id: p.identity,
       name: p.name || "Someone",
-      muted: !p.tracks.some((t) => t.type === TrackType.AUDIO && !t.muted),
+      muted: !p.tracks.some((t) => t.source === TrackSource.MICROPHONE && !t.muted),
+      sharing: p.tracks.some((t) => t.source === TrackSource.SCREEN_SHARE),
     }));
   }));
   return Response.json({ rooms }, { headers: { "Cache-Control": "no-store" } });

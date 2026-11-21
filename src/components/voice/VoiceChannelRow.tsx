@@ -18,7 +18,7 @@ export function VoiceChannelRow({ channel, occupants, hasMargin }: { channel: Ch
   const room = roomForChannel(channel.id);
   const here = voice.room === room && voice.status !== "idle";
   const people = here
-    ? voice.participants.map((p) => ({ id: p.id, name: p.name, muted: p.muted, speaking: p.speaking }))
+    ? voice.participants.map((p) => ({ id: p.id, name: p.name, muted: p.muted, speaking: p.speaking, sharing: p.sharing }))
     : occupants.map((o) => ({ ...o, speaking: false }));
 
   return (
@@ -40,6 +40,7 @@ export function VoiceChannelRow({ channel, occupants, hasMargin }: { channel: Ch
               </span>
               <span className="truncate">{p.name}</span>
               {p.muted && <MicrophoneSlash size={12} weight="bold" className="flex-none text-danger/80" aria-label="Muted" />}
+              {p.sharing && <span className="ml-auto flex-none rounded-sm bg-danger px-1 text-micro font-bold text-white" title="Sharing their screen">LIVE</span>}
             </li>
           ))}
         </ul>

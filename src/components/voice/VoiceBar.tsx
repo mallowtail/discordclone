@@ -3,11 +3,11 @@
 import Link from "next/link";
 import { useVoice } from "@/components/providers/VoiceProvider";
 import { keyLabel } from "@/lib/voice/settings";
-import { Microphone, MicrophoneSlash, PhoneDisconnect, SpeakerHigh, SpeakerSlash } from "@phosphor-icons/react";
+import { Microphone, MicrophoneSlash, MonitorArrowUp, PhoneDisconnect, SpeakerHigh, SpeakerSlash } from "@phosphor-icons/react";
 
 /** Shown above your name while you're in (or joining) a voice room: where, and Mute/Deafen/Leave. */
 export function VoiceBar() {
-  const { status, label, href, selfMuted, deafened, canSpeak, error, toggleMute, toggleDeafen, leave, settings, pttHeld } = useVoice();
+  const { status, label, href, selfMuted, deafened, canSpeak, error, toggleMute, toggleDeafen, leave, settings, pttHeld, canShare, sharing, toggleShare } = useVoice();
   const ptt = status === "connected" && settings.mode === "ptt" && canSpeak && !selfMuted;
   if (status === "idle" && !error) return null;
 
@@ -40,6 +40,15 @@ export function VoiceBar() {
             <PhoneDisconnect size={18} weight="bold" />
           </button>
         </div>
+      )}
+      {status === "connected" && canShare && canSpeak && (
+        <button type="button" onClick={() => void toggleShare()} aria-pressed={sharing}
+          className={`mt-1.5 flex w-full items-center justify-center gap-1.5 rounded-control py-1.5 text-meta font-medium min-h-11 md:min-h-0 ${
+            sharing ? "bg-danger/15 text-danger hover:bg-danger/25" : "bg-surface-2 text-ink hover:bg-line"
+          }`}>
+          <MonitorArrowUp size={15} weight="bold" aria-hidden="true" />
+          {sharing ? "Stop sharing" : "Share screen"}
+        </button>
       )}
       {ptt && (
         <p className={`mt-1 px-1 text-micro ${pttHeld ? "text-online" : "text-muted"}`}>

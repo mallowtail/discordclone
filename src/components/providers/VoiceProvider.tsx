@@ -1,14 +1,23 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
-import { Room, RoomEvent, Track, type Participant, type RemoteTrack } from "livekit-client";
+import {
+  Room, RoomEvent, ScreenSharePresets, Track,
+  type Participant, type RemoteParticipant, type RemoteTrack, type RemoteTrackPublication,
+} from "livekit-client";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { createClient } from "@/lib/supabase/client";
 import { parseRoom } from "@/lib/voice/rooms";
 import { DEFAULT_SETTINGS, STORAGE_KEY, parseVoiceSettings, type VoiceSettings } from "@/lib/voice/settings";
 import { createMicGate, type MicGate } from "@/components/voice/micGate";
 
-export type VoiceParticipant = { id: string; name: string; speaking: boolean; muted: boolean; isLocal: boolean };
+export type VoiceParticipant = {
+  id: string; name: string; speaking: boolean; muted: boolean; isLocal: boolean;
+  /** Sharing their screen right now. */
+  sharing: boolean;
+  /** Their screen's video has arrived here (you're watching it, or it's your own). */
+  screenReady: boolean;
+};
 
 type Status = "idle" | "connecting" | "connected";
 
@@ -34,13 +43,33 @@ type Ctx = {
   updateSettings: (patch: Partial<VoiceSettings>) => void;
   /** Push to talk: the key is held right now. */
   pttHeld: boolean;
+  /** This browser can share its screen (computers; not phone browsers). */
+  canShare: boolean;
+  sharing: boolean;
+  toggleShare: () => Promise<void>;
+  /** Screens you've chosen to watch (participant ids). Streams only download while watched. */
+  watching: string[];
+  watch: (id: string) => void;
+  unwatch: (id: string) => void;
+  /** Show someone's screen in a <video>. Returns a cleanup function. */
+  attachScreen: (id: string, el: HTMLVideoElement) => () => void;
 };
 
 const VoiceContext = createContext<Ctx>({
   status: "idle", room: null, label: null, href: null, participants: [], selfMuted: false, deafened: false,
   canSpeak: true, error: null, join: async () => {}, leave: async () => {}, toggleMute: async () => {}, toggleDeafen: async () => {},
   settings: DEFAULT_SETTINGS, updateSettings: () => {}, pttHeld: false,
+  canShare: false, sharing: false, toggleShare: async () => {}, watching: [], watch: () => {}, unwatch: () => {},
+  attachScreen: () => () => {},
 });
+
+const SCREEN_SOURCES = [Track.Source.ScreenShare, Track.Source.ScreenShareAudio];
+
+/** Microphones always play; screens (video and their sound) only for people watching them. */
+function subscribeFor(pub: RemoteTrackPublication, watched: boolean) {
+  if (pub.source === Track.Source.Microphone) pub.setSubscribed(true);
+  else if (SCREEN_SOURCES.includes(pub.source)) pub.setSubscribed(watched);
+}
 
 /** Mute or unmute every remote audio element (deafen). */
 function setAllMuted(els: Set<HTMLMediaElement>, muted: boolean) {
@@ -69,6 +98,8 @@ function snapshot(room: Room): VoiceParticipant[] {
     speaking: speaking.has(p.identity),
     muted: !p.isMicrophoneEnabled,
     isLocal,
+    sharing: p.isScreenShareEnabled,
+    screenReady: !!p.getTrackPublication(Track.Source.ScreenShare)?.track,
   });
   return [one(room.localParticipant, true), ...[...room.remoteParticipants.values()].map((p) => one(p, false))];
 }
@@ -115,6 +146,14 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
   const gateRef = useRef<MicGate | null>(null);
   const gateCtxRef = useRef<AudioContext | null>(null);
   const [pttHeld, setPttHeld] = useState(false);
+  const [sharing, setSharing] = useState(false);
+  const [watching, setWatching] = useState<string[]>([]);
+  const watchingRef = useRef<string[]>([]);
+  const [canShare, setCanShare] = useState(false);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- browser feature check (not known during server render)
+    setCanShare(typeof navigator !== "undefined" && typeof navigator.mediaDevices?.getDisplayMedia === "function");
+  }, []);
 
   const reset = useCallback(() => {
     for (const el of audioEls.current) el.remove();
@@ -124,6 +163,9 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
     void gateCtxRef.current?.close().catch(() => {});
     gateCtxRef.current = null;
     setPttHeld(false);
+    setSharing(false);
+    watchingRef.current = [];
+    setWatching([]);
     setStatus("idle");
     setRoomName(null);
     setLabel(null);
@@ -178,6 +220,7 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
     const refresh = () => { if (roomRef.current === room) setParticipants(snapshot(room)); };
     room
       .on(RoomEvent.TrackSubscribed, (track: RemoteTrack) => {
+        refresh();
         if (track.kind !== Track.Kind.Audio) return;
         const el = track.attach();
         el.muted = deafRef.current;
@@ -185,7 +228,25 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
         document.body.appendChild(el);
         audioEls.current.add(el);
       })
+      .on(RoomEvent.TrackPublished, (pub: RemoteTrackPublication, p: RemoteParticipant) => {
+        subscribeFor(pub, watchingRef.current.includes(p.identity));
+        refresh();
+      })
+      .on(RoomEvent.TrackUnpublished, (pub: RemoteTrackPublication, p: RemoteParticipant) => {
+        // Their share ended: stop "watching" a screen that's gone.
+        if (pub.source === Track.Source.ScreenShare && watchingRef.current.includes(p.identity)) {
+          watchingRef.current = watchingRef.current.filter((x) => x !== p.identity);
+          setWatching(watchingRef.current);
+        }
+        refresh();
+      })
+      .on(RoomEvent.LocalTrackUnpublished, (pub) => {
+        // Includes the browser's own "Stop sharing" button.
+        if (pub.source === Track.Source.ScreenShare && roomRef.current === room) setSharing(false);
+        refresh();
+      })
       .on(RoomEvent.TrackUnsubscribed, (track: RemoteTrack) => {
+        refresh();
         for (const el of track.detach()) {
           el.remove();
           audioEls.current.delete(el);
@@ -200,7 +261,8 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
       .on(RoomEvent.Disconnected, () => { if (roomRef.current === room) reset(); });
 
     try {
-      await room.connect(url, body.token, { autoSubscribe: true });
+      await room.connect(url, body.token, { autoSubscribe: false });
+      for (const p of room.remoteParticipants.values()) for (const pub of p.trackPublications.values()) subscribeFor(pub, false);
       await room.startAudio().catch(() => {}); // called inside the click, so browsers allow sound
     } catch {
       reset();
@@ -276,6 +338,45 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
     if (next.outputId !== prev.outputId) void room.switchActiveDevice("audiooutput", next.outputId || "default").catch(() => {});
   }, []);
 
+  const toggleShare = useCallback(async () => {
+    const room = roomRef.current;
+    if (!room || !canSpeak) return;
+    const next = !room.localParticipant.isScreenShareEnabled;
+    try {
+      // 720p at 30 fps: smooth enough for games, light on the free plan's data allowance.
+      await room.localParticipant.setScreenShareEnabled(next, next ? {
+        audio: true, resolution: ScreenSharePresets.h720fps30.resolution, contentHint: "motion", selfBrowserSurface: "exclude",
+      } : undefined, next ? { screenShareEncoding: ScreenSharePresets.h720fps30.encoding } : undefined);
+      setSharing(next);
+      setError(null);
+    } catch (e) {
+      // Pressing "Cancel" in the browser's picker isn't an error.
+      if (!(e instanceof DOMException && e.name === "NotAllowedError")) setError("Couldn't share your screen — try again");
+      setSharing(room.localParticipant.isScreenShareEnabled);
+    }
+    setParticipants(snapshot(room));
+  }, [canSpeak]);
+
+  const setWatched = useCallback((id: string, on: boolean) => {
+    const list = watchingRef.current.filter((x) => x !== id);
+    watchingRef.current = on ? [...list, id] : list;
+    setWatching(watchingRef.current);
+    const p = roomRef.current?.remoteParticipants.get(id);
+    if (p) for (const pub of p.trackPublications.values()) subscribeFor(pub, on);
+  }, []);
+  const watch = useCallback((id: string) => setWatched(id, true), [setWatched]);
+  const unwatch = useCallback((id: string) => setWatched(id, false), [setWatched]);
+
+  const attachScreen = useCallback((id: string, el: HTMLVideoElement) => {
+    const room = roomRef.current;
+    const p = !room ? undefined : room.localParticipant.identity === id ? room.localParticipant : room.remoteParticipants.get(id);
+    const track = p?.getTrackPublication(Track.Source.ScreenShare)?.track;
+    if (!track) return () => {};
+    track.attach(el);
+    el.muted = true; // the screen's sound plays through the hidden audio elements (so deafen applies)
+    return () => { track.detach(el); };
+  }, []);
+
   // Push to talk: hold the key to send sound. Browsers only tell a site about keys while its tab is
   // the one in front, so letting go of the window also lets go of the key.
   const ptt = status === "connected" && settings.mode === "ptt";
@@ -315,7 +416,9 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
   const value = useMemo<Ctx>(() => ({
     status, room: roomName, label, href, participants, selfMuted, deafened, canSpeak, error,
     join, leave, toggleMute, toggleDeafen, settings, updateSettings, pttHeld,
-  }), [status, roomName, label, href, participants, selfMuted, deafened, canSpeak, error, join, leave, toggleMute, toggleDeafen, settings, updateSettings, pttHeld]);
+    canShare, sharing, toggleShare, watching, watch, unwatch, attachScreen,
+  }), [status, roomName, label, href, participants, selfMuted, deafened, canSpeak, error, join, leave, toggleMute, toggleDeafen,
+    settings, updateSettings, pttHeld, canShare, sharing, toggleShare, watching, watch, unwatch, attachScreen]);
 
   return <VoiceContext.Provider value={value}>{children}</VoiceContext.Provider>;
 }

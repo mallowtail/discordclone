@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { createClient } from "@/lib/supabase/client";
 import { useVoice } from "@/components/providers/VoiceProvider";
 import { useActiveCall } from "@/hooks/useActiveCall";
 import { roomForConversation } from "@/lib/voice/rooms";
@@ -17,8 +16,14 @@ export function CallButton({ conversationId, label, disabled }: { conversationId
 
   async function start() {
     setError(null);
-    const { error: err } = await createClient().rpc("start_call", { conv: conversationId });
-    if (err) return setError(err.message.includes("cannot call") ? "You can't call this person." : "Couldn't start the call — try again.");
+    // Through the server, which first clears out a call everyone left by closing the tab.
+    const res = await fetch("/api/voice/call", {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ conversation: conversationId, action: "start" }),
+    }).catch(() => null);
+    if (!res?.ok) {
+      const body = (await res?.json().catch(() => ({}))) as { error?: string } | undefined;
+      return setError(body?.error ?? "Couldn't start the call — try again.");
+    }
     await voice.join(room, label, `/dms/${conversationId}`);
   }
 

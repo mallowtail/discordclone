@@ -7,6 +7,9 @@ import type { Message } from "@/types/db";
 import { useConversation } from "@/hooks/useConversations";
 import { useSafety } from "@/components/providers/SafetyProvider";
 import { CallButton } from "@/components/voice/CallButton";
+import { ScreenShares } from "@/components/voice/ScreenShares";
+import { useVoice } from "@/components/providers/VoiceProvider";
+import { roomForConversation } from "@/lib/voice/rooms";
 import { GroupIcon } from "@/components/dms/groups/GroupIcon";
 import { GroupMembersPanel } from "@/components/dms/groups/GroupMembersPanel";
 import { HeaderButton, SidePanelOverlay, useOverlayMode } from "@/components/ui/SidePanel";
@@ -63,6 +66,8 @@ function DmView({ conversationId }: { conversationId: string }) {
   const { kindOf, clear } = useSafety();
   const dmOther = conv && !conv.isGroup ? conv.others[0] ?? null : null;
   const blockedOther = dmOther && kindOf(dmOther.id) === "block" ? dmOther : null;
+  const voice = useVoice();
+  const inThisCall = voice.status === "connected" && voice.room === roomForConversation(conversationId);
   const [replyTo, setReplyTo] = useState<Message | null>(null);
   const [replyToName, setReplyToName] = useState("");
   const [showPins, setShowPins] = useState(false);
@@ -148,6 +153,7 @@ function DmView({ conversationId }: { conversationId: string }) {
           />
         )}
       </header>
+      {inThisCall && <ScreenShares className="flex-none max-h-[60vh] overflow-y-auto border-b border-line p-3 justify-items-center" />}
       <div className="flex flex-1 min-h-0 relative">
         <MessageDropZone
           target={{ conversation_id: conversationId }}

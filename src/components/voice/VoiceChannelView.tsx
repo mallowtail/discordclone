@@ -6,6 +6,7 @@ import { useDrawer } from "@/components/providers/DrawerProvider";
 import { navCache } from "@/lib/cache/navCache";
 import { roomForChannel } from "@/lib/voice/rooms";
 import { Avatar } from "@/components/user/profile/Avatar";
+import { ScreenShares } from "@/components/voice/ScreenShares";
 import type { Channel } from "@/types/db";
 import { List, MicrophoneSlash, SpeakerHigh } from "@phosphor-icons/react";
 
@@ -30,7 +31,8 @@ export function VoiceChannelView({ channel }: { channel: Channel }) {
         <SpeakerHigh size={18} weight="bold" className="text-muted flex-none" aria-hidden="true" />
         <span className="truncate">{channel.name}</span>
       </header>
-      <div className="flex-1 flex flex-col items-center justify-center gap-6 p-6">
+      <div className="flex-1 flex flex-col items-center justify-center gap-6 p-6 overflow-y-auto">
+        {here && <ScreenShares className="w-full max-w-5xl" />}
         {people.length === 0 ? (
           <p className="text-body text-muted">No one&apos;s here yet.</p>
         ) : (
@@ -43,6 +45,7 @@ export function VoiceChannelView({ channel }: { channel: Channel }) {
                 <span className="flex items-center gap-1 max-w-full text-body text-ink">
                   <span className="truncate">{p.name}</span>
                   {p.muted && <MicrophoneSlash size={14} weight="bold" className="flex-none text-danger" aria-label="Muted" />}
+                  {p.sharing && <span className="flex-none rounded-sm bg-danger px-1 text-micro font-bold text-white">LIVE</span>}
                 </span>
               </li>
             ))}

@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
     canSubscribe: true,
     canPublish: canSpeak,
     canPublishData: false,
-    canPublishSources: [TrackSource.MICROPHONE], // screen sharing comes later
+    canPublishSources: [TrackSource.MICROPHONE, TrackSource.SCREEN_SHARE, TrackSource.SCREEN_SHARE_AUDIO],
   });
   return Response.json({ token: await token.toJwt(), canSpeak }, { headers: { "Cache-Control": "no-store" } });
 }

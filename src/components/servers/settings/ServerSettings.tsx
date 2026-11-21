@@ -17,11 +17,12 @@ import { MemberModMenu } from "@/components/servers/members/MemberModMenu";
 import { MemberRolesDialog } from "@/components/servers/members/MemberRolesDialog";
 import { RolePill } from "@/components/servers/roles/RolePill";
 import { Avatar } from "@/components/user/profile/Avatar";
+import { StickersTab } from "@/components/servers/settings/StickersTab";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import type { Profile, Server } from "@/types/db";
 import { Clock, MagnifyingGlass, ShieldStar, X } from "@phosphor-icons/react";
 
-type Tab = "overview" | "roles" | "members" | "invites" | "bans" | "audit";
+type Tab = "overview" | "roles" | "members" | "invites" | "bans" | "stickers" | "audit";
 
 /**
  * Full-screen server settings with tabs down the side (like User Settings). Each tab only appears
@@ -48,6 +49,7 @@ export function ServerSettings({
     { id: "members", label: "Members", show: true },
     { id: "invites", label: "Invites", show: true },
     { id: "bans", label: "Bans", show: canBan },
+    { id: "stickers", label: "Stickers", show: isOwner || has("manage_stickers") },
     { id: "audit", label: "Audit Log", show: canModerateAny || canManageServer },
   ];
   const [tab, setTab] = useState<Tab>("overview");
@@ -77,6 +79,7 @@ export function ServerSettings({
           {tab === "members" && <MembersTab server={server} />}
           {tab === "invites" && (<><Heading title="Invites" /><InvitesPanel server={server} isManager={canManageServer} /></>)}
           {tab === "bans" && <BansTab serverId={server.id} />}
+          {tab === "stickers" && <StickersTab serverId={server.id} />}
           {tab === "audit" && <AuditTab serverId={server.id} />}
         </div>
       </div>

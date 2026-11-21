@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
-  checkStickerFile, cleanStickerName, defaultStickerName, fitSticker, isAnimatedImage,
+  checkStickerFile, checkStickerSource, cleanStickerName, defaultStickerName, fitSticker, isAnimatedImage,
   isStickerUrl, stickerPublicUrl, groupStickersByServer, type Sticker,
 } from "@/lib/messages/stickers";
 
@@ -12,6 +12,19 @@ describe("checkStickerFile", () => {
     expect(checkStickerFile({ type: "image/jpeg", size: 10 })).toBe("Stickers must be PNG, GIF or WebP");
     expect(checkStickerFile({ type: "image/png", size: 524289 })).toBe("Stickers must be 512 KB or smaller");
     expect(checkStickerFile({ type: "image/webp", size: 524288 })).toBeNull();
+  });
+});
+
+describe("checkStickerSource", () => {
+  const MB = 1024 * 1024;
+  it("accepts any picture type up to 20 MB", () => {
+    expect(checkStickerSource({ type: "image/jpeg", size: 3 * MB })).toBeNull();
+    expect(checkStickerSource({ type: "image/heic", size: 1000 })).toBeNull();
+    expect(checkStickerSource({ type: "image/jpeg", size: 20 * MB })).toBeNull();
+  });
+  it("rejects non-pictures and huge pictures", () => {
+    expect(checkStickerSource({ type: "application/pdf", size: 10 })).toBe("That file isn't a picture");
+    expect(checkStickerSource({ type: "image/jpeg", size: 20 * MB + 1 })).toBe("That picture is too big (max 20 MB)");
   });
 });
 

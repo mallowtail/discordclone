@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { optimizeImage } from "@/lib/media/imageOptimize";
 import {
-  MAX_STICKERS, STICKER_MAX_BYTES, STICKER_STATIC_MAX, checkStickerFile, cleanStickerName, defaultStickerName,
+  MAX_STICKERS, STICKER_MAX_BYTES, STICKER_STATIC_MAX, checkStickerFile, checkStickerSource, cleanStickerName, defaultStickerName,
   fitSticker, isAnimatedImage, stickerExt, stickerPublicUrl, type Sticker,
 } from "@/lib/messages/stickers";
 
@@ -26,6 +26,55 @@ async function readSize(blob: Blob): Promise<{ width: number; height: number } |
     return size;
   } catch {
     return null;
+  }
+}
+
+const UNSUPPORTED = "This photo type isn't supported — save it as JPG or PNG first";
+
+/** Decode any picture the browser understands (SVG goes through an <img>). */
+async function decodeImage(file: File): Promise<{ src: CanvasImageSource; width: number; height: number; close: () => void } | null> {
+  try {
+    const bmp = await createImageBitmap(file, { imageOrientation: "from-image" });
+    if (bmp.width > 0 && bmp.height > 0) return { src: bmp, width: bmp.width, height: bmp.height, close: () => bmp.close() };
+    bmp.close();
+  } catch { /* fall through to <img> */ }
+  const url = URL.createObjectURL(file);
+  try {
+    const img = new Image();
+    img.src = url;
+    await img.decode();
+    // SVGs without a fixed size report 0; draw them at the sticker size.
+    const width = img.naturalWidth || STICKER_STATIC_MAX, height = img.naturalHeight || STICKER_STATIC_MAX;
+    return { src: img, width, height, close: () => URL.revokeObjectURL(url) };
+  } catch {
+    URL.revokeObjectURL(url);
+    return null;
+  }
+}
+
+/** Draw a picture to a canvas at most STICKER_STATIC_MAX on the long side and save it as WebP (PNG if WebP isn't available). Never JPEG, so transparency survives. */
+async function toStickerImage(file: File): Promise<File | null> {
+  const dec = await decodeImage(file);
+  if (!dec) return null;
+  try {
+    const scale = Math.min(1, STICKER_STATIC_MAX / Math.max(dec.width, dec.height));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(dec.width * scale));
+    canvas.height = Math.max(1, Math.round(dec.height * scale));
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return null;
+    ctx.imageSmoothingQuality = "high";
+    ctx.drawImage(dec.src, 0, 0, canvas.width, canvas.height);
+    const encode = (type: string) => new Promise<Blob | null>((r) => canvas.toBlob(r, type, 0.85));
+    let blob = await encode("image/webp");
+    if (!blob || blob.type !== "image/webp") blob = await encode("image/png");
+    if (!blob || (blob.type !== "image/webp" && blob.type !== "image/png")) return null;
+    const ext = stickerExt(blob.type);
+    return new File([blob], `${file.name.replace(/\.[^.]*$/, "") || "sticker"}.${ext}`, { type: blob.type });
+  } catch {
+    return null;
+  } finally {
+    dec.close();
   }
 }
 
@@ -74,10 +123,18 @@ export function StickersTab({ serverId }: { serverId: string }) {
     e.target.value = "";
     if (!picked) return;
     setError(null);
+    const srcErr = checkStickerSource(picked);
+    if (srcErr) return setError(srcErr);
     let file = picked;
-    // Static images that are too wide/tall or over 512 KB are re-encoded to PNG/WebP (keeps
-    // transparency, never JPEG); animated files are never re-encoded. The size is re-checked below.
-    if (stickerExt(picked.type)) {
+    if (!stickerExt(picked.type)) {
+      // JPEG, HEIC, AVIF, BMP, SVG…: converted to a small WebP/PNG here, since only those are stored.
+      const converted = await toStickerImage(picked);
+      if (!converted) return setError(UNSUPPORTED);
+      file = converted;
+    }
+    else {
+      // Static images that are too wide/tall or over 512 KB are re-encoded to PNG/WebP (keeps
+      // transparency, never JPEG); animated files are never re-encoded. The size is re-checked below.
       const animated = isAnimatedImage(new Uint8Array(await picked.arrayBuffer()), picked.type);
       if (!animated) {
         const out = await optimizeImage(picked, STICKER_STATIC_MAX, { reencodeAboveBytes: STICKER_MAX_BYTES, noJpeg: true });
@@ -158,14 +215,14 @@ export function StickersTab({ serverId }: { serverId: string }) {
           <h2 className="text-title font-semibold text-ink tracking-tight">
             Stickers <span className="text-meta font-normal text-muted">{count} / {MAX_STICKERS}</span>
           </h2>
-          <p className="mt-1 text-meta text-muted">PNG, GIF or WebP, 512 KB or smaller. Anyone in the server can send them.</p>
+          <p className="mt-1 text-meta text-muted">Any picture works; it&apos;s shrunk to fit (animated GIFs must be 512 KB or smaller). Anyone in the server can send them.</p>
         </div>
         <button type="button" onClick={() => fileRef.current?.click()} disabled={busy || full || !!pending || stickers === null}
           title={full ? `This server already has ${MAX_STICKERS} stickers` : undefined}
           className="flex-none rounded-control bg-accent hover:bg-accent-strong text-white text-body font-medium px-4 py-2 disabled:opacity-50">
           Upload
         </button>
-        <input ref={fileRef} type="file" accept="image/png,image/gif,image/webp" className="hidden" onChange={onPick} />
+        <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onPick} />
       </div>
 
       {error && <p role="alert" className="mb-3 text-meta text-danger">{error}</p>}

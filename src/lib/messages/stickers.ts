@@ -36,6 +36,17 @@ export const stickerPreview = "Sticker";
 
 const PUBLIC_PREFIX = "https://dpsikhsxdwigeuyonfch.supabase.co/storage/v1/object/public/stickers/";
 
+/** Biggest picture a person may pick; anything that isn't already a small sticker is converted in the browser. */
+export const STICKER_SOURCE_MAX_BYTES = 20 * 1024 * 1024;
+
+/** Check a picked file before converting it: any picture type, up to 20 MB. */
+export function checkStickerSource(f: { type: string; size: number }): string | null {
+  if (!f.type.startsWith("image/")) return "That file isn't a picture";
+  if (f.size > STICKER_SOURCE_MAX_BYTES) return "That picture is too big (max 20 MB)";
+  return null;
+}
+
+/** Check the file that will actually be uploaded (after any conversion). */
 export function checkStickerFile(f: { type: string; size: number }): string | null {
   if (!(STICKER_TYPES as readonly string[]).includes(f.type)) return "Stickers must be PNG, GIF or WebP";
   if (f.size > STICKER_MAX_BYTES) return "Stickers must be 512 KB or smaller";

@@ -73,9 +73,16 @@ and wants **site-admin powers** to deal with real trouble.
 5. **"Also delete all their messages"** removes every message they wrote — servers, DMs and groups —
    and the files attached to those messages. Their avatar stays (they come back as they were on
    unban); stickers they uploaded belong to the server and stay.
-6. **While banned,** they look like a normal user to others except a small "Banned" label on their
-   profile card. **Group chats they own pass to a random member** when they're banned (same rule as
-   leaving — no ownerless groups); servers are handed off or deleted by the admin as designed.
+6. **While banned, everyone else sees them as "Deleted User"** (grey avatar, no name, profile card
+   "This account was deleted.", no DM/friend/call actions — the same display as a deleted account),
+   **but nothing about them is erased**: their profile, messages (unless "Also delete all their
+   messages" was ticked) and files stay in the database as a record, in case they did something
+   really bad that should be documented (owner's decision). The admin page shows their real identity.
+   On unban they come back exactly as before. **Group chats they own pass to a random member** when
+   they're banned (no ownerless groups); servers are handed off or deleted by the admin as designed.
+   Implementation: a public `profiles.banned_at` (set/cleared only by `site_ban`/`site_unban`) that the
+   app treats like `deleted_at` for display; the admin's views ignore it. (Raw API reads of the
+   profile still return the stored fields — accepted for this app; the app never shows them.)
 
 ## Approaches (owner left the how to Claude; Claude chose A)
 

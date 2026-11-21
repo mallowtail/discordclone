@@ -12,7 +12,9 @@ type AuthState = {
    *  "no row yet" (a first OAuth sign-in that hasn't picked a username), not "still loading". */
   profileLoaded: boolean;
   loading: boolean;
-  signOut: () => Promise<void>;
+  /** `scope: "local"` only forgets this browser's session (used after deleting the account, when
+   *  there's nothing left on the server to sign out of). */
+  signOut: (opts?: { scope?: "global" | "local" }) => Promise<void>;
   refreshProfile: () => Promise<void>;
 };
 const AuthContext = createContext<AuthState>({
@@ -64,8 +66,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     refreshProfile();
   }, [refreshProfile, user]); // re-check on every sign-in / sign-out
 
-  const signOut = async () => {
-    await supabase.auth.signOut();
+  const signOut = async (opts?: { scope?: "global" | "local" }) => {
+    await supabase.auth.signOut(opts);
   };
 
   return (

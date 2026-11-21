@@ -19,6 +19,8 @@ function LoginPageContent() {
     params.get("error") === "oauth" ? "That sign-in didn't go through — try again" : null
   );
   const [busy, setBusy] = useState(false);
+  // Settings → Delete account ends here with ?deleted=1.
+  const deleted = params.get("deleted") === "1";
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -44,6 +46,7 @@ function LoginPageContent() {
         </div>
         <form onSubmit={onSubmit} className="bg-surface border border-line p-8 rounded-modal space-y-4">
           <h1 className="text-title font-semibold text-ink tracking-tight">Welcome back</h1>
+          {deleted && !error && <p role="status" className="text-online text-meta">Your account was deleted.</p>}
           {error && <p id="form-error" role="alert" className="text-danger text-meta">{error}</p>}
           <OAuthButtons next={next} onError={setError} />
           <OrDivider />

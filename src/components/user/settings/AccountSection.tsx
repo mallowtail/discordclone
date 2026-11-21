@@ -4,6 +4,8 @@ import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { TrustedSitesSection } from "@/components/user/settings/TrustedSitesSection";
+import { DeleteAccountSection } from "@/components/user/settings/DeleteAccountSection";
+import { verifyPassword } from "@/lib/users/account";
 
 const PASSWORD_MIN = 8;
 
@@ -26,11 +28,8 @@ export function AccountSection() {
 
     setBusy(true);
     // Verify the current password by re-authenticating.
-    const { error: reauthErr } = await supabase.auth.signInWithPassword({
-      email: user.email,
-      password: current,
-    });
-    if (reauthErr) {
+    const reauth = await verifyPassword(supabase, user.email, current);
+    if (!reauth.ok) {
       setBusy(false);
       return setError("Current password is incorrect");
     }
@@ -98,6 +97,7 @@ export function AccountSection() {
         </button>
       </div>
       <TrustedSitesSection />
+      <DeleteAccountSection />
     </div>
   );
 }

@@ -42,6 +42,14 @@ describe("cleanPath", () => {
     expect(cleanPath("/channels/0b0e1c1e-1111-4222-8333-944445555666")).toBe("/channels/0b0e1c1e-1111-4222-8333-944445555666");
     expect(cleanPath("/x".repeat(500)).length).toBe(ERROR_LIMITS.path);
   });
+
+  it("masks invite codes", () => {
+    expect(cleanPath("/invite/AbC123xy")).toBe("/invite/[code]");
+    expect(cleanPath("/invite/AbC123xy?ref=1#x")).toBe("/invite/[code]");
+    expect(cleanPath("/invite/AbC123xy/extra")).toBe("/invite/[code]/extra");
+    expect(cleanPath("/invite/")).toBe("/invite/");
+    expect(cleanPath("/channels/invite/abc")).toBe("/channels/invite/abc");
+  });
 });
 
 describe("errorParts", () => {

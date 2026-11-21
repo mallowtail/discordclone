@@ -42,9 +42,14 @@ function clean(text: string, max: number): string {
   return scrubErrorText(text.slice(0, max * 2)).slice(0, max).trim();
 }
 
-/** The page path only — never the query string or hash (`?next=…`, `#access_token=…`). */
+/**
+ * The page path only — never the query string or hash (`?next=…`, `#access_token=…`) — and
+ * invite codes masked (`/invite/<code>` → `/invite/[code]`). Same as the path rule in
+ * log_client_error (supabase/migrations/0059).
+ */
 export function cleanPath(path: string): string {
-  return clean(path.split(/[?#]/, 1)[0] ?? "", ERROR_LIMITS.path);
+  const bare = (path.split(/[?#]/, 1)[0] ?? "").replace(/^\/invite\/[^/]+/, "/invite/[code]");
+  return clean(bare, ERROR_LIMITS.path);
 }
 
 /** Message and stack from whatever was thrown (Errors, strings, `{ message }` objects, anything). */

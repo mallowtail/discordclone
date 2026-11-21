@@ -5,12 +5,14 @@ import { useRouter, usePathname } from "next/navigation";
 import { useTopmostEscape } from "@/components/ui/overlayStack";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { createClient } from "@/lib/supabase/client";
+import { stickerPreview } from "@/lib/messages/stickers";
 import type { Message, Profile } from "@/types/db";
 import { PushPin, X } from "@phosphor-icons/react";
 
 function snippet(m: Message): string {
   if (m.poll) return `📊 ${m.content}`;
   if (m.gif && !m.content) return "GIF";
+  if (m.sticker && !m.content) return stickerPreview;
   if (m.content) return m.content.length > 80 ? m.content.slice(0, 80) + "…" : m.content;
   if (m.image_url) return "Image";
   if (m.file_url) return "File";

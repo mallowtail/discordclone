@@ -12,6 +12,7 @@ import { MessageActions } from "@/components/messages/list/MessageActions";
 import { ReactionBar } from "@/components/messages/list/ReactionBar";
 import { ForwardDialog } from "@/components/messages/forwarding/ForwardDialog";
 import { ForwardedBlock } from "@/components/messages/forwarding/ForwardedBlock";
+import { stickerPreview } from "@/lib/messages/stickers";
 import { PollCard } from "@/components/messages/polls/PollCard";
 import { LinkPreviews } from "@/components/messages/list/LinkPreviews";
 import { Avatar } from "@/components/user/profile/Avatar";
@@ -25,6 +26,7 @@ import { toolbarRecents } from "@/lib/messages/recentEmojis";
 function snippet(m: Message): string {
   if (m.poll) return `📊 ${m.content}`;
   if (m.gif && !m.content) return "GIF";
+  if (m.sticker && !m.content) return stickerPreview;
   if (m.content) return m.content.length > 60 ? m.content.slice(0, 60) + "…" : m.content;
   if (m.image_url) return "Image";
   if (m.file_url) return "File";

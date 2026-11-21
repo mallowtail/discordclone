@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Avatar } from "@/components/user/profile/Avatar";
 import { isHttpUrl, withDownloadName } from "@/lib/media/url";
 import { fitGif, isKlipyMediaUrl } from "@/lib/messages/gifs";
+import { StickerImage } from "@/components/messages/list/StickerImage";
 import type { ForwardSnapshot, Profile } from "@/types/db";
 import { ArrowBendUpRight } from "@phosphor-icons/react";
 
@@ -46,6 +47,7 @@ export function ForwardedBlock({ snapshot }: { snapshot: ForwardSnapshot }) {
               width={box.width} height={box.height} loading="lazy" className="mt-1 rounded-row" style={{ width: box.width, height: box.height }} />
           );
         })()}
+        {snapshot.sticker && <StickerImage sticker={snapshot.sticker} max={120} />}
         {file && (
           <a href={withDownloadName(file, snapshot.file_name)} download={snapshot.file_name ?? undefined} target="_blank" rel="noreferrer" className="mt-1 inline-block text-accent text-body hover:underline">
             {snapshot.file_name ?? "Attachment"}

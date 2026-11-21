@@ -9,6 +9,7 @@ import { isHttpUrl, withDownloadName } from "@/lib/media/url";
 import { useLinkGuard } from "@/components/providers/LinkGuardProvider";
 import { fitGif, isKlipyMediaUrl } from "@/lib/messages/gifs";
 import { isPlainText } from "@/lib/messages/plainText";
+import { StickerImage } from "@/components/messages/list/StickerImage";
 import { GifFavoriteStar } from "@/components/messages/list/GifFavoriteStar";
 
 // Discord-style subset. Anything not in this list renders as plain text.
@@ -68,6 +69,7 @@ export const MessageContent = memo(function MessageContent({ msg }: { msg: Messa
           </span>
         );
       })()}
+      {msg.sticker && <StickerImage sticker={msg.sticker} />}
       {safeImage && (
         <a href={safeImage} target="_blank" rel="noopener noreferrer">
           <span className="mt-1 block h-80 max-w-sm overflow-hidden rounded-control bg-surface-2">
@@ -98,5 +100,7 @@ export const MessageContent = memo(function MessageContent({ msg }: { msg: Messa
   a.msg.image_url === b.msg.image_url &&
   a.msg.file_url === b.msg.file_url &&
   a.msg.file_name === b.msg.file_name &&
-  a.msg.gif?.url === b.msg.gif?.url
+  a.msg.gif?.url === b.msg.gif?.url &&
+  a.msg.sticker?.url === b.msg.sticker?.url &&
+  a.msg.sticker?.removed === b.msg.sticker?.removed
 );

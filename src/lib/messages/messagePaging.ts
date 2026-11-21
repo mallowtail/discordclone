@@ -65,10 +65,18 @@ export function reconcileNewestPage(
   if (page.length >= pageSize && confirmed.length > 0) {
     const pageIds = new Set(page.map((m) => m.id));
     if (!confirmed.some((m) => pageIds.has(m.id))) {
-      return { messages: mergeMessages(page, prev.filter((m) => m.pending)), replaced: true };
+      return { messages: mergeMessages(page, [...newerConfirmed(confirmed, page), ...prev.filter((m) => m.pending)]), replaced: true };
     }
   }
   return { messages: mergeMessages(prev, page), replaced: false };
+}
+
+/** Confirmed remembered rows newer than the page's newest row: they arrived live while it loaded. */
+function newerConfirmed(confirmed: Message[], page: Message[]): Message[] {
+  if (page.length === 0) return [];
+  const end = Date.parse(page[page.length - 1].created_at);
+  const pageIds = new Set(page.map((m) => m.id));
+  return confirmed.filter((m) => Date.parse(m.created_at) > end && !pageIds.has(m.id));
 }
 
 /**
@@ -86,12 +94,12 @@ export function refreshCachedPage(
   const confirmed = cached.filter((m) => !m.pending);
   const pageIds = new Set(page.map((m) => m.id));
   if (page.length >= pageSize && confirmed.length > 0 && !confirmed.some((m) => pageIds.has(m.id))) {
-    return { messages: mergeMessages(page, pending), replaced: true };
+    return { messages: mergeMessages(page, [...newerConfirmed(confirmed, page), ...pending]), replaced: true };
   }
   if (page.length === 0) return { messages: pending, replaced: false };
   const start = page[0].created_at;
   const older = confirmed.filter((m) => m.created_at < start);
-  return { messages: mergeMessages([...older, ...page], pending), replaced: false };
+  return { messages: mergeMessages([...older, ...page, ...newerConfirmed(confirmed, page)], pending), replaced: false };
 }
 
 /**

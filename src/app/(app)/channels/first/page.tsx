@@ -26,7 +26,7 @@ export default function FirstChannel() {
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
   const params = useSearchParams();
-  const { user, loading } = useAuth();
+  const { user, profile, profileLoaded, loading } = useAuth();
   const [state, setState] = useState<State>({ kind: "loading" });
   const [creating, setCreating] = useState(false);
   const emptyServerId = state.kind === "empty" ? state.serverId : null;
@@ -34,7 +34,8 @@ export default function FirstChannel() {
 
   useEffect(() => {
     if (loading) return;
-    if (!user) return;
+    // A person without a profile is left to the (app) layout's /welcome redirect.
+    if (!user || !profileLoaded || !profile) return;
     let active = true;
     (async () => {
       let serverId = params.get("server");
@@ -68,7 +69,7 @@ export default function FirstChannel() {
       );
     })();
     return () => { active = false; };
-  }, [supabase, user, loading, params, router]);
+  }, [supabase, user, profile, profileLoaded, loading, params, router]);
 
   if (state.kind === "missing") {
     return (

@@ -118,10 +118,12 @@ export function useMessages(target: Target) {
     const deletedIds = new Set<string>();
     const latestRows = new Map<string, Message>();
     const touch = (id: string, row?: Message) => {
+      if (loadsInFlight === 0) return; // nothing to protect: keep the maps from growing between loads
       touchedAt.set(id, ++eventSeq);
       if (row) latestRows.set(id, row);
     };
     const markDeleted = (id: string) => {
+      if (loadsInFlight === 0) return;
       touch(id);
       deletedIds.add(id);
       latestRows.delete(id);

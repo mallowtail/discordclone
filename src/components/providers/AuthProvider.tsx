@@ -62,13 +62,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!error) setProfileFor(current.id);
   }, [supabase]);
 
-  // This account was deleted from another device: forget the session here and say why.
+  // This account was deleted from another device, or banned by the site admin: forget the session
+  // here and say why. (A ban also ends the account's sessions on the server, so "local" is all
+  // that's left to do.)
   const pathname = usePathname();
   const deletedAt = profile?.deleted_at;
+  const bannedAt = profile?.banned_at;
   useEffect(() => {
-    if (!deletedAt || pathname.startsWith("/login")) return;
-    supabase.auth.signOut({ scope: "local" }).finally(() => { window.location.href = "/login?deleted=1"; });
-  }, [deletedAt, pathname, supabase]);
+    if ((!deletedAt && !bannedAt) || pathname.startsWith("/login")) return;
+    const dest = deletedAt ? "/login?deleted=1" : "/login?banned=1";
+    supabase.auth.signOut({ scope: "local" }).finally(() => { window.location.href = dest; });
+  }, [deletedAt, bannedAt, pathname, supabase]);
+
+  // An open tab finds out about a ban (or a deletion elsewhere) on its next check: when it comes
+  // back into view, and every few minutes while it's open.
+  useEffect(() => {
+    if (!user) return;
+    // Only the two flags, and the profile is reloaded only when one is set, so nothing re-renders
+    // on a routine check.
+    const recheck = async () => {
+      if (document.visibilityState !== "visible") return;
+      const { data } = await supabase.from("profiles").select("deleted_at, banned_at").eq("id", user.id).maybeSingle();
+      if (data?.deleted_at || data?.banned_at) refreshProfile();
+    };
+    document.addEventListener("visibilitychange", recheck);
+    const timer = window.setInterval(recheck, 3 * 60 * 1000);
+    return () => {
+      document.removeEventListener("visibilitychange", recheck);
+      window.clearInterval(timer);
+    };
+  }, [user, refreshProfile, supabase]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- shared public refetch; its null-user branch clears the old profile on sign-out

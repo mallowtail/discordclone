@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   BANNED_ACCOUNT_MESSAGE, DELETED_USER_NAME, OWNS_SERVERS_MESSAGE, deleteAccountErrorMessage, deletedUsernameFor, hasPasswordLogin,
-  isBannedAccountError, isBannedProfile, isDeletedProfile, isDeletedUsername, shownProfile, shownProfileOrNull,
+  isBannedAccountError, isBannedLoginError, isBannedProfile, isDeletedProfile, isDeletedUsername, shownProfile, shownProfileOrNull,
   usernameConfirmMatches, verifyPassword,
 } from "@/lib/users/account";
 
@@ -142,5 +142,19 @@ describe("banned accounts", () => {
     expect(shownProfileOrNull(null)).toBeNull();
     expect(shownProfileOrNull(undefined)).toBeNull();
     expect(shownProfileOrNull(banned)?.display_name).toBe(DELETED_USER_NAME);
+  });
+});
+
+describe("isBannedLoginError", () => {
+  it("spots GoTrue's banned refusal by code or message", () => {
+    expect(isBannedLoginError({ code: "user_banned", message: "anything" })).toBe(true);
+    expect(isBannedLoginError({ message: "User is banned" })).toBe(true);
+    expect(isBannedLoginError({ message: "user is BANNED" })).toBe(true);
+  });
+  it("ignores other errors", () => {
+    expect(isBannedLoginError({ code: "invalid_credentials", message: "Invalid login credentials" })).toBe(false);
+    expect(isBannedLoginError({ message: "You're banned from this server." })).toBe(false);
+    expect(isBannedLoginError(null)).toBe(false);
+    expect(isBannedLoginError(undefined)).toBe(false);
   });
 });

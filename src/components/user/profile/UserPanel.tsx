@@ -7,12 +7,17 @@ import { useProfilePopover } from "@/components/providers/ProfilePopoverProvider
 import { Avatar } from "@/components/user/profile/Avatar";
 import { UserSettings } from "@/components/user/settings/UserSettings";
 import { usePresence } from "@/hooks/usePresence";
-import { GearSix } from "@phosphor-icons/react";
+import { useIsSiteAdmin } from "@/hooks/useIsSiteAdmin";
+import { useDrawer } from "@/components/providers/DrawerProvider";
+import Link from "next/link";
+import { GearSix, ShieldCheck } from "@phosphor-icons/react";
 
 export function UserPanel() {
   const { user, profile } = useAuth();
   const { open } = useProfilePopover();
   const { isOnline } = usePresence();
+  const isAdmin = useIsSiteAdmin();
+  const { closeDrawer } = useDrawer();
   const [showSettings, setShowSettings] = useState(false);
   const online = !!user && isOnline(user.id);
   const displayName = profile?.display_name ?? user?.email ?? "you";
@@ -38,6 +43,18 @@ export function UserPanel() {
           />
           <span className="text-ink truncate">{displayName}</span>
         </button>
+        {/* Only the site admin (checked once per session) gets the way into /admin. */}
+        {isAdmin && (
+          <Link
+            href="/admin"
+            onClick={closeDrawer}
+            aria-label="Admin"
+            title="Admin"
+            className="flex-none p-1 text-muted hover:text-ink"
+          >
+            <ShieldCheck size={18} />
+          </Link>
+        )}
         <button
           onClick={() => setShowSettings(true)}
           aria-label="User settings"

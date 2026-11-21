@@ -16,6 +16,17 @@ export function isBannedAccountError(message: string | null | undefined): boolea
   return !!message?.includes("this account has been banned");
 }
 
+/**
+ * True when Supabase Auth refused a sign-in because the account is banned (`auth.users.banned_until`,
+ * set by `site_ban`): GoTrue answers with the code `user_banned` and the message "User is banned".
+ * Also used for the OAuth return, where it arrives as `error_code` / `error_description`.
+ */
+export function isBannedLoginError(err: { message?: string | null; code?: string | null } | null | undefined): boolean {
+  if (!err) return false;
+  if (err.code === "user_banned") return true;
+  return /\buser is banned\b/i.test(err.message ?? "");
+}
+
 type AccountState = { deleted_at?: string | null; banned_at?: string | null };
 
 /** True while the account is site-banned (`profiles.banned_at`, set only by the site admin). */

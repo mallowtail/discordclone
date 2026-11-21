@@ -8,6 +8,7 @@ import { safeNext } from "@/lib/servers/invite";
 import { OAuthButtons, OrDivider } from "@/components/auth/OAuthButtons";
 import { BotCheckField, useBotCheck } from "@/components/auth/Turnstile";
 import { CAPTCHA_FAILED_MESSAGE, isCaptchaError } from "@/lib/users/captcha";
+import { BANNED_ACCOUNT_MESSAGE, isBannedLoginError } from "@/lib/users/account";
 
 function LoginPageContent() {
   const supabase = createClient();
@@ -16,9 +17,11 @@ function LoginPageContent() {
   const next = safeNext(params.get("next"));
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  // /auth/callback sends people back here with ?error=oauth if the provider round-trip failed.
+  // /auth/callback sends people back here with ?error=oauth if the provider round-trip failed, and
+  // ?banned=1 when Supabase refused a banned account (the app also signs banned people out to here).
   const [error, setError] = useState<string | null>(() =>
-    params.get("error") === "oauth" ? "That sign-in didn't go through — try again" : null
+    params.get("banned") === "1" ? BANNED_ACCOUNT_MESSAGE
+      : params.get("error") === "oauth" ? "That sign-in didn't go through — try again" : null
   );
   const [busy, setBusy] = useState(false);
   const bot = useBotCheck();
@@ -34,7 +37,10 @@ function LoginPageContent() {
     });
     setBusy(false);
     bot.reset(); // tokens are single-use
-    if (err) return setError(isCaptchaError(err.message) ? CAPTCHA_FAILED_MESSAGE : "Wrong email or password");
+    if (err) {
+      if (isBannedLoginError(err)) return setError(BANNED_ACCOUNT_MESSAGE);
+      return setError(isCaptchaError(err.message) ? CAPTCHA_FAILED_MESSAGE : "Wrong email or password");
+    }
     router.push(next);
   }
 

@@ -10,6 +10,7 @@ import { ServerIcon } from "@/components/servers/layout/ServerIcon";
 import { ServerSettings } from "@/components/servers/settings/ServerSettings";
 import { TypeToConfirmDialog } from "@/components/ui/TypeToConfirmDialog";
 import { storagePathFromPublicUrl } from "@/lib/media/url";
+import { removeStorageFiles } from "@/lib/media/upload";
 import {
   OWNS_SERVERS_MESSAGE, deleteAccountErrorMessage, hasPasswordLogin, usernameConfirmMatches, verifyPassword,
 } from "@/lib/users/account";
@@ -55,7 +56,8 @@ export function DeleteAccountSection() {
     // The database keeps storage files; remove our own avatar first (an outside Discord/GitHub
     // picture has no file here).
     const avatarPath = storagePathFromPublicUrl(profile?.avatar_url, "avatars");
-    if (avatarPath) await supabase.storage.from("avatars").remove([avatarPath]);
+    // Best effort: a failure is logged and the deletion carries on.
+    if (avatarPath) await removeStorageFiles("avatars", [avatarPath]);
 
     const { error } = await supabase.rpc("delete_my_account");
     if (error) {

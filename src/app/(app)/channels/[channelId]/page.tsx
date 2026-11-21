@@ -71,6 +71,22 @@ export default function ChannelPage({ params }: { params: Promise<{ channelId: s
     return () => { active = false; };
   }, [supabase, id]);
 
+  // The server was deleted while we're looking at it: show "Server not found" (the open-a-server
+  // page says that for a server that's gone). DELETE events can't be filtered and carry only the
+  // primary key, so listen to all of them and compare ids.
+  const router = useRouter();
+  const serverId = channel?.server_id ?? null;
+  useEffect(() => {
+    if (!serverId) return;
+    const sub = supabase
+      .channel(`server-deleted:${serverId}:${id}`)
+      .on("postgres_changes", { event: "DELETE", schema: "public", table: "servers" }, (payload) => {
+        if ((payload.old as { id?: string }).id === serverId) router.replace(`/channels/first?server=${serverId}`);
+      })
+      .subscribe();
+    return () => { void supabase.removeChannel(sub); };
+  }, [supabase, serverId, id, router]);
+
   if (missing) {
     return (
       <div className="flex-1 flex items-center justify-center">

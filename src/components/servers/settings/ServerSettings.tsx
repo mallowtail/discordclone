@@ -7,7 +7,7 @@ import { useAuth } from "@/components/providers/AuthProvider";
 import { useServerPermissions } from "@/hooks/useServerPermissions";
 import { useMemberRoleColors } from "@/hooks/useMemberRoleColors";
 import { useTopmostEscape } from "@/components/ui/overlayStack";
-import { uploadServerIcon } from "@/lib/media/upload";
+import { removeStorageFiles, uploadServerIcon } from "@/lib/media/upload";
 import { canModerate } from "@/lib/servers/moderation";
 import { describeAuditEntry, type AuditEntry } from "@/lib/servers/auditLog";
 import { ServerIcon } from "@/components/servers/layout/ServerIcon";
@@ -119,6 +119,8 @@ function OverviewTab({ server, canManage, isOwner, onSaved, onClose, onOwnerChan
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState<{ ok: boolean; text: string } | null>(null);
   const [confirmLeave, setConfirmLeave] = useState(false);
+  // Set by OwnerZone after a transfer; shown here because OwnerZone disappears once we're not the owner.
+  const [ownerNotice, setOwnerNotice] = useState<string | null>(null);
   const dirty = name.trim() !== server.name || description.trim() !== (server.description ?? "") || isPublic !== server.is_public;
 
   async function save() {
@@ -204,6 +206,7 @@ function OverviewTab({ server, canManage, isOwner, onSaved, onClose, onOwnerChan
 
       {!isOwner && (
         <section className="mt-10 border-t border-line pt-6">
+          {ownerNotice && <p role="status" className="mb-3 text-meta text-online">{ownerNotice}</p>}
           <button type="button" onClick={() => setConfirmLeave(true)}
             className="rounded-control border border-danger/50 px-4 py-2 text-body font-medium text-danger hover:bg-danger/10">
             Leave server
@@ -214,7 +217,10 @@ function OverviewTab({ server, canManage, isOwner, onSaved, onClose, onOwnerChan
         <ConfirmDialog title="Leave server" message={`Leave ${server.name}?`} confirmLabel="Leave" destructive
           onConfirm={() => { setConfirmLeave(false); leave(); }} onClose={() => setConfirmLeave(false)} />
       )}
-      {isOwner && <OwnerZone server={server} onOwnerChanged={onOwnerChanged} onClose={onClose} />}
+      {isOwner && (
+        <OwnerZone server={server} onClose={onClose}
+          onTransferred={(text) => { setOwnerNotice(text); onOwnerChanged(); }} />
+      )}
     </>
   );
 }
@@ -222,7 +228,7 @@ function OverviewTab({ server, canManage, isOwner, onSaved, onClose, onOwnerChan
 type Candidate = { user_id: string; profile: Profile | null };
 
 /** Owner only: pass the server on to another member, or delete it. */
-function OwnerZone({ server, onOwnerChanged, onClose }: { server: Server; onOwnerChanged: () => void; onClose: () => void }) {
+function OwnerZone({ server, onTransferred, onClose }: { server: Server; onTransferred: (notice: string) => void; onClose: () => void }) {
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
   const voice = useVoice();
@@ -230,7 +236,7 @@ function OwnerZone({ server, onOwnerChanged, onClose }: { server: Server; onOwne
   const [newOwner, setNewOwner] = useState("");
   const [confirmTransfer, setConfirmTransfer] = useState(false);
   const [transferBusy, setTransferBusy] = useState(false);
-  const [transferStatus, setTransferStatus] = useState<{ ok: boolean; text: string } | null>(null);
+  const [transferError, setTransferError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   useEffect(() => {
@@ -250,22 +256,22 @@ function OwnerZone({ server, onOwnerChanged, onClose }: { server: Server; onOwne
     if (!chosen) return;
     setConfirmTransfer(false);
     setTransferBusy(true);
-    setTransferStatus(null);
+    setTransferError(null);
     const { error } = await supabase.rpc("transfer_server_ownership", { srv: server.id, new_owner: chosen.user_id });
     setTransferBusy(false);
-    if (error) return setTransferStatus({ ok: false, text: transferErrorMessage(error.message) });
-    setTransferStatus({ ok: true, text: `${chosen.profile?.display_name ?? "They"} now owns ${server.name}.` });
+    if (error) return setTransferError(transferErrorMessage(error.message));
     setNewOwner("");
-    onOwnerChanged();
+    onTransferred(`${chosen.profile?.display_name ?? "They"} now owns ${server.name}.`);
   }
 
   async function deleteServer(): Promise<string | null> {
     // Files first, while we still have permission to remove them (it goes with the server).
     const { data: stickers } = await supabase.from("stickers").select("path").eq("server_id", server.id);
     const stickerPaths = ((stickers ?? []) as { path: string }[]).map((s) => s.path);
-    if (stickerPaths.length > 0) await supabase.storage.from("stickers").remove(stickerPaths);
+    // Best effort: a file that won't go is logged by removeStorageFiles, and the deletion carries on.
+    await removeStorageFiles("stickers", stickerPaths);
     const iconPath = storagePathFromPublicUrl(server.icon_url, "server-icons");
-    if (iconPath) await supabase.storage.from("server-icons").remove([iconPath]);
+    if (iconPath) await removeStorageFiles("server-icons", [iconPath]);
     // In one of its voice channels? Leave before the channel disappears.
     const { data: channels } = await supabase.from("channels").select("id").eq("server_id", server.id);
     const rooms = new Set(((channels ?? []) as { id: string }[]).map((c) => roomForChannel(c.id)));
@@ -284,7 +290,7 @@ function OwnerZone({ server, onOwnerChanged, onClose }: { server: Server; onOwne
         <h3 className="text-body font-semibold text-ink">Transfer ownership</h3>
         <p className="mt-1 text-meta text-muted">Make another member the owner. You&apos;ll stay in the server with your roles, but stop being the owner.</p>
         <div className="mt-3 flex flex-wrap items-center gap-2">
-          <select value={newOwner} onChange={(e) => { setNewOwner(e.target.value); setTransferStatus(null); }}
+          <select value={newOwner} onChange={(e) => { setNewOwner(e.target.value); setTransferError(null); }}
             disabled={transferBusy || !members || members.length === 0} aria-label="New owner"
             className="min-w-0 flex-1 rounded-control bg-surface-2 border border-line px-3 py-2 text-body text-ink outline-none focus:border-accent disabled:opacity-60">
             <option value="">{members === null ? "Loading members…" : members.length === 0 ? "No one else is in this server" : "Choose a member…"}</option>
@@ -297,11 +303,7 @@ function OwnerZone({ server, onOwnerChanged, onClose }: { server: Server; onOwne
             {transferBusy ? "Transferring…" : "Transfer"}
           </button>
         </div>
-        {transferStatus && (
-          <p role={transferStatus.ok ? "status" : "alert"} className={`mt-2 text-meta ${transferStatus.ok ? "text-online" : "text-danger"}`}>
-            {transferStatus.text}
-          </p>
-        )}
+        {transferError && <p role="alert" className="mt-2 text-meta text-danger">{transferError}</p>}
       </section>
 
       <section className="mt-8 rounded-card border border-danger/40 p-4">

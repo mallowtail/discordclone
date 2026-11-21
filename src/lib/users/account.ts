@@ -13,6 +13,12 @@ export function isDeletedProfile(p: { deleted_at?: string | null } | null | unde
   return !!p?.deleted_at;
 }
 
+/** True for a tombstone's username (`deleted_…`). Live accounts can't have one (the database's
+ *  profiles_username_reserved check), so this works where only the username is at hand, e.g. search results. */
+export function isDeletedUsername(username: string | null | undefined): boolean {
+  return !!username && /^deleted_/i.test(username);
+}
+
 type AuthUserLike = {
   identities?: { provider: string }[] | null;
   app_metadata?: { provider?: string; providers?: string[] };

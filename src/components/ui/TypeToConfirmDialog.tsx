@@ -41,12 +41,16 @@ export function TypeToConfirmDialog({
     if (!ready) return;
     setBusy(true);
     setError(null);
-    const err = await onConfirm(value);
-    // On success the caller usually unmounts us; only touch state when we're staying open.
-    if (err) {
-      setError(err);
+    let err: string | null;
+    try {
+      err = await onConfirm(value);
+    } catch (e) {
+      console.error(e);
+      err = "Something went wrong — try again.";
+    } finally {
       setBusy(false);
     }
+    if (err) setError(err);
   }
 
   return (

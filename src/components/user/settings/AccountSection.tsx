@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { TrustedSitesSection } from "@/components/user/settings/TrustedSitesSection";
 import { DeleteAccountSection } from "@/components/user/settings/DeleteAccountSection";
-import { verifyPassword } from "@/lib/users/account";
+import { hasPasswordLogin, verifyPassword } from "@/lib/users/account";
 
 const PASSWORD_MIN = 8;
 
@@ -57,6 +57,9 @@ export function AccountSection() {
       </div>
 
       <h3 className="text-body font-semibold text-ink mb-3">Change password</h3>
+      {user && !hasPasswordLogin(user) ? (
+        <p className="text-muted text-body">You sign in with Discord or GitHub, so there&apos;s no password to change.</p>
+      ) : (<>
       {error && <p className="text-danger text-body mb-3">{error}</p>}
       {done && <p className="text-online text-body mb-3">Password updated</p>}
 
@@ -96,6 +99,7 @@ export function AccountSection() {
           {busy ? "Updating…" : "Update password"}
         </button>
       </div>
+      </>)}
       <TrustedSitesSection />
       <DeleteAccountSection />
     </div>

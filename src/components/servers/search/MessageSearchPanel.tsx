@@ -7,6 +7,7 @@ import { Pagination } from "@/components/servers/search/Pagination";
 import { Avatar } from "@/components/user/profile/Avatar";
 import { MagnifyingGlass, Hash } from "@phosphor-icons/react";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { isDeletedUsername } from "@/lib/users/account";
 
 /** Always-visible search input for the channel header (right of the Members button). */
 export function SearchBox({ search }: { search: MessageSearch }) {
@@ -73,7 +74,7 @@ export function SearchResultsPanel({ search }: { search: MessageSearch }) {
             className="text-left p-2 rounded-row hover:bg-surface flex flex-col gap-1"
           >
             <span className="flex items-center gap-1.5 text-meta text-muted">
-              <Avatar url={r.author_avatar_url} name={r.author_display_name} size="sm" />
+              <Avatar url={r.author_avatar_url} name={r.author_display_name} size="sm" deleted={isDeletedUsername(r.author_username)} />
               <span className="text-ink font-medium">{r.author_display_name}</span>
               <Hash size={11} />{r.channel_name}
               <span className="ml-auto">{new Date(r.created_at).toLocaleDateString()}</span>

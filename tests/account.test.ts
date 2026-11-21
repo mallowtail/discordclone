@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
-  DELETED_USER_NAME, OWNS_SERVERS_MESSAGE, deleteAccountErrorMessage, hasPasswordLogin, isDeletedProfile,
+  DELETED_USER_NAME, OWNS_SERVERS_MESSAGE, deleteAccountErrorMessage, hasPasswordLogin, isDeletedProfile, isDeletedUsername,
   usernameConfirmMatches, verifyPassword,
 } from "@/lib/users/account";
 
@@ -14,6 +14,18 @@ describe("isDeletedProfile", () => {
   });
   it("names tombstones Deleted User", () => {
     expect(DELETED_USER_NAME).toBe("Deleted User");
+  });
+});
+
+describe("isDeletedUsername", () => {
+  it("spots tombstone usernames", () => {
+    expect(isDeletedUsername("deleted_2a2d34b5")).toBe(true);
+    expect(isDeletedUsername("Deleted_x")).toBe(true);
+  });
+  it("is false for live names and nothing", () => {
+    expect(isDeletedUsername("deleted")).toBe(false);
+    expect(isDeletedUsername("sam")).toBe(false);
+    expect(isDeletedUsername(null)).toBe(false);
   });
 });
 

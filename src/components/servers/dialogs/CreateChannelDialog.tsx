@@ -4,24 +4,22 @@ import { Hash, SpeakerHigh } from "@phosphor-icons/react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { Dropdown } from "@/components/ui/Dropdown";
 import { Modal } from "@/components/ui/Modal";
-import type { Category } from "@/types/db";
 
+/** Creates a text or voice channel in the given category (null = not in any category). */
 export function CreateChannelDialog({
   serverId,
-  categories,
+  categoryId,
   onClose,
 }: {
   serverId: string;
-  categories: Category[];
+  categoryId: string | null;
   onClose: () => void;
 }) {
   const supabase = createClient();
   const router = useRouter();
   const [name, setName] = useState("");
   const [kind, setKind] = useState<"text" | "voice">("text");
-  const [categoryId, setCategoryId] = useState<string>(categories[0]?.id ?? "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -33,7 +31,7 @@ export function CreateChannelDialog({
     setBusy(true);
     const { data, error: err } = await supabase
       .from("channels")
-      .insert({ name: trimmed, server_id: serverId, category_id: categoryId || null, position: 0, kind })
+      .insert({ name: trimmed, server_id: serverId, category_id: categoryId, position: 0, kind })
       .select("id")
       .single();
     setBusy(false);
@@ -61,15 +59,6 @@ export function CreateChannelDialog({
         <input autoFocus value={name} maxLength={100} onChange={(e) => setName(e.target.value)}
           placeholder={kind === "text" ? "channel-name" : "Hangout"} aria-label="Channel name"
           className="w-full p-2 rounded-control bg-surface-2 text-ink mb-3" />
-        {categories.length > 0 && (
-          <div className="mb-3">
-            <Dropdown
-              value={categoryId}
-              onChange={setCategoryId}
-              options={categories.map((c) => ({ value: c.id, label: c.name }))}
-            />
-          </div>
-        )}
         <button onClick={create} disabled={busy}
           className="w-full bg-accent hover:bg-accent-strong text-white font-medium rounded-control p-2 disabled:opacity-50">
           {busy ? "Creating…" : "Create"}

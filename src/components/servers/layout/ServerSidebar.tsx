@@ -40,7 +40,8 @@ export function ServerSidebar({ serverId }: { serverId: string }) {
   const [channels, setChannels] = useState<Channel[]>(() => navCache.getSidebar(serverId)?.channels ?? []);
   const [loaded, setLoaded] = useState(() => !!navCache.getSidebar(serverId));
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
-  const [creating, setCreating] = useState(false);
+  // Which category a new channel goes in (null = none); undefined = dialog closed.
+  const [creatingIn, setCreatingIn] = useState<string | null | undefined>(undefined);
   const [addingCategory, setAddingCategory] = useState(false);
   const [settings, setSettings] = useState(false);
   const [inviting, setInviting] = useState(false);
@@ -199,19 +200,28 @@ export function ServerSidebar({ serverId }: { serverId: string }) {
             {uncategorized.map((c) => renderChannelLink(c, false))}
             {categories.map((cat) => (
               <div key={cat.id}>
-                <button
-                  onClick={() => setCollapsed((p) => ({ ...p, [cat.id]: !p[cat.id] }))}
-                  className="w-full min-h-11 md:min-h-0 flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wider text-muted mt-3 mb-1 hover:text-ink"
-                >
-                  <span>
-                    {collapsed[cat.id] ? (
-                      <CaretRight size={12} weight="bold" />
-                    ) : (
-                      <CaretDown size={12} weight="bold" />
-                    )}
-                  </span>{" "}
-                  {cat.name}
-                </button>
+                <div className="group/cat flex items-center mt-3 mb-1">
+                  <button
+                    onClick={() => setCollapsed((p) => ({ ...p, [cat.id]: !p[cat.id] }))}
+                    className="flex-1 min-w-0 min-h-11 md:min-h-0 flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wider text-muted hover:text-ink"
+                  >
+                    <span>
+                      {collapsed[cat.id] ? (
+                        <CaretRight size={12} weight="bold" />
+                      ) : (
+                        <CaretDown size={12} weight="bold" />
+                      )}
+                    </span>{" "}
+                    <span className="truncate">{cat.name}</span>
+                  </button>
+                  {canManageChannels && (
+                    <button onClick={() => setCreatingIn(cat.id)} title={`Create a channel in ${cat.name}`}
+                      aria-label={`Create a channel in ${cat.name}`}
+                      className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 md:p-0.5 flex items-center justify-center text-muted hover:text-ink md:opacity-0 md:group-hover/cat:opacity-100 focus-visible:opacity-100">
+                      <Plus size={14} weight="bold" aria-hidden="true" />
+                    </button>
+                  )}
+                </div>
                 {!collapsed[cat.id] &&
                   channelsIn(cat.id).map((c) => renderChannelLink(c, true))}
               </div>
@@ -223,7 +233,7 @@ export function ServerSidebar({ serverId }: { serverId: string }) {
         )}
         {loaded && canManageChannels && (
           <div className="flex gap-2 mt-3 text-xs">
-            <button onClick={() => setCreating(true)} className="min-h-11 md:min-h-0 flex items-center hover:text-ink">+ Channel</button>
+            <button onClick={() => setCreatingIn(categories[0]?.id ?? null)} className="min-h-11 md:min-h-0 flex items-center hover:text-ink">+ Channel</button>
             <button onClick={() => setAddingCategory(true)} className="min-h-11 md:min-h-0 flex items-center hover:text-ink">+ Category</button>
           </div>
         )}
@@ -233,7 +243,9 @@ export function ServerSidebar({ serverId }: { serverId: string }) {
       </div>
       {/* Reload on close: our own change shouldn't depend on the realtime event arriving (it
           occasionally doesn't — measured ~1 in 5 right after switching servers). */}
-      {creating && <CreateChannelDialog serverId={serverId} categories={categories} onClose={() => { setCreating(false); load(); }} />}
+      {creatingIn !== undefined && (
+        <CreateChannelDialog serverId={serverId} categoryId={creatingIn} onClose={() => { setCreatingIn(undefined); load(); }} />
+      )}
       {addingCategory && (
         <CreateCategoryDialog
           serverId={serverId}

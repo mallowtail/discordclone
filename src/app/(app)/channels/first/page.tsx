@@ -101,7 +101,7 @@ export default function FirstChannel() {
           }
         />
         {creating && (
-          <CreateChannelDialog serverId={state.serverId} categories={state.categories} onClose={() => setCreating(false)} />
+          <CreateChannelDialog serverId={state.serverId} categoryId={state.categories[0]?.id ?? null} onClose={() => setCreating(false)} />
         )}
       </div>
     );

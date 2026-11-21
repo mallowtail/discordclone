@@ -15,7 +15,7 @@ export function StickerPicker({ onPick, disabled }: { onPick: (s: Sticker) => vo
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const { servers } = useServers();
-  const { stickers, loading } = useStickers(open);
+  const { stickers, loading, failed } = useStickers(open);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -49,8 +49,11 @@ export function StickerPicker({ onPick, disabled }: { onPick: (s: Sticker) => vo
             </div>
           </div>
           <div className="flex-1 overflow-y-auto p-2">
-            {loading && stickers.length === 0 ? (
+            {/* Having stickers means you're in a server, so no servers yet = the list is still loading. */}
+            {(loading && stickers.length === 0) || (stickers.length > 0 && servers.length === 0) ? (
               <p className="p-2 text-center text-meta text-muted">Loading…</p>
+            ) : failed && stickers.length === 0 ? (
+              <p role="alert" className="p-3 text-body text-danger">Couldn&apos;t load stickers</p>
             ) : stickers.length === 0 ? (
               <p className="p-3 text-body text-muted">No stickers yet — server admins can add them in Server Settings → Stickers.</p>
             ) : groups.length === 0 ? (

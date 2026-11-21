@@ -12,7 +12,9 @@ export type ImagePlan = { action: "keep" } | { action: "encode"; width: number; 
 
 export function planImage(
   src: { type: string; size: number; width: number; height: number },
-  maxDim: number
+  maxDim: number,
+  /** PNG/WebP files above this many bytes are re-encoded even within maxDim. */
+  reencodeAboveBytes: number = REENCODE_ABOVE_BYTES
 ): ImagePlan {
   // Re-saving a GIF through a canvas keeps only the first frame.
   if (src.type === "image/gif") return { action: "keep" };
@@ -23,7 +25,7 @@ export function planImage(
 
   // JPEGs (phone photos) are always re-encoded: that's what strips EXIF, including GPS location.
   if (src.type === "image/jpeg") return { action: "encode", width, height };
-  if (scale < 1 || src.size > REENCODE_ABOVE_BYTES) return { action: "encode", width, height };
+  if (scale < 1 || src.size > reencodeAboveBytes) return { action: "encode", width, height };
   return { action: "keep" };
 }
 

@@ -252,7 +252,7 @@ export function MessageItem({
           onPin={togglePin}
           pinned={msg.pinned}
           canEdit={isMine}
-          editable={!msg.poll}
+          editable={!msg.poll && !msg.sticker}
           onEdit={() => {
             setDraft(msg.content);
             setEditing(true);

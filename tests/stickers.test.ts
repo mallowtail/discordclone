@@ -24,6 +24,12 @@ describe("cleanStickerName", () => {
     expect(cleanStickerName("x".repeat(31)).ok).toBe(false);
     expect(cleanStickerName("bad\u0007").ok).toBe(false);
   });
+  it("counts emoji as one character each, like Postgres char_length", () => {
+    expect(cleanStickerName("💀").ok).toBe(false);
+    expect(cleanStickerName("💀💀")).toEqual({ ok: true, name: "💀💀" });
+    expect(cleanStickerName("💀".repeat(30)).ok).toBe(true);
+    expect(cleanStickerName("💀".repeat(31)).ok).toBe(false);
+  });
 });
 
 describe("defaultStickerName", () => {
@@ -31,6 +37,12 @@ describe("defaultStickerName", () => {
     expect(defaultStickerName("sad_cat-2.png")).toBe("sad cat 2");
     expect(defaultStickerName(".png")).toBe("sticker");
     expect(defaultStickerName("x".repeat(50) + ".gif")).toBe("x".repeat(30));
+  });
+  it("cuts long emoji names by character, never splitting a surrogate pair", () => {
+    expect(defaultStickerName("💀".repeat(40) + ".png")).toBe("💀".repeat(30));
+    const name = defaultStickerName("a" + "💀".repeat(40) + ".png");
+    expect(name).toBe("a" + "💀".repeat(29));
+    expect(name).not.toMatch(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])/);
   });
 });
 

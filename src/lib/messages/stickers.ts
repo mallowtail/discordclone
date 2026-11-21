@@ -45,13 +45,16 @@ export function checkStickerFile(f: { type: string; size: number }): string | nu
 export function cleanStickerName(raw: string): { ok: true; name: string } | { ok: false; error: string } {
   if (/[\u0000-\u001f\u007f-\u009f]/.test(raw)) return { ok: false, error: "Sticker names can't contain control characters" };
   const name = raw.trim().replace(/\s+/g, " ");
-  if (name.length < 2 || name.length > 30) return { ok: false, error: "Sticker names must be 2–30 characters" };
+  // Count code points, like Postgres char_length (an emoji is one character, not two).
+  const chars = [...name].length;
+  if (chars < 2 || chars > 30) return { ok: false, error: "Sticker names must be 2–30 characters" };
   return { ok: true, name };
 }
 
 export function defaultStickerName(fileName: string): string {
   const base = fileName.replace(/\.[^.]*$/, "").replace(/[_-]/g, " ");
-  const spaced = base.replace(/[\u0000-\u001f\u007f-\u009f]/g, " ").trim().replace(/\s+/g, " ").slice(0, 30).trim();
+  const collapsed = base.replace(/[\u0000-\u001f\u007f-\u009f]/g, " ").trim().replace(/\s+/g, " ");
+  const spaced = [...collapsed].slice(0, 30).join("").trim(); // by code point: never split an emoji
   return cleanStickerName(spaced).ok ? spaced : "sticker";
 }
 

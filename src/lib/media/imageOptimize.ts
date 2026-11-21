@@ -13,12 +13,18 @@ function toBlob(canvas: HTMLCanvasElement, type: string): Promise<Blob | null> {
  * Never throws: on any failure (unsupported browser, undecodable file) it returns the original,
  * which then goes through the normal size/type checks.
  */
-export async function optimizeImage(file: File, maxDim: number): Promise<File> {
+export async function optimizeImage(
+  file: File,
+  maxDim: number,
+  opts: { reencodeAboveBytes?: number; noJpeg?: boolean } = {}
+): Promise<File> {
   if (typeof document === "undefined" || typeof createImageBitmap === "undefined") return file;
   let bitmap: ImageBitmap | null = null;
   try {
     bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
-    const plan = planImage({ type: file.type, size: file.size, width: bitmap.width, height: bitmap.height }, maxDim);
+    const plan = planImage(
+      { type: file.type, size: file.size, width: bitmap.width, height: bitmap.height }, maxDim, opts.reencodeAboveBytes
+    );
     if (plan.action === "keep") return file;
 
     const canvas = document.createElement("canvas");
@@ -30,10 +36,11 @@ export async function optimizeImage(file: File, maxDim: number): Promise<File> {
     ctx.drawImage(bitmap, 0, 0, plan.width, plan.height);
 
     // WebP keeps transparency and is much smaller. Browsers that can't encode it silently hand back
-    // a PNG instead, so check the type and fall back: PNG for PNGs (keep transparency), else JPEG.
+    // a PNG instead, so check the type and fall back: PNG for PNGs (keep transparency), else JPEG
+    // (unless `noJpeg`, e.g. stickers, which must stay PNG/WebP).
     let blob = await toBlob(canvas, "image/webp");
     if (!blob || blob.type !== "image/webp") {
-      blob = await toBlob(canvas, file.type === "image/png" ? "image/png" : "image/jpeg");
+      blob = await toBlob(canvas, file.type === "image/png" || opts.noJpeg ? "image/png" : "image/jpeg");
     }
     if (!blob || !shouldUseEncoded({ srcType: file.type, srcSize: file.size, outSize: blob.size })) return file;
     return new File([blob], renameForType(file.name, blob.type), { type: blob.type, lastModified: Date.now() });

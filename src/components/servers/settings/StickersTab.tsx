@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { optimizeImage } from "@/lib/media/imageOptimize";
 import {
-  MAX_STICKERS, STICKER_STATIC_MAX, checkStickerFile, cleanStickerName, defaultStickerName,
+  MAX_STICKERS, STICKER_MAX_BYTES, STICKER_STATIC_MAX, checkStickerFile, cleanStickerName, defaultStickerName,
   fitSticker, isAnimatedImage, stickerExt, stickerPublicUrl, type Sticker,
 } from "@/lib/messages/stickers";
 
@@ -41,9 +41,17 @@ export function StickersTab({ serverId }: { serverId: string }) {
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState<{ id: string; name: string } | null>(null);
   const [deleting, setDeleting] = useState<Sticker | null>(null);
+  const [loadFailed, setLoadFailed] = useState(false);
 
   const load = useCallback(async () => {
-    const { data } = await supabase.from("stickers").select("*").eq("server_id", serverId).order("created_at", { ascending: true });
+    const { data, error: err } = await supabase.from("stickers").select("*").eq("server_id", serverId).order("created_at", { ascending: true });
+    if (err) {
+      // Don't show a stale or empty list (and keep Upload disabled) until a load succeeds.
+      setStickers(null);
+      setLoadFailed(true);
+      return;
+    }
+    setLoadFailed(false);
     setStickers((data as Sticker[] | null) ?? []);
   }, [supabase, serverId]);
 
@@ -67,11 +75,12 @@ export function StickersTab({ serverId }: { serverId: string }) {
     if (!picked) return;
     setError(null);
     let file = picked;
-    // Big static images shrink to PNG/WebP (keeps transparency); animated files are never re-encoded.
+    // Static images that are too wide/tall or over 512 KB are re-encoded to PNG/WebP (keeps
+    // transparency, never JPEG); animated files are never re-encoded. The size is re-checked below.
     if (stickerExt(picked.type)) {
       const animated = isAnimatedImage(new Uint8Array(await picked.arrayBuffer()), picked.type);
       if (!animated) {
-        const out = await optimizeImage(picked, STICKER_STATIC_MAX);
+        const out = await optimizeImage(picked, STICKER_STATIC_MAX, { reencodeAboveBytes: STICKER_MAX_BYTES, noJpeg: true });
         if (out.type === "image/png" || out.type === "image/webp") file = out;
       }
     }
@@ -167,9 +176,13 @@ export function StickersTab({ serverId }: { serverId: string }) {
           <img src={pending.previewUrl} alt="" className="w-20 h-20 flex-none object-contain" />
           <div className="min-w-0 flex-1">
             <label className="block text-meta font-medium text-muted mb-1" htmlFor="sticker-name">Sticker name</label>
-            <input id="sticker-name" value={pending.name} maxLength={30} autoFocus disabled={busy} className={field}
+            <input id="sticker-name" value={pending.name} autoFocus disabled={busy} className={field}
               onChange={(e) => { setPending({ ...pending, name: e.target.value }); setError(null); }}
-              onKeyDown={(e) => { if (e.key === "Enter") save(); }} />
+              onKeyDown={(e) => {
+                if (e.key === "Enter") save();
+                // Cancel the upload instead of letting Escape close all of Server Settings.
+                if (e.key === "Escape") { e.stopPropagation(); if (!busy) { setPending(null); setError(null); } }
+              }} />
             <div className="mt-2 flex gap-2">
               <button type="button" onClick={save} disabled={busy}
                 className="rounded-control bg-accent hover:bg-accent-strong text-white text-body font-medium px-4 py-1.5 disabled:opacity-50">
@@ -185,7 +198,14 @@ export function StickersTab({ serverId }: { serverId: string }) {
       )}
 
       {stickers === null ? (
-        <p className="text-body text-muted">Loading…</p>
+        loadFailed ? (
+          <p role="alert" className="text-body text-danger">
+            Couldn&apos;t load stickers —{" "}
+            <button type="button" onClick={() => { setLoadFailed(false); load(); }} className="underline hover:text-ink">try again</button>
+          </p>
+        ) : (
+          <p className="text-body text-muted">Loading…</p>
+        )
       ) : stickers.length === 0 ? (
         <p className="text-body text-muted">No stickers yet. Upload one to get started.</p>
       ) : (
@@ -201,7 +221,7 @@ export function StickersTab({ serverId }: { serverId: string }) {
                 </div>
                 {isEditing ? (
                   <div className="w-full">
-                    <input value={editing.name} maxLength={30} autoFocus aria-label="Sticker name" className={field} disabled={busy}
+                    <input value={editing.name} autoFocus aria-label="Sticker name" className={field} disabled={busy}
                       onChange={(e) => { setEditing({ id: s.id, name: e.target.value }); setError(null); }}
                       onKeyDown={(e) => { if (e.key === "Enter") rename(); if (e.key === "Escape") { e.stopPropagation(); setEditing(null); setError(null); } }} />
                     <div className="mt-2 flex gap-2 justify-end">

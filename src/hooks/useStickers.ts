@@ -5,23 +5,26 @@ import { createClient } from "@/lib/supabase/client";
 import type { Sticker } from "@/lib/messages/stickers";
 
 /** Every sticker from the servers you're in (RLS limits the rows), refetched each time `enabled` turns on. */
-export function useStickers(enabled: boolean): { stickers: Sticker[]; loading: boolean } {
+export function useStickers(enabled: boolean): { stickers: Sticker[]; loading: boolean; failed: boolean } {
   const supabase = useMemo(() => createClient(), []);
   const [stickers, setStickers] = useState<Sticker[]>([]);
   const [loading, setLoading] = useState(false);
+  const [failed, setFailed] = useState(false);
 
   useEffect(() => {
     if (!enabled) return;
     let cancelled = false;
     // eslint-disable-next-line react-hooks/set-state-in-effect -- start the fetch when the picker opens
     setLoading(true);
-    supabase.from("stickers").select("*").order("created_at").then(({ data }) => {
+    setFailed(false);
+    supabase.from("stickers").select("*").order("created_at").then(({ data, error }) => {
       if (cancelled) return;
-      setStickers((data as Sticker[] | null) ?? []);
+      if (error) setFailed(true);
+      else setStickers((data as Sticker[] | null) ?? []);
       setLoading(false);
     });
     return () => { cancelled = true; };
   }, [supabase, enabled]);
 
-  return { stickers, loading };
+  return { stickers, loading, failed };
 }

@@ -29,6 +29,13 @@ describe("planImage", () => {
     expect(planImage({ type: "image/png", size: 3 * MB, width: 1900, height: 1000 }, ATTACHMENT_MAX_DIM))
       .toEqual({ action: "encode", width: 1900, height: 1000 });
   });
+  it("re-encodes above a custom byte threshold (stickers: 512 KB) even within maxDim", () => {
+    const src = { type: "image/png", size: 600_000, width: 300, height: 200 };
+    expect(planImage(src, 320)).toEqual({ action: "keep" });
+    expect(planImage(src, 320, 524288)).toEqual({ action: "encode", width: 300, height: 200 });
+    expect(planImage({ ...src, size: 500_000 }, 320, 524288)).toEqual({ action: "keep" });
+    expect(planImage({ ...src, type: "image/gif" }, 320, 524288)).toEqual({ action: "keep" });
+  });
   it("never produces a zero-size dimension for extreme aspect ratios", () => {
     const p = planImage({ type: "image/jpeg", size: MB, width: 10000, height: 2 }, ATTACHMENT_MAX_DIM);
     expect(p).toEqual({ action: "encode", width: 2048, height: 1 });

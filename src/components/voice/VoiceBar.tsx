@@ -2,11 +2,13 @@
 
 import Link from "next/link";
 import { useVoice } from "@/components/providers/VoiceProvider";
+import { keyLabel } from "@/lib/voice/settings";
 import { Microphone, MicrophoneSlash, PhoneDisconnect, SpeakerHigh, SpeakerSlash } from "@phosphor-icons/react";
 
 /** Shown above your name while you're in (or joining) a voice room: where, and Mute/Deafen/Leave. */
 export function VoiceBar() {
-  const { status, label, href, selfMuted, deafened, canSpeak, error, toggleMute, toggleDeafen, leave } = useVoice();
+  const { status, label, href, selfMuted, deafened, canSpeak, error, toggleMute, toggleDeafen, leave, settings, pttHeld } = useVoice();
+  const ptt = status === "connected" && settings.mode === "ptt" && canSpeak && !selfMuted;
   if (status === "idle" && !error) return null;
 
   const btn = "flex items-center justify-center w-11 h-11 md:w-8 md:h-8 rounded-control hover:bg-surface-2";
@@ -38,6 +40,11 @@ export function VoiceBar() {
             <PhoneDisconnect size={18} weight="bold" />
           </button>
         </div>
+      )}
+      {ptt && (
+        <p className={`mt-1 px-1 text-micro ${pttHeld ? "text-online" : "text-muted"}`}>
+          {pttHeld ? "Talking…" : `Hold ${keyLabel(settings.pttKey)} to talk`}
+        </p>
       )}
       {error && <p role="alert" className="mt-1 px-1 text-micro text-danger">{error}</p>}
     </div>

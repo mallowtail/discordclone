@@ -18,7 +18,7 @@ Imports always use `@/…` (= `src/…`). Pure logic lives in `src/lib` and is u
   - `servers/layout/` — ServerRail, ServerSidebar, ServerIcon · `servers/settings/` — ServerSettings (full-screen tabs: Overview, Roles, Members, Invites, Bans, Audit Log) · `servers/dialogs/` — add/create/invite · `servers/members/` · `servers/roles/` (RolesPanel) · `servers/search/`
   - `dms/sidebar/` — DmSidebar, NewDmDialog, PeoplePickerDialog, RequestBadge · `dms/groups/` — GroupIcon, GroupMembersPanel
   - `user/profile/` — Avatar, ProfileCard, FullProfileModal, FriendButton, StatusBubble, UserPanel · `user/settings/` — UserSettings + sections
-  - `voice/` — VoiceBar, VoiceChannelRow, VoiceChannelView
+  - `voice/` — VoiceBar, VoiceChannelRow, VoiceChannelView, CallButton, IncomingCall, micGate (voice activity / push-to-talk gate)
   - `auth/` — OAuthButtons
 - `src/lib/`
   - `messages/` — validation, mentions, reactions, pins, polls, gifs, embeds (link → player), linkGuard, forward, grouping, messagePaging, sendAttachment, typing, unread, format, recentEmojis
@@ -26,7 +26,7 @@ Imports always use `@/…` (= `src/…`). Pure logic lives in `src/lib` and is u
   - `servers/` — invite, permissions, roleHierarchy, roleColor(s), moderation, auditLog, server-icon
   - `search/` — search, searchQuery, searchSuggest
   - `users/` — profile, oauthProfile, friends, conversations, dm, avatarColor, popover
-  - `voice/` — rooms (LiveKit room names ↔ channel / conversation)
+  - `voice/` — rooms (LiveKit room names ↔ channel / conversation), settings (Settings → Voice, saved in localStorage)
   - `server/` — server-only: safeFetch (SSRF-safe fetch), linkPreview, linkMeta
   - `supabase/` — browser and server clients
 - `src/hooks/` — data hooks (useMessages, useConversations, useServers, useServerPermissions, useReactions, useTyping, …)

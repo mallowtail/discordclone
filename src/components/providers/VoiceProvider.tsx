@@ -5,6 +5,8 @@ import { Room, RoomEvent, Track, type Participant, type RemoteTrack } from "live
 import { useAuth } from "@/components/providers/AuthProvider";
 import { createClient } from "@/lib/supabase/client";
 import { parseRoom } from "@/lib/voice/rooms";
+import { DEFAULT_SETTINGS, STORAGE_KEY, parseVoiceSettings, type VoiceSettings } from "@/lib/voice/settings";
+import { createMicGate, type MicGate } from "@/components/voice/micGate";
 
 export type VoiceParticipant = { id: string; name: string; speaking: boolean; muted: boolean; isLocal: boolean };
 
@@ -27,16 +29,36 @@ type Ctx = {
   leave: () => Promise<void>;
   toggleMute: () => Promise<void>;
   toggleDeafen: () => Promise<void>;
+  /** Settings → Voice (saved in this browser). Changes apply to a call in progress too. */
+  settings: VoiceSettings;
+  updateSettings: (patch: Partial<VoiceSettings>) => void;
+  /** Push to talk: the key is held right now. */
+  pttHeld: boolean;
 };
 
 const VoiceContext = createContext<Ctx>({
   status: "idle", room: null, label: null, href: null, participants: [], selfMuted: false, deafened: false,
   canSpeak: true, error: null, join: async () => {}, leave: async () => {}, toggleMute: async () => {}, toggleDeafen: async () => {},
+  settings: DEFAULT_SETTINGS, updateSettings: () => {}, pttHeld: false,
 });
 
 /** Mute or unmute every remote audio element (deafen). */
 function setAllMuted(els: Set<HTMLMediaElement>, muted: boolean) {
   els.forEach((el) => { el.muted = muted; });
+}
+
+function loadSettings(): VoiceSettings {
+  try {
+    return typeof window === "undefined" ? DEFAULT_SETTINGS : parseVoiceSettings(localStorage.getItem(STORAGE_KEY));
+  } catch {
+    return DEFAULT_SETTINGS;
+  }
+}
+
+/** Is the keyboard focus in something you type into (so a push-to-talk key should still type)? */
+function isTyping(target: EventTarget | null): boolean {
+  const el = target as HTMLElement | null;
+  return !!el && (el.isContentEditable || el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT");
 }
 
 function snapshot(room: Room): VoiceParticipant[] {
@@ -49,6 +71,23 @@ function snapshot(room: Room): VoiceParticipant[] {
     isLocal,
   });
   return [one(room.localParticipant, true), ...[...room.remoteParticipants.values()].map((p) => one(p, false))];
+}
+
+/**
+ * Turns the mic on, then routes it through the voice-activity / push-to-talk gate. The gate runs in
+ * our own audio context (LiveKit only makes one in a mode we don't use). If this browser can't run
+ * the gate, the plain mic stays on (always sending) rather than voice not working at all.
+ */
+async function enableMic(room: Room, gate: MicGate | null, ctx: AudioContext | null) {
+  await room.localParticipant.setMicrophoneEnabled(true);
+  const track = room.localParticipant.getTrackPublication(Track.Source.Microphone)?.audioTrack;
+  if (!gate || !ctx || !track || track.getProcessor()) return;
+  try {
+    await track.setAudioContext(ctx);
+    await track.setProcessor(gate.processor);
+  } catch {
+    // keep the plain mic
+  }
 }
 
 /**
@@ -71,11 +110,20 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
   const [deafened, setDeafened] = useState(false);
   const [canSpeak, setCanSpeak] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [settings, setSettings] = useState<VoiceSettings>(loadSettings);
+  const settingsRef = useRef(settings);
+  const gateRef = useRef<MicGate | null>(null);
+  const gateCtxRef = useRef<AudioContext | null>(null);
+  const [pttHeld, setPttHeld] = useState(false);
 
   const reset = useCallback(() => {
     for (const el of audioEls.current) el.remove();
     audioEls.current.clear();
     roomRef.current = null;
+    gateRef.current = null;
+    void gateCtxRef.current?.close().catch(() => {});
+    gateCtxRef.current = null;
+    setPttHeld(false);
     setStatus("idle");
     setRoomName(null);
     setLabel(null);
@@ -114,7 +162,18 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    const room = new Room({ adaptiveStream: false, dynacast: false });
+    const s = settingsRef.current;
+    const room = new Room({
+      adaptiveStream: false, dynacast: false,
+      audioCaptureDefaults: s.inputId ? { deviceId: s.inputId } : undefined,
+      audioOutput: s.outputId ? { deviceId: s.outputId } : undefined,
+    });
+    gateRef.current = createMicGate(s.mode, s.threshold);
+    try {
+      gateCtxRef.current = new AudioContext(); // made inside the click, so it's allowed to run
+    } catch {
+      gateCtxRef.current = null;
+    }
     roomRef.current = room;
     const refresh = () => { if (roomRef.current === room) setParticipants(snapshot(room)); };
     room
@@ -152,7 +211,7 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
     setCanSpeak(body.canSpeak !== false);
     if (body.canSpeak !== false && !deafRef.current) {
       try {
-        await room.localParticipant.setMicrophoneEnabled(true);
+        await enableMic(room, gateRef.current, gateCtxRef.current);
         setSelfMuted(false);
       } catch {
         setSelfMuted(true);
@@ -176,7 +235,8 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
     }
     const next = !selfMuted;
     try {
-      await room.localParticipant.setMicrophoneEnabled(!next);
+      if (next) await room.localParticipant.setMicrophoneEnabled(false);
+      else await enableMic(room, gateRef.current, gateCtxRef.current);
       setSelfMuted(next);
       setError(null);
     } catch {
@@ -197,11 +257,49 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
       await room.localParticipant.setMicrophoneEnabled(false).catch(() => {});
       setSelfMuted(true);
     } else if (!mutedBeforeDeafen.current) {
-      await room.localParticipant.setMicrophoneEnabled(true).catch(() => {});
+      await enableMic(room, gateRef.current, gateCtxRef.current).catch(() => {});
       setSelfMuted(false);
     }
     setParticipants(snapshot(room));
   }, [selfMuted, canSpeak]);
+
+  const updateSettings = useCallback((patch: Partial<VoiceSettings>) => {
+    const prev = settingsRef.current;
+    const next = { ...prev, ...patch };
+    settingsRef.current = next;
+    setSettings(next);
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)); } catch { /* private mode: this visit only */ }
+    gateRef.current?.configure(next.mode, next.threshold);
+    const room = roomRef.current;
+    if (!room) return;
+    if (next.inputId !== prev.inputId) void room.switchActiveDevice("audioinput", next.inputId || "default").catch(() => {});
+    if (next.outputId !== prev.outputId) void room.switchActiveDevice("audiooutput", next.outputId || "default").catch(() => {});
+  }, []);
+
+  // Push to talk: hold the key to send sound. Browsers only tell a site about keys while its tab is
+  // the one in front, so letting go of the window also lets go of the key.
+  const ptt = status === "connected" && settings.mode === "ptt";
+  useEffect(() => {
+    if (!ptt) return;
+    const key = settings.pttKey;
+    const set = (down: boolean) => { gateRef.current?.setKeyDown(down); setPttHeld(down); };
+    const onDown = (e: KeyboardEvent) => {
+      if (e.code !== key) return;
+      if (!isTyping(e.target)) e.preventDefault(); // e.g. Space shouldn't scroll the page
+      if (!e.repeat) set(true);
+    };
+    const onUp = (e: KeyboardEvent) => { if (e.code === key) set(false); };
+    const onBlur = () => set(false);
+    window.addEventListener("keydown", onDown);
+    window.addEventListener("keyup", onUp);
+    window.addEventListener("blur", onBlur);
+    return () => {
+      window.removeEventListener("keydown", onDown);
+      window.removeEventListener("keyup", onUp);
+      window.removeEventListener("blur", onBlur);
+      set(false);
+    };
+  }, [ptt, settings.pttKey]);
 
   // Signing out (or a different account) ends the call; closing the tab disconnects cleanly.
   useEffect(() => {
@@ -216,8 +314,8 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
 
   const value = useMemo<Ctx>(() => ({
     status, room: roomName, label, href, participants, selfMuted, deafened, canSpeak, error,
-    join, leave, toggleMute, toggleDeafen,
-  }), [status, roomName, label, href, participants, selfMuted, deafened, canSpeak, error, join, leave, toggleMute, toggleDeafen]);
+    join, leave, toggleMute, toggleDeafen, settings, updateSettings, pttHeld,
+  }), [status, roomName, label, href, participants, selfMuted, deafened, canSpeak, error, join, leave, toggleMute, toggleDeafen, settings, updateSettings, pttHeld]);
 
   return <VoiceContext.Provider value={value}>{children}</VoiceContext.Provider>;
 }

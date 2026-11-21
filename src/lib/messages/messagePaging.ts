@@ -93,3 +93,38 @@ export function refreshCachedPage(
   const older = confirmed.filter((m) => m.created_at < start);
   return { messages: mergeMessages([...older, ...page], pending), replaced: false };
 }
+
+/**
+ * A page fetched while realtime events were arriving can be older than what the list already
+ * shows: a message edited or deleted live after the fetch started would come back stale (or come
+ * back at all). For every id in `touched` (realtime/local events since the fetch began) the page
+ * uses the list's current row, or drops the row when the list no longer has it (deleted). Other
+ * rows pass through. Returns `page` itself when nothing was touched.
+ */
+export function preferLiveRows(page: Message[], current: Message[], touched: ReadonlySet<string>): Message[] {
+  if (touched.size === 0 || !page.some((m) => touched.has(m.id))) return page;
+  const byId = new Map(current.map((m) => [m.id, m]));
+  const out: Message[] = [];
+  for (const m of page) {
+    if (!touched.has(m.id)) out.push(m);
+    else {
+      const live = byId.get(m.id);
+      if (live && !live.pending) out.push(live);
+    }
+  }
+  return out;
+}
+
+/**
+ * Missed-message catch-up. Realtime can report SUBSCRIBED a moment before the server actually
+ * streams changes, so a message sent right then never arrives live: load again this long after
+ * SUBSCRIBED. Returning to the tab (focus / visible / back online) also catches up, at most once
+ * per CATCH_UP_MIN_GAP_MS (focus and visibilitychange usually fire together).
+ */
+export const CATCH_UP_DELAY_MS = 2000;
+export const CATCH_UP_MIN_GAP_MS = 5000;
+
+/** Whether a tab-return catch-up should run now, given when the last one ran (0 = never). */
+export function catchUpDue(lastAt: number, now: number, minGapMs: number = CATCH_UP_MIN_GAP_MS): boolean {
+  return lastAt === 0 || now - lastAt >= minGapMs;
+}

@@ -1,5 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { mergeMessages, hasMoreAfter, nextHasMore, reconcileNewestPage, refreshCachedPage, MESSAGE_PAGE } from "@/lib/messages/messagePaging";
+import {
+  mergeMessages, hasMoreAfter, nextHasMore, reconcileNewestPage, refreshCachedPage, MESSAGE_PAGE,
+  preferLiveRows, catchUpDue, CATCH_UP_MIN_GAP_MS,
+} from "@/lib/messages/messagePaging";
 import type { Message } from "@/types/db";
 
 function msg(id: string, created_at: string, extra: Partial<Message> = {}): Message {
@@ -180,5 +183,49 @@ describe("refreshCachedPage (remembered messages + a fresh newest page)", () => 
     const pending = msg("p1", "2026-10-30T10:05:00Z", { pending: true });
     expect(refreshCachedPage([m1, pending], [m1], 10).messages.map((m) => m.id)).toEqual(["m1", "p1"]);
     expect(refreshCachedPage([m1, m2], [], 10).messages).toEqual([]);
+  });
+});
+
+describe("preferLiveRows", () => {
+  it("returns the page itself when nothing changed live", () => {
+    const page = [m1, m2];
+    expect(preferLiveRows(page, [m1], new Set())).toBe(page);
+    expect(preferLiveRows(page, [m1], new Set(["other"]))).toBe(page);
+  });
+
+  it("keeps a live edit instead of the stale fetched copy", () => {
+    const edited = { ...m2, content: "edited live", updated_at: "2026-10-30T11:00:00Z" };
+    const out = preferLiveRows([m1, m2, m3], [m1, edited], new Set(["m2"]));
+    expect(out.map((m) => m.content)).toEqual(["content m1", "edited live", "content m3"]);
+  });
+
+  it("drops a row deleted live while the fetch was in flight", () => {
+    expect(preferLiveRows([m1, m2, m3], [m1, m3], new Set(["m2"])).map((m) => m.id)).toEqual(["m1", "m3"]);
+  });
+
+  it("a catch-up merge adds the missed message once and keeps paged-in history", () => {
+    // Older history paged in (m1, m2), the newest page fetched late includes the missed m4.
+    const list = [m1, m2, m3];
+    const page = preferLiveRows([m2, m3, m4], list, new Set());
+    const once = reconcileNewestPage(list, page, MESSAGE_PAGE).messages;
+    const twice = reconcileNewestPage(once, page, MESSAGE_PAGE).messages;
+    expect(once.map((m) => m.id)).toEqual(["m1", "m2", "m3", "m4"]);
+    expect(twice.map((m) => m.id)).toEqual(["m1", "m2", "m3", "m4"]);
+  });
+
+  it("a missed own message replaces its pending copy", () => {
+    const pending = { ...m4, pending: true };
+    const merged = mergeMessages([m3, pending], preferLiveRows([m3, m4], [m3, pending], new Set()));
+    expect(merged).toHaveLength(2);
+    expect(merged[1].pending).toBeFalsy();
+  });
+});
+
+describe("catchUpDue", () => {
+  it("runs the first time, then at most once per gap", () => {
+    expect(catchUpDue(0, 1000)).toBe(true);
+    expect(catchUpDue(10_000, 10_000 + CATCH_UP_MIN_GAP_MS - 1)).toBe(false);
+    expect(catchUpDue(10_000, 10_000 + CATCH_UP_MIN_GAP_MS)).toBe(true);
+    expect(catchUpDue(10_000, 10_500, 100)).toBe(true);
   });
 });

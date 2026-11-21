@@ -2,7 +2,9 @@
 
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { MESSAGE_PAGE, mergeMessages, nextHasMore, reconcileNewestPage, refreshCachedPage } from "@/lib/messages/messagePaging";
+import {
+  CATCH_UP_DELAY_MS, MESSAGE_PAGE, catchUpDue, mergeMessages, nextHasMore, preferLiveRows, reconcileNewestPage, refreshCachedPage,
+} from "@/lib/messages/messagePaging";
 import { navCache } from "@/lib/cache/navCache";
 import { onMessageDeleted, withoutMessage } from "@/lib/messages/localDeletes";
 import type { Message } from "@/types/db";
@@ -104,9 +106,33 @@ export function useMessages(target: Target) {
     let active = true;
     const run = ++runRef.current;
 
+    // Live events (and this tab's own deletes) numbered as they arrive, so a load can tell which
+    // rows changed while its fetch was in flight and keep the live version (preferLiveRows) — more
+    // loads now run (catch-ups), and a stale page must never bring back a deleted message or undo
+    // an edit. Cleared whenever no load is in flight.
+    let eventSeq = 0;
+    let loadsInFlight = 0;
+    const touchedAt = new Map<string, number>();
+    const touch = (id: string) => touchedAt.set(id, ++eventSeq);
+    const touchedSince = (startSeq: number) =>
+      new Set([...touchedAt].filter(([, at]) => at > startSeq).map(([id]) => id));
+    const offLocalDelete = onMessageDeleted(touch);
+    // Missed-message catch-up (see the subscribe callback and catchUp below).
+    let catchUpTimer: ReturnType<typeof setTimeout> | null = null;
+    let lastCatchUp = 0;
+
     // Fetches the newest page (or the anchored window) and MERGES it into existing state, so a
     // realtime reconnect (SUBSCRIBED fires again) never wipes history paged in via loadOlder.
     async function load() {
+      loadsInFlight++;
+      try {
+        await fetchAndMerge(eventSeq);
+      } finally {
+        if (--loadsInFlight === 0) touchedAt.clear();
+      }
+    }
+
+    async function fetchAndMerge(startSeq: number) {
       if (anchorId) {
         const { data: anchor } = await supabase
           .from("messages").select("created_at").eq("id", anchorId).eq(column, value).maybeSingle();
@@ -124,9 +150,10 @@ export function useMessages(target: Target) {
           // A failed "before" fetch says nothing about older history: keep hasMore and leave
           // `loaded` unset so the next successful load (e.g. realtime re-SUBSCRIBED) decides it.
           const beforeOk = !before.error && !!before.data;
+          const touched = touchedSince(startSeq);
           update(key, (s) => ({
             ...s,
-            messages: mergeMessages(s.messages, [...beforeRows, ...afterRows]),
+            messages: mergeMessages(s.messages, preferLiveRows([...beforeRows, ...afterRows], s.messages, touched)),
             hasMore: s.loaded ? s.hasMore : nextHasMore(s.hasMore, before, MESSAGE_PAGE),
             anchorFound: true,
             loaded: s.loaded || beforeOk,
@@ -144,9 +171,11 @@ export function useMessages(target: Target) {
         .order("created_at", { ascending: false })
         .limit(MESSAGE_PAGE);
       if (!active) return;
-      const page = ((recent.data ?? []) as Message[]).reverse();
+      const fetched = ((recent.data ?? []) as Message[]).reverse();
       const ok = !recent.error && !!recent.data;
+      const touched = touchedSince(startSeq);
       update(key, (s) => {
+        const page = preferLiveRows(fetched, s.messages, touched);
         if (s.fromCache && ok) {
           // Reopened chat: the fresh page replaces the remembered one for its time range.
           const r = refreshCachedPage(s.messages, page, MESSAGE_PAGE);
@@ -179,6 +208,7 @@ export function useMessages(target: Target) {
           if (!active) return;
           // replaces an existing id (clears an optimistic `pending` row) or inserts in order
           const row = payload.new as Message;
+          touch(row.id);
           update(key, (s) => ({ ...s, messages: mergeMessages(s.messages, [row]) }));
         }
       )
@@ -188,6 +218,7 @@ export function useMessages(target: Target) {
         (payload) => {
           if (!active) return;
           const row = payload.new as Message;
+          touch(row.id);
           update(key, (s) => ({ ...s, messages: s.messages.map((m) => (m.id === row.id ? row : m)) }));
         }
       )
@@ -197,15 +228,42 @@ export function useMessages(target: Target) {
         (payload) => {
           if (!active) return;
           const id = (payload.old as { id: string }).id;
+          touch(id);
           update(key, (s) => ({ ...s, messages: s.messages.filter((m) => m.id !== id) }));
         }
       )
       .subscribe((status) => {
-        if (status === "SUBSCRIBED") load();
+        if (status !== "SUBSCRIBED") return;
+        // Fires on the first connect AND on every reconnect: load what we may have missed, then
+        // once more shortly after — the server can report SUBSCRIBED a moment before it really
+        // streams changes, and a message sent in that moment would otherwise only show on reload.
+        load();
+        if (catchUpTimer) clearTimeout(catchUpTimer);
+        catchUpTimer = setTimeout(() => {
+          catchUpTimer = null;
+          if (active) load();
+        }, CATCH_UP_DELAY_MS);
       });
+
+    // Coming back to the tab (or back online): the live connection may have dozed off (phones
+    // suspend background tabs), so look for anything new. Merged by id like every load.
+    function catchUp() {
+      const now = Date.now();
+      if (!active || document.visibilityState === "hidden" || !catchUpDue(lastCatchUp, now)) return;
+      lastCatchUp = now;
+      load();
+    }
+    document.addEventListener("visibilitychange", catchUp);
+    window.addEventListener("focus", catchUp);
+    window.addEventListener("online", catchUp);
 
     return () => {
       active = false;
+      if (catchUpTimer) clearTimeout(catchUpTimer);
+      document.removeEventListener("visibilitychange", catchUp);
+      window.removeEventListener("focus", catchUp);
+      window.removeEventListener("online", catchUp);
+      offLocalDelete();
       supabase.removeChannel(channel);
     };
   }, [supabase, column, value, anchorId, key, update, instanceId]);

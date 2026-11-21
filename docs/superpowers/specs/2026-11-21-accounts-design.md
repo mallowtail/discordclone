@@ -51,7 +51,10 @@ configuring SMTP in Supabase.
   Turnstile widget as well.
 - **Any deletion of a login tombstones the profile**, not just the button: a trigger on `auth.users`
   delete does the cleanup + tombstone, so deleting a user from the Supabase dashboard or the admin
-  API (as test cleanup does) never leaves a real name/avatar behind.
+  API (as test cleanup does) never leaves a real name/avatar behind. Per the owner, that trigger
+  **refuses** while the person still owns a server — ownership must be passed on (or the server
+  deleted) first, on every path. The Delete account screen says: "You own these servers. Pass on
+  ownership to someone else (or delete the server) before deleting your account." and lists them.
 - Test accounts for e2e are created with the admin API (service role, `email_confirm: true`) instead
   of the sign-up API once CAPTCHA is on.
 
@@ -98,9 +101,10 @@ verifies it with the secret key the owner enters in the dashboard).
 - **Cleanup lives in a trigger on `auth.users` delete** (SECURITY DEFINER), so every deletion path
   tombstones. `delete_my_account()` — SECURITY DEFINER RPC, callable by authenticated, acting on
   `auth.uid()` only — refuses with `'transfer or delete your servers first'` if the caller owns any
-  server, then deletes the caller's `auth.users` row, which fires the trigger. If a login is deleted
-  some other way (dashboard) while it still owns servers, each server goes to a random member, or is
-  deleted if it has none (never ownerless). The trigger:
+  server, then deletes the caller's `auth.users` row, which fires the trigger. The trigger itself also
+  refuses (`'transfer or delete your servers first'`) while the person owns any server, so even a
+  deletion from the Supabase dashboard or admin API can't leave a server ownerless (owner's rule:
+  ownership must be passed on first). Otherwise the trigger:
   2. For each group chat the caller is in: leave it (reusing the existing leave logic, so an owner's
      group passes to a random member; an owner alone in a group → the group is deleted, as today).
   3. Delete the caller's: server memberships (+ member roles), friendships (both directions),

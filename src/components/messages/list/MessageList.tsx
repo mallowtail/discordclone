@@ -1,5 +1,7 @@
 "use client";
 
+import { useSafety } from "@/components/providers/SafetyProvider";
+import { groupHiddenRuns, hiddenLabel } from "@/lib/users/safety";
 import { navCache } from "@/lib/cache/navCache";
 import { memo, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
@@ -11,7 +13,7 @@ import { useReactions } from "@/hooks/useReactions";
 import { useMemberRoleColors } from "@/hooks/useMemberRoleColors";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { ChatCircleDots } from "@phosphor-icons/react";
+import { ChatCircleDots, EyeSlash } from "@phosphor-icons/react";
 
 /**
  * Placeholder for a single message row, shaped to match `MessageItem` so nothing jumps when the
@@ -93,6 +95,16 @@ export const MessageList = memo(function MessageList({
   const [attempted, setAttempted] = useState<Record<string, true>>({});
   // Authors already loaded this session (navCache) show at once, without another lookup.
   const profileOf = (id: string) => profiles[id] ?? navCache.getProfile(id);
+  // Blocked / ignored people's messages collapse into "N blocked messages — Show".
+  const { kindOf } = useSafety();
+  const [revealedRuns, setRevealedRuns] = useState<Set<string>>(() => new Set());
+  const toggleRun = (key: string) =>
+    setRevealedRuns((cur) => {
+      const next = new Set(cur);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
   const reactionsByMessage = useReactions(messages.map((m) => m.id), user?.id ?? "");
   const byId = new Map(messages.map((m) => [m.id, m]));
   const { colorFor } = useMemberRoleColors(serverId);
@@ -235,8 +247,25 @@ export const MessageList = memo(function MessageList({
           title="No messages yet — say something"
         />
       ) : (
-        messages.map((m, i) => {
-          const showHeader = startsNewGroup(messages[i - 1], m);
+        groupHiddenRuns(messages, kindOf, revealedRuns).map((row, i, rows) => {
+          if (row.type !== "message") {
+            const hidden = row.type === "hidden";
+            const count = hidden ? row.messages.length : row.count;
+            return (
+              <div key={`${row.type}-${row.key}`} className="px-4 py-1">
+                <button type="button" onClick={() => toggleRun(row.key)}
+                  className="flex items-center gap-2 rounded-row px-2 py-1 text-meta text-muted hover:bg-surface-2 hover:text-ink">
+                  <EyeSlash size={14} aria-hidden="true" />
+                  {hiddenLabel(row.kind, count)}
+                  <span className="font-medium text-accent">{hidden ? "Show" : "Hide"}</span>
+                </button>
+              </div>
+            );
+          }
+          const m = row.message;
+          // Group headers follow the previous *shown* message (a collapsed run breaks the group).
+          const before = rows[i - 1];
+          const showHeader = startsNewGroup(before?.type === "message" ? before.message : undefined, m);
           const repliedTo = m.reply_to_id ? byId.get(m.reply_to_id) ?? null : null;
           // A message that exists is always rendered. Own profile comes from auth so a just-sent
           // optimistic message never waits on a round-trip; for anyone else, only the NAME shows

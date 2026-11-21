@@ -6,9 +6,10 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { ProfileSection } from "@/components/user/settings/ProfileSection";
 import { AccountSection } from "@/components/user/settings/AccountSection";
+import { PrivacySection } from "@/components/user/settings/PrivacySection";
 import { X } from "@phosphor-icons/react";
 
-type Section = "profile" | "account";
+type Section = "profile" | "account" | "privacy";
 
 export function UserSettings({ onClose }: { onClose: () => void }) {
   const router = useRouter();
@@ -41,6 +42,7 @@ export function UserSettings({ onClose }: { onClose: () => void }) {
         </div>
         {navItem("profile", "Profile")}
         {navItem("account", "Account")}
+        {navItem("privacy", "Privacy & Safety")}
         <button
           onClick={logOut}
           className="mt-auto w-full text-left text-body rounded-row px-3 py-1.5 text-danger hover:bg-surface-2"
@@ -58,7 +60,7 @@ export function UserSettings({ onClose }: { onClose: () => void }) {
           <X size={18} weight="bold" />
         </button>
         <div className="p-8">
-          {section === "profile" ? <ProfileSection /> : <AccountSection />}
+          {section === "profile" ? <ProfileSection /> : section === "account" ? <AccountSection /> : <PrivacySection />}
         </div>
       </div>
     </div>

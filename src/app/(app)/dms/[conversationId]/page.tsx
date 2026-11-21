@@ -5,6 +5,7 @@ import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import type { Message } from "@/types/db";
 import { useConversation } from "@/hooks/useConversations";
+import { useSafety } from "@/components/providers/SafetyProvider";
 import { GroupIcon } from "@/components/dms/groups/GroupIcon";
 import { GroupMembersPanel } from "@/components/dms/groups/GroupMembersPanel";
 import { HeaderButton, SidePanelOverlay, useOverlayMode } from "@/components/ui/SidePanel";
@@ -58,6 +59,9 @@ function DmView({ conversationId }: { conversationId: string }) {
   // Stable: SidePanelOverlay's effect depends on it, and new messages re-render this view.
   const closeMembers = useCallback(() => setShowMembers(false), []);
   const membersOverlayMode = useOverlayMode();
+  const { kindOf, clear } = useSafety();
+  const dmOther = conv && !conv.isGroup ? conv.others[0] ?? null : null;
+  const blockedOther = dmOther && kindOf(dmOther.id) === "block" ? dmOther : null;
   const [replyTo, setReplyTo] = useState<Message | null>(null);
   const [replyToName, setReplyToName] = useState("");
   const [showPins, setShowPins] = useState(false);
@@ -169,16 +173,27 @@ function DmView({ conversationId }: { conversationId: string }) {
             </button>
           )}
           <TypingIndicator names={typing.names} />
-          <MessageInput
-            target={{ conversation_id: conversationId }}
-            placeholder={`Message ${conv?.label ?? ""}`}
-            replyTo={replyTo}
-            replyToName={replyToName}
-            onClearReply={() => setReplyTo(null)}
-            addPending={addPending}
-            removePending={removePending}
-            onTyping={(t) => (t ? typing.notifyTyping() : typing.notifyStopped())}
-          />
+          {blockedOther ? (
+            // You can't message someone you've blocked (the database refuses it too).
+            <div className="m-3 flex flex-wrap items-center justify-between gap-2 rounded-card border border-line bg-surface px-4 py-3">
+              <p className="text-body text-muted">You&apos;ve blocked {blockedOther.display_name}. Unblock them to send messages.</p>
+              <button type="button" onClick={() => clear(blockedOther.id)}
+                className="rounded-control border border-line px-3 py-1.5 text-body font-medium text-ink hover:bg-surface-2">
+                Unblock
+              </button>
+            </div>
+          ) : (
+            <MessageInput
+              target={{ conversation_id: conversationId }}
+              placeholder={`Message ${conv?.label ?? ""}`}
+              replyTo={replyTo}
+              replyToName={replyToName}
+              onClearReply={() => setReplyTo(null)}
+              addPending={addPending}
+              removePending={removePending}
+              onTyping={(t) => (t ? typing.notifyTyping() : typing.notifyStopped())}
+            />
+          )}
         </MessageDropZone>
       {conv?.isGroup && showMembers && (
         membersOverlayMode ? (

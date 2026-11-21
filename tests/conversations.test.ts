@@ -3,7 +3,7 @@ import { summarizeConversation, conversationLabel, pickerAction, groupErrorMessa
 import type { Profile } from "@/types/db";
 
 const p = (id: string, display_name = id): Profile => ({
-  id, username: id, display_name, avatar_url: null, bio: null, status: null, recent_emojis: [], trusted_domains: [], created_at: "2026-01-01T00:00:00Z",
+  id, username: id, display_name, avatar_url: null, bio: null, status: null, recent_emojis: [], trusted_domains: [], dm_policy: "reachable", fr_everyone: true, fr_friends_of_friends: true, fr_server_members: true, created_at: "2026-01-01T00:00:00Z",
 });
 const row = (over: Partial<ConversationRow>, people: Profile[]): ConversationRow => ({
   id: "c1", is_group: true, name: null, owner_id: "me", created_at: "2026-01-01T00:00:00Z",
@@ -59,7 +59,7 @@ describe("pickerAction", () => {
 describe("groupErrorMessage", () => {
   it("turns server errors into plain words", () => {
     expect(groupErrorMessage("group is full")).toBe("That would make the group bigger than 10 people.");
-    expect(groupErrorMessage("not reachable")).toBe("You can only add people you're friends with or share a server or group with.");
+    expect(groupErrorMessage("not reachable")).toBe("Some of these people can't be added — they may only accept group chats from friends.");
     expect(groupErrorMessage("anything else")).toBe("Something went wrong — try again.");
   });
 });

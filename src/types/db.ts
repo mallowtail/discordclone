@@ -8,6 +8,12 @@ export type Profile = {
   recent_emojis: string[];
   /** Hostnames whose links open without the "Leaving Mallowchat" warning. */
   trusted_domains: string[];
+  /** Who can DM you / add you to groups (enforced in the database, migration 0040). */
+  dm_policy: "reachable" | "friends" | "none";
+  /** Who can send you friend requests. */
+  fr_everyone: boolean;
+  fr_friends_of_friends: boolean;
+  fr_server_members: boolean;
   created_at: string;
 };
 

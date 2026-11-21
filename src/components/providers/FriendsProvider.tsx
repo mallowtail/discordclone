@@ -89,6 +89,7 @@ export function FriendsProvider({ children }: { children: React.ReactNode }) {
         throw new Error(
           error.message.includes("yourself") ? "That's you!"
             : error.message.includes("not found") ? "Couldn't find that user."
+            : error.message.includes("not accepting") ? "They aren't accepting friend requests right now."
             : "Couldn't send the request — try again."
         );
       }

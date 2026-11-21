@@ -13,6 +13,7 @@ import { UnreadProvider } from "@/components/providers/UnreadProvider";
 import { FriendsProvider } from "@/components/providers/FriendsProvider";
 import { LinkGuardProvider } from "@/components/providers/LinkGuardProvider";
 import { FavoriteGifsProvider } from "@/components/providers/FavoriteGifsProvider";
+import { SafetyProvider } from "@/components/providers/SafetyProvider";
 import { DrawerProvider, useDrawer } from "@/components/providers/DrawerProvider";
 import { Drawer } from "@/components/ui/Drawer";
 import { navCache } from "@/lib/cache/navCache";
@@ -77,13 +78,17 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <PresenceProvider>
         <UnreadProvider>
           <FriendsProvider>
-            <ProfilePopoverProvider>
+            {/* Safety, link guard and favourites sit outside ProfilePopoverProvider: it draws the
+                profile cards itself, and they need these too (Block/Ignore lives on the card). */}
+            <SafetyProvider>
               <LinkGuardProvider>
                 <FavoriteGifsProvider>
-                  <AppShell activeServer={activeServer}>{children}</AppShell>
+                  <ProfilePopoverProvider>
+                    <AppShell activeServer={activeServer}>{children}</AppShell>
+                  </ProfilePopoverProvider>
                 </FavoriteGifsProvider>
               </LinkGuardProvider>
-            </ProfilePopoverProvider>
+            </SafetyProvider>
           </FriendsProvider>
         </UnreadProvider>
       </PresenceProvider>

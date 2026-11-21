@@ -18,5 +18,6 @@ export function validateUsername(input: string): Validated {
 /** User-facing text for a failed message insert (the database enforces a spam limit). */
 export function sendErrorMessage(message: string | undefined): string {
   if (message?.includes("slow down")) return "You're sending messages too fast — wait a few seconds.";
+  if (message?.includes("cannot message this person")) return "Your message couldn't be delivered. They may only accept messages from some people.";
   return "Failed to send — try again";
 }

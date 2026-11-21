@@ -14,6 +14,8 @@ import { usePresence } from "@/hooks/usePresence";
 import { RolePill } from "@/components/servers/roles/RolePill";
 import { ServerIcon } from "@/components/servers/layout/ServerIcon";
 import { FriendButton } from "@/components/user/profile/FriendButton";
+import { SafetyMenu } from "@/components/user/profile/SafetyMenu";
+import { useSafety } from "@/components/providers/SafetyProvider";
 import { useFriends } from "@/components/providers/FriendsProvider";
 import { openDmWith } from "@/lib/users/dm";
 import { Modal } from "@/components/ui/Modal";
@@ -52,6 +54,7 @@ export function FullProfileModal({
   const { colorFor, rolesFor } = useMemberRoleColors(serverId);
   const { isOnline } = usePresence();
   const isSelf = user?.id === userId;
+  const blocked = useSafety().kindOf(userId) === "block";
   const online = isOnline(userId);
 
   useEffect(() => {
@@ -165,6 +168,10 @@ export function FullProfileModal({
                       >
                         Edit Profile
                       </button>
+                    ) : blocked ? (
+                      <p className="rounded-control border border-line px-3 py-2 text-body text-muted">
+                        You&apos;ve blocked {profile.display_name}. Unblock them from the ⋯ menu to message or add them.
+                      </p>
                     ) : (
                       <button
                         onClick={message}
@@ -174,7 +181,12 @@ export function FullProfileModal({
                         {busy ? "…" : "Message"}
                       </button>
                     )}
-                    {!isSelf && <div className="mt-2"><FriendButton userId={userId} full /></div>}
+                    {!isSelf && (
+                      <div className="mt-2 flex items-start gap-2">
+                        {!blocked && <div className="flex-1"><FriendButton userId={userId} full /></div>}
+                        <div className={blocked ? "ml-auto" : undefined}><SafetyMenu userId={userId} name={profile.display_name} /></div>
+                      </div>
+                    )}
                   </div>
 
                   {profile.bio && (

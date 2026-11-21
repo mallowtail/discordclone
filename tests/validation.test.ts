@@ -44,6 +44,9 @@ describe("sendErrorMessage", () => {
   it("explains the spam limit", () => {
     expect(sendErrorMessage("slow down: too many messages")).toBe("You're sending messages too fast — wait a few seconds.");
   });
+  it("explains a refused DM without saying why (a block mustn't be detectable)", () => {
+    expect(sendErrorMessage("cannot message this person")).toBe("Your message couldn't be delivered. They may only accept messages from some people.");
+  });
   it("falls back to a generic message", () => {
     expect(sendErrorMessage("network down")).toBe("Failed to send — try again");
     expect(sendErrorMessage(undefined)).toBe("Failed to send — try again");

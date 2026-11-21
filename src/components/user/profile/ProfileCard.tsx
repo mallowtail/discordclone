@@ -16,6 +16,8 @@ import { useMemberRoleColors } from "@/hooks/useMemberRoleColors";
 import { usePresence } from "@/hooks/usePresence";
 import { RolePill } from "@/components/servers/roles/RolePill";
 import { FriendButton } from "@/components/user/profile/FriendButton";
+import { SafetyMenu } from "@/components/user/profile/SafetyMenu";
+import { useSafety } from "@/components/providers/SafetyProvider";
 
 const CARD_WIDTH = 256; // w-64
 
@@ -50,6 +52,7 @@ export function ProfileCard({
   const { isOnline } = usePresence();
 
   const isSelf = user?.id === userId;
+  const blocked = useSafety().kindOf(userId) === "block";
   const online = isOnline(userId);
 
   useEffect(() => {
@@ -77,7 +80,11 @@ export function ProfileCard({
 
   useEffect(() => {
     function onDown(e: MouseEvent) {
-      if (cardRef.current && !cardRef.current.contains(e.target as Node)) onClose();
+      const t = e.target as Element;
+      // Its own pop-ups (the ⋯ menu, the "Block?" confirmation) are drawn outside the card; clicks
+      // there mustn't close it.
+      if (t.closest?.("[data-keep-popover], [aria-modal='true']")) return;
+      if (cardRef.current && !cardRef.current.contains(t)) onClose();
     }
     document.addEventListener("mousedown", onDown);
     return () => document.removeEventListener("mousedown", onDown);
@@ -163,10 +170,15 @@ export function ProfileCard({
         )}
         <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
           <span className="text-muted text-meta">Member since {memberSince}</span>
-          {!isSelf && <FriendButton userId={userId} />}
+          {!isSelf && (
+            <div className="flex items-center gap-1.5">
+              {blocked ? <span className="text-meta font-medium text-danger">Blocked</span> : <FriendButton userId={userId} />}
+              <SafetyMenu userId={userId} name={profile?.display_name ?? "this person"} />
+            </div>
+          )}
         </div>
       </div>
-      {!isSelf && (
+      {!isSelf && !blocked && (
         <div className="border-t border-line p-2">
           <input
             value={draft}

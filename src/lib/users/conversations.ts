@@ -76,6 +76,6 @@ export function pickerAction(
 /** Plain-words versions of the database's group errors. */
 export function groupErrorMessage(message: string): string {
   if (message.includes("group is full")) return `That would make the group bigger than ${MAX_GROUP_SIZE} people.`;
-  if (message.includes("not reachable")) return "You can only add people you're friends with or share a server or group with.";
+  if (message.includes("not reachable")) return "Some of these people can't be added — they may only accept group chats from friends.";
   return "Something went wrong — try again.";
 }

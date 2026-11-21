@@ -1,3 +1,5 @@
+import type { MessageSticker } from "@/lib/messages/stickers";
+
 export type Profile = {
   id: string;
   username: string;
@@ -93,6 +95,7 @@ export type ForwardSnapshot = {
   file_name: string | null;
   /** Filled in by the server when the forwarded message was a GIF. */
   gif?: { url: string; width: number; height: number; title: string } | null;
+  sticker?: MessageSticker | null;
   source: string;
 };
 
@@ -116,6 +119,8 @@ export type Message = {
   poll?: boolean;
   /** A KLIPY GIF (shown through our relay); see lib/gifs. */
   gif?: { url: string; width: number; height: number; title: string } | null;
+  /** A server sticker (content is empty); see lib/stickers. */
+  sticker?: MessageSticker | null;
   pending?: boolean;
 };
 

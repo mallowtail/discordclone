@@ -1,6 +1,7 @@
 export const PERMISSIONS = [
   "manage_channels", "manage_server", "manage_roles",
   "kick_members", "ban_members", "timeout_members", "manage_messages",
+  "manage_stickers",
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];
@@ -8,6 +9,7 @@ export type Permission = (typeof PERMISSIONS)[number];
 export const PERMISSION_LABELS: Record<Permission, string> = {
   manage_channels: "Manage Channels",
   manage_server: "Manage Server",
+  manage_stickers: "Manage Stickers",
   manage_roles: "Manage Roles",
   kick_members: "Kick Members",
   ban_members: "Ban Members",

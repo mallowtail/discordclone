@@ -2,7 +2,7 @@
 
 export type AuditEntry = {
   id: string;
-  action: "kick" | "ban" | "unban" | "timeout" | "timeout_removed";
+  action: "kick" | "ban" | "unban" | "timeout" | "timeout_removed" | "sticker_create" | "sticker_delete";
   reason: string | null;
   until: string | null;
   created_at: string;
@@ -25,6 +25,8 @@ export function describeAuditEntry(e: AuditEntry): string {
     case "kick": return `${actor} kicked ${target}`;
     case "ban": return `${actor} banned ${target}`;
     case "unban": return `${actor} unbanned ${target}`;
+    case "sticker_create": return `${actor} added the sticker “${e.reason ?? ""}”`;
+    case "sticker_delete": return `${actor} deleted the sticker “${e.reason ?? ""}”`;
     case "timeout_removed": return `${actor} removed ${target}'s timeout`;
     case "timeout": return e.until ? `${actor} timed out ${target} for ${duration(e.created_at, e.until)}` : `${actor} timed out ${target}`;
   }

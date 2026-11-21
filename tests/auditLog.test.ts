@@ -18,6 +18,10 @@ describe("describeAuditEntry", () => {
     expect(describeAuditEntry(e("timeout", { until: "2026-11-22T10:00:00Z" }))).toBe("Sam timed out Alex for 1 day");
     expect(describeAuditEntry(e("timeout", { until: "2026-11-21T10:10:00Z" }))).toBe("Sam timed out Alex for 10 minutes");
   });
+  it("names stickers by their reason", () => {
+    expect(describeAuditEntry(e("sticker_create", { reason: "sad cat", target: null }))).toBe("Sam added the sticker “sad cat”");
+    expect(describeAuditEntry(e("sticker_delete", { reason: "sad cat", target: null }))).toBe("Sam deleted the sticker “sad cat”");
+  });
   it("copes with deleted accounts", () => {
     expect(describeAuditEntry(e("kick", { actor: null, target: null }))).toBe("Someone kicked a deleted user");
   });

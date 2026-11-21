@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { sendErrorMessage, validateMessage } from "@/lib/messages/validation";
 import { uploadAndPostFiles } from "@/lib/messages/sendAttachment";
+import { isUploadLimitMessage } from "@/lib/media/uploadLimits";
 import { PollComposerDialog } from "@/components/messages/polls/PollComposerDialog";
 import { GifPicker } from "@/components/messages/composer/GifPicker";
 import { StickerPicker } from "@/components/messages/composer/StickerPicker";
@@ -145,6 +146,7 @@ export function MessageInput({
       mention_author: replyTo ? pingAuthor : false,
       pinned: false,
       pinned_at: null,
+      kept: false,
       forward_snapshot: null,
       pending: true,
     });
@@ -179,6 +181,7 @@ export function MessageInput({
       mention_author: replyTo ? pingAuthor : false,
       pinned: false,
       pinned_at: null,
+      kept: false,
       forward_snapshot: null,
       pending: true,
     });
@@ -224,6 +227,7 @@ export function MessageInput({
       mention_author: replyTo ? pingAuthor : false,
       pinned: false,
       pinned_at: null,
+      kept: false,
       forward_snapshot: null,
       pending: true,
     };
@@ -269,6 +273,13 @@ export function MessageInput({
       });
       setQueued((n) => n - 1);
       errors.push(...res.errors);
+      if (res.errors.some(isUploadLimitMessage)) {
+        // Daily limit reached / uploads paused: every file still waiting would be refused the same
+        // way, so drop them and say it once.
+        const dropped = queueRef.current.length;
+        queueRef.current = [];
+        setQueued((n) => n - dropped);
+      }
       if (res.posted && !captionUsed) {
         captionUsed = true;
         // Only clear the box if it still holds the caption that was sent with the file (the user may

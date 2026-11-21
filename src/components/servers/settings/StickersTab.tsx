@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { optimizeImage } from "@/lib/media/imageOptimize";
+import { uploadFailureMessage, uploadLimitProblem } from "@/lib/media/upload";
 import {
   MAX_STICKERS, STICKER_MAX_BYTES, STICKER_STATIC_MAX, checkStickerFile, checkStickerSource, cleanStickerName, defaultStickerName,
   fitSticker, isAnimatedImage, stickerExt, stickerPublicUrl, type Sticker,
@@ -159,13 +160,20 @@ export function StickersTab({ serverId }: { serverId: string }) {
       setBusy(false);
       return setError("Couldn't read that image");
     }
+    // Stickers count toward the uploader's 20 MB a day and stop when storage is almost full.
+    const blocked = await uploadLimitProblem();
+    if (blocked) {
+      setBusy(false);
+      return setError(blocked);
+    }
     const path = `${serverId}/${crypto.randomUUID()}.${ext}`;
     const up = await supabase.storage.from("stickers").upload(path, pending.file, {
       cacheControl: "60", contentType: pending.file.type, upsert: false,
     });
     if (up.error) {
+      const text = await uploadFailureMessage("Couldn't upload the sticker — try again");
       setBusy(false);
-      return setError("Couldn't upload the sticker — try again");
+      return setError(text);
     }
     const { error: insErr } = await supabase.from("stickers")
       .insert({ server_id: serverId, name: cleaned.name, path, width: size.width, height: size.height });

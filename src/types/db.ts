@@ -119,6 +119,9 @@ export type Message = {
   mention_author: boolean;
   pinned: boolean;
   pinned_at: string | null;
+  /** "Keep this message" (migration 0054): never removed by the database safety net, and its upload
+   *  isn't expired after 30 days. Set only through `set_message_kept`. */
+  kept: boolean;
   forward_snapshot: ForwardSnapshot | null;
   /** A poll: `content` is the question; answers and votes live in polls / poll_options / poll_votes. */
   poll?: boolean;

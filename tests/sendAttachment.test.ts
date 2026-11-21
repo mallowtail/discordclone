@@ -128,3 +128,18 @@ describe("uploadAndPostFiles", () => {
     expect(inserts[0]).toMatchObject({ image_url: "https://cdn/b.png", content: "look" });
   });
 });
+
+describe("uploadAndPostFiles — limits", () => {
+  it("says the daily-limit refusal once and stops the rest of the queue", async () => {
+    const { QUOTA_REACHED_MESSAGE } = await import("@/lib/media/uploadLimits");
+    vi.mocked(uploadImage).mockResolvedValue({ error: QUOTA_REACHED_MESSAGE });
+    const { supabase } = fakeSupabase(() => ({ error: null }));
+    const res = await uploadAndPostFiles({
+      supabase, userId: "me", target: { channel_id: "c" }, files: [img, img, doc],
+      addPending: () => {}, removePending: () => {},
+    });
+    expect(res).toEqual({ posted: 0, errors: [QUOTA_REACHED_MESSAGE] });
+    expect(uploadImage).toHaveBeenCalledTimes(1);
+    expect(uploadFile).not.toHaveBeenCalled();
+  });
+});

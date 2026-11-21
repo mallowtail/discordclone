@@ -216,6 +216,7 @@ export function snapshotAsMessage(snap: MessageSnapshot): Message {
     mention_author: false,
     pinned: false,
     pinned_at: null,
+    kept: false,
     forward_snapshot: snap.forward_snapshot,
     gif: snap.gif ?? null,
     sticker: snap.sticker ?? null,

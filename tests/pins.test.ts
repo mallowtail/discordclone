@@ -18,6 +18,7 @@ function msg(id: string, pinned_at: string | null, extra: Partial<Message> = {})
     mention_author: false,
     pinned: pinned_at !== null,
     pinned_at,
+    kept: false,
     forward_snapshot: null,
     ...extra,
   };

@@ -14,7 +14,9 @@ import {
   DotsThree,
   DotsThreeVertical,
   Flag,
+  BookmarkSimple,
 } from "@phosphor-icons/react";
+import { keepLabel } from "@/lib/messages/keep";
 
 export function MessageActions({
   recents,
@@ -30,6 +32,9 @@ export function MessageActions({
   onDelete,
   canReport = false,
   onReport,
+  canKeep = false,
+  kept = false,
+  onKeep,
 }: {
   recents: string[];
   onReact: (emoji: string) => void;
@@ -47,6 +52,10 @@ export function MessageActions({
   /** Someone else's message: "Report message". */
   canReport?: boolean;
   onReport?: () => void;
+  /** "Keep this message" / "Don't keep" (see canKeepMessage). */
+  canKeep?: boolean;
+  kept?: boolean;
+  onKeep?: () => void;
 }) {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerUp, setPickerUp] = useState(false);
@@ -235,6 +244,14 @@ export function MessageActions({
               >
                 <PushPin size={15} /> {pinned ? "Unpin" : "Pin"}
               </button>
+              {canKeep && onKeep && (
+                <button
+                  onClick={() => { setMenuOpen(false); setMobileOpen(false); onKeep(); }}
+                  className="w-full min-h-11 md:min-h-0 flex items-center gap-2 px-3 py-1.5 text-sm text-ink hover:bg-surface-2 text-left"
+                >
+                  <BookmarkSimple size={15} weight={kept ? "fill" : "regular"} /> {keepLabel(kept)}
+                </button>
+              )}
               {canEdit && editable && (
                 <button
                   onClick={() => { setMenuOpen(false); setMobileOpen(false); onEdit(); }}

@@ -18,6 +18,7 @@ function msg(id: string, author_id: string, created_at: string): Message {
     mention_author: false,
     pinned: false,
     pinned_at: null,
+    kept: false,
     forward_snapshot: null,
   };
 }

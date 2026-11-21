@@ -21,7 +21,8 @@ import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { ReportDialog } from "@/components/reports/ReportDialog";
 import { useProfilePopover } from "@/components/providers/ProfilePopoverProvider";
 import type { ReactionPill } from "@/lib/messages/reactions";
-import { ArrowBendUpLeft, PushPin } from "@phosphor-icons/react";
+import { ArrowBendUpLeft, BookmarkSimple, PushPin } from "@phosphor-icons/react";
+import { canKeepMessage, keepErrorMessage } from "@/lib/messages/keep";
 import { toolbarRecents } from "@/lib/messages/recentEmojis";
 import { modDeleteErrorMessage } from "@/lib/reports/reports";
 import { announceMessageDeleted } from "@/lib/messages/localDeletes";
@@ -142,6 +143,14 @@ export function MessageItem({
     else setError(null);
   }
 
+  async function toggleKeep() {
+    const keep = !msg.kept;
+    // The change arrives through realtime like any other edit of the row.
+    const { error: err } = await supabase.rpc("set_message_kept", { msg: msg.id, keep });
+    if (err) setError(keepErrorMessage(err.message, keep));
+    else setError(null);
+  }
+
   async function react(emoji: string) {
     if (!user) return;
     const mine = pills.find((p) => p.emoji === emoji)?.mine ?? false;
@@ -178,6 +187,11 @@ export function MessageItem({
       {!showHeader && msg.pinned && (
         <span className="absolute left-1 top-0.5 text-muted" title="Pinned" aria-label="Pinned">
           <PushPin size={15} weight="fill" />
+        </span>
+      )}
+      {!showHeader && msg.kept && (
+        <span className={`absolute ${msg.pinned ? "left-5" : "left-1"} top-0.5 text-muted`} title="Kept — won't be deleted to free space" aria-label="Kept">
+          <BookmarkSimple size={15} weight="fill" />
         </span>
       )}
       <div className="flex gap-2 md:gap-3">
@@ -223,6 +237,11 @@ export function MessageItem({
               {msg.pinned && (
                 <span className="text-muted ml-2 inline-flex align-middle" title="Pinned" aria-label="Pinned">
                   <PushPin size={15} weight="fill" />
+                </span>
+              )}
+              {msg.kept && (
+                <span className="text-muted ml-2 inline-flex items-center gap-0.5 align-middle text-micro" title="Kept — won't be deleted to free space">
+                  <BookmarkSimple size={13} weight="fill" aria-hidden="true" /> Kept
                 </span>
               )}
             </div>
@@ -277,6 +296,11 @@ export function MessageItem({
           canDelete={isMine || (canModDelete && !!msg.channel_id)}
           canReport={!isMine && !msg.pending}
           onReport={() => setReporting(true)}
+          canKeep={canKeepMessage({
+            isMine, inServer: !!msg.channel_id, canManageMessages: canModDelete, pending: msg.pending,
+          })}
+          kept={!!msg.kept}
+          onKeep={toggleKeep}
           onEdit={() => {
             setDraft(msg.content);
             setEditing(true);

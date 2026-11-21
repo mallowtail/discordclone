@@ -1,13 +1,16 @@
 import { describe, it, expect, vi } from "vitest";
 
 const removeMock = vi.hoisted(() => vi.fn());
+const rpcMock = vi.hoisted(() => vi.fn());
 vi.mock("@/lib/supabase/client", () => ({
-  createClient: () => ({ storage: { from: () => ({ remove: removeMock }) } }),
+  createClient: () => ({ storage: { from: () => ({ remove: removeMock }) }, rpc: rpcMock }),
 }));
 
 import {
   validateImage, isImageType, removalProblem, notRemoved, removeStorageFiles, removeStorageFilesReporting, STORAGE_REMOVE_BATCH,
+  uploadLimitProblem, uploadFailureMessage,
 } from "@/lib/media/upload";
+import { QUOTA_REACHED_MESSAGE, UPLOADS_PAUSED_MESSAGE } from "@/lib/media/uploadLimits";
 
 const MB = 1024 * 1024;
 
@@ -84,5 +87,30 @@ describe("removeStorageFilesReporting", () => {
     removeMock.mockImplementation(async () => { throw new Error("offline"); });
     expect(await removeStorageFilesReporting("stickers", ["x"])).toEqual(["x"]);
     expect(await removeStorageFiles("stickers", ["x"])).toBe(false);
+  });
+});
+
+describe("upload limits", () => {
+  const st = (o: object) => ({ data: { used_bytes: 0, limit_bytes: 20 * MB, remaining_bytes: 20 * MB, paused: false, ...o }, error: null });
+  it("pre-check: asks upload_status() and blocks at the limit or while paused", async () => {
+    rpcMock.mockResolvedValueOnce(st({}));
+    expect(await uploadLimitProblem()).toBeNull();
+    expect(rpcMock).toHaveBeenLastCalledWith("upload_status");
+    rpcMock.mockResolvedValueOnce(st({ used_bytes: 20 * MB, remaining_bytes: 0 }));
+    expect(await uploadLimitProblem()).toBe(QUOTA_REACHED_MESSAGE);
+    rpcMock.mockResolvedValueOnce(st({ paused: true }));
+    expect(await uploadLimitProblem()).toBe(UPLOADS_PAUSED_MESSAGE);
+  });
+  it("pre-check lets the upload try when the status can't be read", async () => {
+    rpcMock.mockResolvedValueOnce({ data: null, error: { message: "not signed in" } });
+    expect(await uploadLimitProblem()).toBeNull();
+    rpcMock.mockRejectedValueOnce(new Error("offline"));
+    expect(await uploadLimitProblem()).toBeNull();
+  });
+  it("after a generic Storage failure, re-reads the status to pick the words", async () => {
+    rpcMock.mockResolvedValueOnce(st({ remaining_bytes: 0 }));
+    expect(await uploadFailureMessage("Upload failed: database error, code: P0001")).toBe(QUOTA_REACHED_MESSAGE);
+    rpcMock.mockResolvedValueOnce(st({}));
+    expect(await uploadFailureMessage("Upload failed: x")).toBe("Upload failed: x");
   });
 });

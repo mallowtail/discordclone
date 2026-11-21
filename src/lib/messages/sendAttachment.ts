@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Message } from "@/types/db";
 import { uploadImage, uploadFile, isImageType } from "@/lib/media/upload";
 import { sendErrorMessage } from "@/lib/messages/validation";
+import { isUploadLimitMessage } from "@/lib/media/uploadLimits";
 
 export type Target = { channel_id: string } | { conversation_id: string };
 
@@ -44,6 +45,7 @@ export async function uploadAndPostFile(opts: {
     mention_author: (replyFields.mention_author as boolean) ?? false,
     pinned: false,
     pinned_at: null,
+    kept: false,
     forward_snapshot: null,
     pending: true,
   };
@@ -59,7 +61,9 @@ export async function uploadAndPostFile(opts: {
 }
 
 /** Upload and post several files one after another, so they land in the order picked. The caption
- *  and reply ride on the first file that posts; a failure doesn't stop the rest. Errors name the file. */
+ *  and reply ride on the first file that posts; a failure doesn't stop the rest. Errors name the file —
+ *  except the daily-limit / storage-paused refusal, which is said once and stops the queue (every
+ *  later file would be refused the same way). */
 export async function uploadAndPostFiles(
   opts: Omit<Parameters<typeof uploadAndPostFile>[0], "file"> & { files: File[] }
 ): Promise<{ posted: number; errors: string[] }> {
@@ -74,6 +78,10 @@ export async function uploadAndPostFiles(
       content: first ? content : "",
       replyFields: first ? replyFields : {},
     });
+    if (res.error && isUploadLimitMessage(res.error)) {
+      errors.push(res.error);
+      break;
+    }
     if (res.error) errors.push(`${file.name}: ${res.error}`);
     else posted += 1;
   }

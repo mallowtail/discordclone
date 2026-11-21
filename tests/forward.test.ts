@@ -7,7 +7,7 @@ function msg(over: Partial<Message> = {}): Message {
     id: "m1", author_id: "u1", channel_id: "c1", conversation_id: null,
     content: "hello", image_url: null, file_url: null, file_name: null,
     created_at: "t", updated_at: null, reply_to_id: null, mention_author: false,
-    pinned: false, pinned_at: null, forward_snapshot: null, ...over,
+    pinned: false, pinned_at: null, kept: false, forward_snapshot: null, ...over,
   };
 }
 

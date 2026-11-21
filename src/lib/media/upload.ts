@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/client";
 import { optimizeImage } from "@/lib/media/imageOptimize";
 import { ATTACHMENT_MAX_DIM, ICON_MAX_DIM, extensionForType } from "@/lib/media/imagePlan";
 import { chunkIds } from "@/lib/messages/reactions";
+import { parseUploadStatus, uploadBlockedMessage, uploadFailedMessage, type UploadStatus } from "@/lib/media/uploadLimits";
 
 const MAX_BYTES = 5 * 1024 * 1024;
 const ALLOWED = ["image/png", "image/jpeg", "image/gif", "image/webp"];
@@ -19,6 +20,32 @@ export function validateImage(file: { type: string; size: number }): UploadCheck
   return { ok: true };
 }
 
+/** `upload_status()` for the signed-in person, or null when it can't be read (then Storage decides). */
+async function readUploadStatus(): Promise<UploadStatus | null> {
+  try {
+    const { data, error } = await createClient().rpc("upload_status");
+    return error ? null : parseUploadStatus(data);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Checked before every upload (all four buckets): the daily-limit or storage-paused message when
+ * the database would refuse it, else null. The database enforces it either way.
+ */
+export async function uploadLimitProblem(): Promise<string | null> {
+  return uploadBlockedMessage(await readUploadStatus());
+}
+
+/**
+ * Words for a failed Storage upload. A limit refusal arrives as a generic error (HTTP 500 "database
+ * error" from the trigger, or an RLS 403), so `upload_status()` is read again to tell which.
+ */
+export async function uploadFailureMessage(fallback: string): Promise<string> {
+  return uploadFailedMessage(await readUploadStatus(), fallback);
+}
+
 /**
  * Shared image upload: reject non-image types up front, then resize/re-save in the browser
  * (optimizeImage — strips EXIF/GPS too), and only then apply the 5 MB limit, so a large phone photo
@@ -28,6 +55,8 @@ async function uploadImageTo(
   bucket: string, file: File, maxDim: number, folder?: string,
 ): Promise<{ url: string } | { error: string }> {
   if (!ALLOWED.includes(file.type)) return { error: "Only PNG, JPEG, GIF, or WebP images" };
+  const blocked = await uploadLimitProblem();
+  if (blocked) return { error: blocked };
   const prepared = await optimizeImage(file, maxDim);
   const check = validateImage(prepared);
   if (!check.ok) return { error: check.error };
@@ -35,7 +64,7 @@ async function uploadImageTo(
   const name = `${crypto.randomUUID()}.${extensionForType(prepared.type)}`;
   const path = folder ? `${folder}/${name}` : name;
   const { error } = await supabase.storage.from(bucket).upload(path, prepared, { contentType: prepared.type });
-  if (error) return { error: `Upload failed: ${error.message}` };
+  if (error) return { error: await uploadFailureMessage(`Upload failed: ${error.message}`) };
   const { data } = supabase.storage.from(bucket).getPublicUrl(path);
   return { url: data.publicUrl };
 }
@@ -61,6 +90,8 @@ export function isImageType(type: string): boolean {
 /** Upload any file to the attachments bucket. Returns its public URL + original name. */
 export async function uploadFile(file: File): Promise<{ url: string; name: string } | { error: string }> {
   if (file.size > FILE_MAX_BYTES) return { error: "File must be 25 MB or smaller" };
+  const blocked = await uploadLimitProblem();
+  if (blocked) return { error: blocked };
   const supabase = createClient();
   const ext = file.name.split(".").pop()?.toLowerCase() || "bin";
   const path = `${crypto.randomUUID()}.${ext}`;
@@ -69,7 +100,7 @@ export async function uploadFile(file: File): Promise<{ url: string; name: strin
     // Force a non-executable content-type: files land in a PUBLIC bucket, so serving
     // client-declared types (e.g. text/html, image/svg+xml) would be a stored-XSS vector.
     .upload(path, file, { contentType: "application/octet-stream" });
-  if (error) return { error: `Upload failed: ${error.message}` };
+  if (error) return { error: await uploadFailureMessage(`Upload failed: ${error.message}`) };
   const { data } = supabase.storage.from("attachments").getPublicUrl(path);
   return { url: data.publicUrl, name: file.name };
 }

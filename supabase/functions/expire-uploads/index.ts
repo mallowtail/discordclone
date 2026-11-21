@@ -8,10 +8,11 @@
 //   Anyone else gets 401 / 403. Deployed with JWT verification off, since the cron call has no JWT.
 //
 // What it does (each step is an RPC in the database, service role only):
-//   cleanup_start → expire_uploads('age') → expire_uploads('pressure') → expire_messages
-//   → expire_orphans (0055), removing the files each step hands back (attachments bucket only,
+//   cleanup_start → expire_uploads('age') → expire_orphans (0055) → expire_uploads('pressure')
+//   → expire_messages (order since 0056), removing the files each step hands back (attachments bucket only,
 //   batches of up to 1000, then cleanup_files_done) → cleanup_finish. Every step runs even if an
-//   earlier one failed; the errors are joined into the run's error. If the run can't even start
+//   earlier one failed; the errors are added to the run's error (after any notes the steps wrote
+//   there, e.g. "storage still over 80%"). If the run can't even start
 //   (other than "already running"), a failed run is recorded with cleanup_record_failure.
 //
 // Response: 200 {ok: true, run, files_deleted, ...} or {ok: false, error}.
@@ -104,10 +105,12 @@ Deno.serve(async (req) => {
   let filesDeleted = 0;
   const errors: string[] = [];
   const steps: [string, string, Record<string, unknown>][] = [
+    // Orphans before pressure (0056): files nobody uses go first, so the 80% rule only takes
+    // what it still has to from real messages.
     ["age", "expire_uploads", { mode: "age", run }],
+    ["orphans", "expire_orphans", { run }],
     ["pressure", "expire_uploads", { mode: "pressure", run }],
     ["messages", "expire_messages", { run }],
-    ["orphans", "expire_orphans", { run }],
   ];
   for (const [label, fn, args] of steps) {
     try {

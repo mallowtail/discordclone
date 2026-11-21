@@ -155,7 +155,7 @@ export function AdminUsageTab() {
         {storage.paused ? (
           <Notice level="danger">Uploads are paused for everyone (storage is at {formatPercent(storageFraction)}). Text chat still works.</Notice>
         ) : storageFraction >= storage.warnAt ? (
-          <Notice level="warn">Storage is over {formatPercent(storage.warnAt)} — the daily clean-up turns the oldest uploads into text until it&apos;s under 75%. Uploads pause at {formatPercent(storage.pauseAt)}.</Notice>
+          <Notice level="warn">Storage is over {formatPercent(storage.warnAt)} — the daily clean-up turns the oldest uploads into text (never in pinned, kept or reported messages) until it&apos;s under 75%. Uploads pause at {formatPercent(storage.pauseAt)}.</Notice>
         ) : null}
         <div className="space-y-2 pl-0 sm:pl-3">
           {storage.buckets.map((b) => (
@@ -174,7 +174,7 @@ export function AdminUsageTab() {
         <Meter label="Messages and everything else" used={database.bytes} limit={database.limitBytes}
           warnAt={database.warnAt} lines={[database.warnAt]} />
         {dbFraction >= database.warnAt && (
-          <Notice level="warn">The database is over {formatPercent(database.warnAt)} — the daily clean-up deletes the oldest messages (never pinned or kept ones) until it&apos;s under 75%.</Notice>
+          <Notice level="warn">The database is over {formatPercent(database.warnAt)} — the daily clean-up deletes the oldest messages (never pinned or kept ones, at most a quarter of them a day). That frees space for new messages; the size shown may not drop, because the database doesn&apos;t shrink its files.</Notice>
         )}
       </section>
 

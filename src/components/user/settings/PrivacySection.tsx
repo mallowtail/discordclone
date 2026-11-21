@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { isDeletedUsername } from "@/lib/users/account";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { useSafety } from "@/components/providers/SafetyProvider";
@@ -118,7 +119,7 @@ function BlockList({ kind, title, empty, undo }: { kind: HiddenKind; title: stri
         <ul className="mt-3 divide-y divide-line border border-line rounded-card overflow-hidden">
           {shown.map((p) => (
             <li key={p.id} className="flex items-center gap-3 px-3 py-2">
-              <Avatar url={p.avatar_url} name={p.display_name} seed={p.id} size="sm" />
+              <Avatar url={p.avatar_url} name={p.display_name} seed={p.id} size="sm" deleted={isDeletedUsername(p.username)} />
               <span className="flex-1 min-w-0 truncate text-body text-ink">{p.display_name} <span className="text-muted">@{p.username}</span></span>
               <button type="button" disabled={busy === p.id}
                 onClick={async () => { setBusy(p.id); await clear(p.id); setBusy(null); }}

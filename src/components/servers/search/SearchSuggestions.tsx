@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { isDeletedUsername } from "@/lib/users/account";
 import { activeToken, suggestKind, type SuggestKind } from "@/lib/search/searchSuggest";
 import { Avatar } from "@/components/user/profile/Avatar";
 import { Hash } from "@phosphor-icons/react";
@@ -62,7 +63,7 @@ export function getSuggestions(
           value: `${prefix}:${m.username} `,
           label: (
             <span className="flex items-center gap-1.5">
-              <Avatar url={m.avatar_url} name={m.display_name} size="sm" />
+              <Avatar url={m.avatar_url} name={m.display_name} size="sm" deleted={isDeletedUsername(m.username)} />
               {m.display_name} <span className="text-muted">@{m.username}</span>
             </span>
           ),

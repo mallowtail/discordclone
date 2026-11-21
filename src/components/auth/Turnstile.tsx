@@ -57,6 +57,8 @@ export function Turnstile({ onToken, onError, resetCount }: {
       widgetId.current = api.render(el.current, {
         sitekey: SITE_KEY,
         theme: "dark",
+        // The normal widget is a fixed 300px; on narrow containers (phones) use the 150px compact one.
+        size: el.current.clientWidth < 300 ? "compact" : "normal",
         callback: (t: string) => cbs.current.onToken(t),
         "expired-callback": () => cbs.current.onToken(null),
         "error-callback": () => cbs.current.onError(),
@@ -71,7 +73,7 @@ export function Turnstile({ onToken, onError, resetCount }: {
   }, []);
 
   if (!SITE_KEY) return null;
-  return <div ref={el} className="min-h-[65px]" />;
+  return <div ref={el} className="min-h-[65px] max-w-full overflow-hidden" />;
 }
 
 /** State for a form with a bot check. Without a site key everything is "ready" and no token is sent. */
@@ -86,7 +88,9 @@ export function useBotCheck() {
   return {
     enabled, resetCount, onToken, onError, reset,
     token: token ?? undefined,
-    ready: !enabled || (!!token && !failed),
+    // If the widget can't load or errors, don't lock people out: submit without a token and let
+    // Supabase decide (it refuses with a captcha error once CAPTCHA is enforced).
+    ready: !enabled || failed || !!token,
     /** Why the submit button is waiting (null when it isn't). */
     hint: !enabled ? null : failed ? CAPTCHA_LOAD_MESSAGE : token ? null : CAPTCHA_WAITING_MESSAGE,
     failed,

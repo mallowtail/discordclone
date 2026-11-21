@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { isDeletedUsername } from "@/lib/users/account";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/components/providers/AuthProvider";
@@ -83,7 +84,7 @@ export function GroupMembersPanel({ conv }: { conv: ConversationSummary }) {
                   aria-label={`View ${m.display_name}'s profile`}
                   className="flex min-w-0 flex-1 items-center gap-2 px-2 py-1 min-h-11 md:min-h-0 text-left">
                   <Avatar url={m.avatar_url} name={m.display_name} seed={m.id}
-                    presence={isOnline(m.id) ? "online" : "offline"} presenceRing="ring-sidebar" size="sm" />
+                    presence={isOnline(m.id) ? "online" : "offline"} presenceRing="ring-sidebar" size="sm" deleted={isDeletedUsername(m.username)} />
                   <span className="min-w-0 truncate text-body text-ink">{m.display_name}{me && <span className="text-muted"> (you)</span>}</span>
                   {owner && <Crown size={14} weight="fill" className="flex-none text-amber" aria-label="Group owner" />}
                 </button>

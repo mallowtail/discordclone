@@ -47,8 +47,8 @@ export function TypeToConfirmDialog({
     let err: string | null;
     try {
       err = await onConfirm(value);
-    } catch (e) {
-      console.error(e);
+    } catch (error) {
+      console.error(error);
       err = "Something went wrong — try again.";
     } finally {
       setBusy(false);

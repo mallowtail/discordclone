@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { isDeletedUsername } from "@/lib/users/account";
 import { createClient } from "@/lib/supabase/client";
 import type { Profile } from "@/types/db";
 import { Avatar } from "@/components/user/profile/Avatar";
@@ -107,6 +108,7 @@ export function MembersPanel({ serverId }: { serverId: string }) {
             url={m.profile?.avatar_url ?? null}
             name={m.profile?.display_name}
             seed={m.user_id}
+            deleted={isDeletedUsername(m.profile?.username)}
             presence={memberIsOnline ? "online" : "offline"}
             size="sm"
           />

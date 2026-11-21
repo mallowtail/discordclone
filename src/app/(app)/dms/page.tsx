@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { isDeletedUsername } from "@/lib/users/account";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/components/providers/AuthProvider";
@@ -179,7 +180,7 @@ function PersonRow({ person, kind }: { person: Profile; kind: "friend" | "incomi
         aria-label={`View ${person.display_name}'s profile`}
         className="flex min-w-0 flex-1 items-center gap-3 rounded-row text-left">
         <Avatar url={person.avatar_url} name={person.display_name} seed={person.id}
-          presence={online ? "online" : "offline"} size="md" />
+          presence={online ? "online" : "offline"} size="md" deleted={isDeletedUsername(person.username)} />
         <span className="min-w-0">
           <span className="block truncate text-body font-medium text-ink">
             {person.display_name} <span className="font-normal text-muted">@{person.username}</span>

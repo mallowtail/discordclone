@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import type { User } from "@supabase/supabase-js";
+import { usePathname } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import type { Profile } from "@/types/db";
 
@@ -60,6 +61,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Only a successful lookup counts as "loaded": a network error must not look like "no profile".
     if (!error) setProfileFor(current.id);
   }, [supabase]);
+
+  // This account was deleted from another device: forget the session here and say why.
+  const pathname = usePathname();
+  const deletedAt = profile?.deleted_at;
+  useEffect(() => {
+    if (!deletedAt || pathname.startsWith("/login")) return;
+    supabase.auth.signOut({ scope: "local" }).finally(() => { window.location.href = "/login?deleted=1"; });
+  }, [deletedAt, pathname, supabase]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- shared public refetch; its null-user branch clears the old profile on sign-out

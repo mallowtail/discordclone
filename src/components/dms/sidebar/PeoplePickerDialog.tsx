@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { isDeletedUsername } from "@/lib/users/account";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/components/providers/AuthProvider";
@@ -118,7 +119,7 @@ export function PeoplePickerDialog({ onClose, ...ctx }: Mode & { onClose: () => 
                 <li key={p.id}>
                   <button type="button" onClick={() => toggle(p)} aria-pressed={on}
                     className={`w-full flex items-center gap-2 px-2 py-1.5 min-h-11 md:min-h-0 rounded-row text-left ${on ? "bg-accent/15" : "hover:bg-surface-2"}`}>
-                    <Avatar url={p.avatar_url} name={p.display_name} seed={p.id} size="sm" />
+                    <Avatar url={p.avatar_url} name={p.display_name} seed={p.id} size="sm" deleted={isDeletedUsername(p.username)} />
                     <span className="flex-1 min-w-0 truncate text-body text-ink">
                       {p.display_name} <span className="text-muted">@{p.username}</span>
                     </span>

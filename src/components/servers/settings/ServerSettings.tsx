@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { isDeletedUsername } from "@/lib/users/account";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/components/providers/AuthProvider";
@@ -377,7 +378,7 @@ function MembersTab({ server }: { server: Server }) {
             const name = m.profile?.display_name ?? "Unknown";
             return (
               <li key={m.user_id} className="flex items-center gap-3 px-3 py-2.5">
-                <Avatar url={m.profile?.avatar_url ?? null} name={name} seed={m.user_id} size="md" />
+                <Avatar url={m.profile?.avatar_url ?? null} name={name} seed={m.user_id} size="md" deleted={isDeletedUsername(m.profile?.username)} />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5 min-w-0">
                     <span className="truncate text-body font-medium text-ink" style={{ color: colorFor(m.user_id) ?? undefined }}>{name}</span>
@@ -454,7 +455,7 @@ function BansTab({ serverId }: { serverId: string }) {
         <ul className="divide-y divide-line border border-line rounded-card">
           {bans.map((b) => (
             <li key={b.user_id} className="flex items-start gap-3 px-3 py-2.5">
-              <Avatar url={b.profile?.avatar_url ?? null} name={b.profile?.display_name} seed={b.user_id} size="md" />
+              <Avatar url={b.profile?.avatar_url ?? null} name={b.profile?.display_name} seed={b.user_id} size="md" deleted={isDeletedUsername(b.profile?.username)} />
               <div className="min-w-0 flex-1">
                 <div className="truncate text-body font-medium text-ink">{b.profile?.display_name ?? "Deleted user"} <span className="font-normal text-muted">@{b.profile?.username ?? "?"}</span></div>
                 <div className="text-meta text-muted">

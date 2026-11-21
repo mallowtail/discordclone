@@ -20,7 +20,7 @@ import { useFriends } from "@/components/providers/FriendsProvider";
 import { openDmWith } from "@/lib/users/dm";
 import { Modal } from "@/components/ui/Modal";
 import { X } from "@phosphor-icons/react";
-import { DELETED_USER_NAME, isDeletedProfile } from "@/lib/users/account";
+import { DELETED_USER_NAME, isDeletedProfile, isDeletedUsername } from "@/lib/users/account";
 
 const TABS = ["Board", "Activity", "Mutual Friends", "Mutual Servers"] as const;
 type Tab = (typeof TABS)[number];
@@ -244,7 +244,7 @@ export function FullProfileModal({
                     render={(f) => (
                       <li key={f.id} className="flex items-center gap-3 px-3 py-2">
                         <Avatar url={f.avatar_url} name={f.display_name} seed={f.id}
-                          presence={isOnline(f.id) ? "online" : "offline"} presenceRing="ring-surface" size="sm" />
+                          presence={isOnline(f.id) ? "online" : "offline"} presenceRing="ring-surface" size="sm" deleted={isDeletedUsername(f.username)} />
                         <span className="min-w-0 truncate text-body text-ink">
                           {f.display_name} <span className="text-muted">@{f.username}</span>
                         </span>

@@ -20,6 +20,9 @@ export async function POST(request: NextRequest) {
   const userId = auth?.claims?.sub;
   if (!userId) return Response.json({ error: "Sign in first" }, { status: 401 });
 
+  const { data: live } = await supabase.rpc("is_live_account");
+  if (!live) return Response.json({ error: "This account was deleted" }, { status: 403 });
+
   const body = (await request.json().catch(() => ({}))) as { room?: string };
   const ref = parseRoom(body.room ?? "");
   if (!ref) return Response.json({ error: "Unknown room" }, { status: 400 });
